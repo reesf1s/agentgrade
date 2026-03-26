@@ -54,11 +54,11 @@ export default function ReportsPage() {
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData}>
-              <CartesianGrid stroke="rgba(0,0,0,0.04)" strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: "rgba(0,0,0,0.06)" }} tickLine={false} />
-              <YAxis domain={[0.3, 1]} tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} axisLine={{ stroke: "rgba(0,0,0,0.06)" }} tickLine={false} />
-              <Tooltip contentStyle={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: "12px", fontSize: 12 }} formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]} />
-              <Line type="monotone" dataKey="overall" stroke="#111827" strokeWidth={2} dot={false} name="Overall" />
+              <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
+              <YAxis domain={[0.3, 1]} tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
+              <Tooltip contentStyle={{ background: "rgba(20,10,40,0.85)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.15)", color: "white", borderRadius: "12px", fontSize: 12 }} formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]} />
+              <Line type="monotone" dataKey="overall" stroke="#ffffff" strokeWidth={2} dot={false} name="Overall" />
               <Line type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} dot={false} name="Accuracy" opacity={0.5} />
               <Line type="monotone" dataKey="hallucination" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Hallucination" opacity={0.5} />
             </LineChart>
@@ -75,7 +75,7 @@ export default function ReportsPage() {
           </div>
           <div className="space-y-3">
             {report.prompt_improvements.map((imp, i) => (
-              <div key={i} className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+              <div key={i} className="p-3 rounded-xl bg-white/5">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-medium text-[var(--text-primary)]">{imp.issue}</p>
                   <SeverityBadge severity={imp.priority === "high" ? "high" : "medium"} />
@@ -94,7 +94,7 @@ export default function ReportsPage() {
           </div>
           <div className="space-y-3">
             {report.knowledge_gaps.map((gap, i) => (
-              <div key={i} className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+              <div key={i} className="p-3 rounded-xl bg-white/5">
                 <p className="text-sm font-medium text-[var(--text-primary)] capitalize">{gap.topic}</p>
                 <p className="text-xs text-[var(--text-secondary)] mt-1">{gap.description}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -117,7 +117,7 @@ export default function ReportsPage() {
             <Link
               key={i}
               href={`/conversations/${f.conversation_id}`}
-              className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)] hover:bg-[rgba(0,0,0,0.04)] transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors"
             >
               <div>
                 <p className="text-sm text-[var(--text-primary)]">{f.summary}</p>

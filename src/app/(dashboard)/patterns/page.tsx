@@ -21,7 +21,7 @@ export default function PatternsPage() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                  pattern.severity === "critical" ? "score-bg-critical" : pattern.severity === "high" ? "score-bg-warning" : "bg-[rgba(0,0,0,0.04)]"
+                  pattern.severity === "critical" ? "score-bg-critical" : pattern.severity === "high" ? "score-bg-warning" : "bg-white/[0.07]"
                 }`}>
                   <AlertTriangle className={`w-4 h-4 ${
                     pattern.severity === "critical" ? "score-critical" : pattern.severity === "high" ? "score-warning" : "text-[var(--text-secondary)]"
@@ -47,7 +47,7 @@ export default function PatternsPage() {
             </p>
 
             {pattern.prompt_fix && (
-              <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-3">
+              <div className="p-4 rounded-xl bg-white/5 mb-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                   <span className="text-xs font-medium text-[var(--text-primary)]">Recommended Prompt Fix</span>
@@ -59,7 +59,7 @@ export default function PatternsPage() {
             )}
 
             {pattern.knowledge_base_suggestion && (
-              <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
+              <div className="p-4 rounded-xl bg-white/5">
                 <div className="flex items-center gap-2 mb-2">
                   <BookOpen className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                   <span className="text-xs font-medium text-[var(--text-primary)]">Knowledge Base Suggestion</span>

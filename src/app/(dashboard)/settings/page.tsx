@@ -33,8 +33,8 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left ${
                   activeTab === tab.id
-                    ? "bg-[rgba(0,0,0,0.05)] text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.02)]"
+                    ? "bg-white/[0.08] text-[var(--text-primary)] font-medium"
+                    : "text-[var(--text-secondary)] hover:bg-white/5"
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -52,7 +52,7 @@ export default function SettingsPage() {
                 <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Agent Connections</h2>
 
                 {/* Existing connection */}
-                <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-4">
+                <div className="p-4 rounded-xl bg-white/5 mb-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-[var(--text-primary)]">Intercom — Support Bot</p>
@@ -70,7 +70,7 @@ export default function SettingsPage() {
                   {["Intercom", "Zendesk", "Custom Webhook"].map((platform) => (
                     <button
                       key={platform}
-                      className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-center"
+                      className="p-4 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors text-center"
                     >
                       <p className="text-sm font-medium text-[var(--text-primary)]">{platform}</p>
                       <p className="text-xs text-[var(--text-muted)] mt-0.5">Connect</p>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
                 <div className="mt-6">
                   <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Or upload conversations</h3>
-                  <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
+                  <div className="border-2 border-dashed border-white/[0.12] rounded-xl p-8 text-center hover:border-white/20 transition-colors cursor-pointer">
                     <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
                     <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
                   </div>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
             <GlassCard className="p-6">
               <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Team Members</h2>
               <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)]">You</p>
                     <p className="text-xs text-[var(--text-muted)]">Owner</p>
@@ -157,13 +157,13 @@ export default function SettingsPage() {
               <p className="text-xs text-[var(--text-muted)] mb-6">
                 Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
               </p>
-              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-4">
+              <div className="border-2 border-dashed border-white/[0.12] rounded-xl p-8 text-center hover:border-white/20 transition-colors cursor-pointer mb-4">
                 <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files here</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                   <div>
                     <p className="text-sm text-[var(--text-primary)]">refund-policy.pdf</p>
                     <p className="text-xs text-[var(--text-muted)]">12 chunks &middot; Uploaded Mar 20</p>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                   <div>
                     <p className="text-sm text-[var(--text-primary)]">product-faq.txt</p>
                     <p className="text-xs text-[var(--text-muted)]">8 chunks &middot; Uploaded Mar 18</p>
@@ -188,7 +188,7 @@ export default function SettingsPage() {
           {activeTab === "billing" && (
             <GlassCard className="p-6">
               <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
-              <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-6">
+              <div className="p-4 rounded-xl bg-white/5 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)]">Starter Plan</p>
@@ -201,8 +201,8 @@ export default function SettingsPage() {
                     <span className="text-[var(--text-secondary)]">Usage this month</span>
                     <span className="text-[var(--text-primary)] font-mono">127 / 5,000</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
-                    <div className="h-full rounded-full bg-[var(--text-primary)]" style={{ width: "2.5%" }} />
+                  <div className="h-1.5 rounded-full bg-white/[0.07]">
+                    <div className="h-full rounded-full bg-white/20" style={{ width: "2.5%" }} />
                   </div>
                 </div>
               </div>

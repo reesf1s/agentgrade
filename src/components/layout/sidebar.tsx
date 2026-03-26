@@ -30,7 +30,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 pb-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
             <Zap className="w-4 h-4 text-white" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
@@ -51,8 +51,8 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
                 isActive
-                  ? "bg-[rgba(0,0,0,0.05)] text-[var(--text-primary)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(0,0,0,0.02)]"
+                  ? "bg-white/[0.08] text-[var(--text-primary)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5"
               )}
             >
               <Icon className="w-[18px] h-[18px]" />
@@ -65,7 +65,7 @@ export function Sidebar() {
       {/* User */}
       <div className="p-4 border-t border-[var(--glass-border)]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[rgba(0,0,0,0.06)] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
             <User className="w-4 h-4 text-[var(--text-muted)]" />
           </div>
           <div className="flex-1 min-w-0">

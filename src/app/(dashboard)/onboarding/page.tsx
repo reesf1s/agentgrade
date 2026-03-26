@@ -28,10 +28,10 @@ export default function OnboardingPage() {
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                   isDone
-                    ? "bg-[var(--text-primary)] text-white"
+                    ? "bg-white/20 text-white"
                     : isActive
-                    ? "bg-[rgba(0,0,0,0.08)] text-[var(--text-primary)]"
-                    : "bg-[rgba(0,0,0,0.03)] text-[var(--text-muted)]"
+                    ? "bg-white/[0.12] text-[var(--text-primary)]"
+                    : "bg-white/5 text-[var(--text-muted)]"
                 }`}
               >
                 {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
@@ -44,7 +44,7 @@ export default function OnboardingPage() {
                 {step.title}
               </span>
               {i < steps.length - 1 && (
-                <div className="w-12 h-px bg-[rgba(0,0,0,0.08)]" />
+                <div className="w-12 h-px bg-white/[0.12]" />
               )}
             </div>
           );
@@ -73,8 +73,8 @@ export default function OnboardingPage() {
                 onClick={() => setPlatform(p.id)}
                 className={`p-4 rounded-xl text-left transition-all ${
                   platform === p.id
-                    ? "bg-[rgba(0,0,0,0.06)] border border-[rgba(0,0,0,0.12)]"
-                    : "bg-[rgba(0,0,0,0.02)] border border-transparent hover:bg-[rgba(0,0,0,0.04)]"
+                    ? "bg-white/10 border border-white/[0.12]"
+                    : "bg-white/5 border border-transparent hover:bg-white/[0.07]"
                 }`}
               >
                 <p className="text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
@@ -102,7 +102,7 @@ export default function OnboardingPage() {
           {platform === "custom" && (
             <div className="space-y-3 mb-6">
               <GlassInput label="Agent Name" placeholder="My Support Bot" />
-              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+              <div className="p-3 rounded-xl bg-white/5">
                 <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL:</p>
                 <code className="text-xs font-mono text-[var(--text-primary)]">
                   https://agentgrade.com/api/webhooks/ingest/your-id
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
 
           {platform === "csv" && (
             <div className="mb-6">
-              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
+              <div className="border-2 border-dashed border-white/[0.12] rounded-xl p-8 text-center hover:border-white/20 transition-colors cursor-pointer">
                 <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-secondary)]">Drop your CSV or JSON file here</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -145,7 +145,7 @@ export default function OnboardingPage() {
             Optional but recommended.
           </p>
 
-          <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-6">
+          <div className="border-2 border-dashed border-white/[0.12] rounded-xl p-8 text-center hover:border-white/20 transition-colors cursor-pointer mb-6">
             <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
             <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">

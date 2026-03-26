@@ -46,10 +46,10 @@ export default function BenchmarksPage() {
                 </div>
               </div>
               {/* Benchmark bar */}
-              <div className="relative h-3 rounded-full bg-[rgba(0,0,0,0.04)]">
+              <div className="relative h-3 rounded-full bg-white/[0.07]">
                 {/* P25-P75 range */}
                 <div
-                  className="absolute top-0 h-full rounded-full bg-[rgba(0,0,0,0.06)]"
+                  className="absolute top-0 h-full rounded-full bg-white/10"
                   style={{
                     left: `${b.p25 * 100}%`,
                     width: `${(b.p75 - b.p25) * 100}%`,
@@ -57,7 +57,7 @@ export default function BenchmarksPage() {
                 />
                 {/* Median marker */}
                 <div
-                  className="absolute top-0 h-full w-0.5 bg-[rgba(0,0,0,0.15)]"
+                  className="absolute top-0 h-full w-0.5 bg-white/20"
                   style={{ left: `${b.p50 * 100}%` }}
                 />
                 {/* Your score marker */}

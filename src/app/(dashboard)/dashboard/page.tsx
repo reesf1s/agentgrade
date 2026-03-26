@@ -63,32 +63,33 @@ export default function DashboardPage() {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
-                  <CartesianGrid stroke="rgba(0,0,0,0.04)" strokeDasharray="3 3" />
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 11, fill: "var(--text-muted)" }}
                     tickFormatter={(v) => v.slice(5)}
-                    axisLine={{ stroke: "rgba(0,0,0,0.06)" }}
+                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0.3, 1]}
                     tick={{ fontSize: 11, fill: "var(--text-muted)" }}
                     tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-                    axisLine={{ stroke: "rgba(0,0,0,0.06)" }}
+                    axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
                     tickLine={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "rgba(255,255,255,0.9)",
+                      background: "rgba(20,10,40,0.85)",
                       backdropFilter: "blur(12px)",
-                      border: "1px solid rgba(0,0,0,0.06)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "white",
                       borderRadius: "12px",
                       fontSize: 12,
                     }}
                     formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]}
                   />
-                  <Line type="monotone" dataKey="overall" stroke="#111827" strokeWidth={2} dot={false} name="Overall" />
+                  <Line type="monotone" dataKey="overall" stroke="#ffffff" strokeWidth={2} dot={false} name="Overall" />
                   <Line type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} dot={false} name="Accuracy" opacity={0.6} />
                   <Line type="monotone" dataKey="hallucination" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Hallucination" opacity={0.6} />
                   <Line type="monotone" dataKey="resolution" stroke="#F59E0B" strokeWidth={1.5} dot={false} name="Resolution" opacity={0.6} />
@@ -107,7 +108,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               {SEED_ALERTS.map((alert) => (
-                <div key={alert.id} className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <div key={alert.id} className="p-3 rounded-xl bg-white/[0.05]">
                   <p className="text-sm font-medium text-[var(--text-primary)] mb-1">{alert.title}</p>
                   <p className="text-xs text-[var(--text-muted)]">{alert.description}</p>
                 </div>
@@ -120,7 +121,7 @@ export default function DashboardPage() {
               <Brain className="w-4 h-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Fix</h2>
             </div>
-            <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+            <div className="p-3 rounded-xl bg-white/[0.05]">
               <p className="text-sm text-[var(--text-primary)] mb-2">
                 Agent fabricating non-existent integrations
               </p>
