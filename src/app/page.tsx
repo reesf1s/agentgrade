@@ -20,13 +20,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-sidebar !border-r-0 border-b border-[var(--glass-border)]">
+      <nav className="glass-sidebar fixed top-0 left-0 right-0 z-50 border-b border-[var(--glass-border)] !border-r-0">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-[var(--text-primary)]" />
+              <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">AgentGrade</span>
+            <span className="text-lg font-semibold tracking-tight">AgentGrade</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/sign-in" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
@@ -75,16 +75,16 @@ export default function LandingPage() {
                 { label: "Hallucination Rate", value: "6.3%", color: "score-critical" },
                 { label: "Escalation Rate", value: "9.4%", color: "score-warning" },
               ].map((stat) => (
-                <div key={stat.label} className="bg-[rgba(0,0,0,0.04)] backdrop-blur-md border border-[var(--glass-border)] rounded-xl p-4">
+                <div key={stat.label} className="glass-static !rounded-xl p-4">
                   <p className="text-xs text-[var(--text-muted)] mb-1">{stat.label}</p>
-                  <p className={`text-2xl font-bold font-mono ${stat.color || "text-[var(--text-primary)]"}`}>{stat.value}</p>
+                  <p className={`text-2xl font-bold font-mono ${stat.color}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
             <div className="glass-static !rounded-xl p-4 mb-4">
               <p className="text-sm font-medium text-[var(--text-primary)] mb-3">This week&apos;s top prompt improvement</p>
               <div className="flex items-start gap-3 p-3 rounded-lg bg-[rgba(0,0,0,0.02)]">
-                <Brain className="w-5 h-5 text-white/50 mt-0.5 flex-shrink-0" />
+                <Brain className="w-5 h-5 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-[var(--text-primary)]">
                     Your agent fabricated 3 integrations this week. Add an explicit integration list to the system prompt.
@@ -130,7 +130,7 @@ export default function LandingPage() {
               { icon: Zap, title: "Webhook any agent", desc: "Send conversations via our webhook URL. Works with any custom-built AI agent." },
             ].map((step, i) => (
               <GlassCard key={i}>
-                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.06)] flex items-center justify-center mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.04)] flex items-center justify-center mb-4">
                   <step.icon className="w-5 h-5 text-[var(--text-secondary)]" />
                 </div>
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{step.title}</h3>
@@ -158,7 +158,7 @@ export default function LandingPage() {
               { icon: FileText, title: "Knowledge Gap Detection", desc: "Identifies topics your agent can't answer well and recommends exactly what to add to your knowledge base." },
             ].map((feature, i) => (
               <GlassCard key={i}>
-                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.06)] flex items-center justify-center mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.04)] flex items-center justify-center mb-4">
                   <feature.icon className="w-5 h-5 text-[var(--text-secondary)]" />
                 </div>
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{feature.title}</h3>
@@ -189,7 +189,7 @@ export default function LandingPage() {
                 features: ["Unlimited conversations", "Custom scoring dimensions", "API access", "Dedicated onboarding", "SLA", "SSO"],
               },
             ].map((tier) => (
-              <GlassCard key={tier.plan} className={tier.featured ? "!border-white/30 ring-1 ring-white/10" : ""}>
+              <GlassCard key={tier.plan} className={tier.featured ? "!border-[rgba(0,0,0,0.12)] ring-1 ring-[rgba(0,0,0,0.04)]" : ""}>
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{tier.plan}</h3>
                 <div className="flex items-baseline gap-1 mb-6">
                   <span className="text-3xl font-bold font-mono text-[var(--text-primary)]">{tier.price}</span>
@@ -237,8 +237,8 @@ export default function LandingPage() {
       <footer className="border-t border-[var(--glass-border)] py-8 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-[rgba(0,0,0,0.1)] flex items-center justify-center">
-              <Zap className="w-3 h-3 text-[var(--text-primary)]" />
+            <div className="w-6 h-6 rounded-md bg-[var(--text-primary)] flex items-center justify-center">
+              <Zap className="w-3 h-3 text-white" />
             </div>
             <span className="text-sm font-medium text-[var(--text-secondary)]">AgentGrade</span>
           </div>

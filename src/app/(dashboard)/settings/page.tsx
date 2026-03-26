@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
                 <div className="mt-6">
                   <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Or upload conversations</h3>
-                  <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.1)] transition-colors cursor-pointer">
+                  <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
                     <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
                     <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
                   </div>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
               <p className="text-xs text-[var(--text-muted)] mb-6">
                 Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
               </p>
-              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.1)] transition-colors cursor-pointer mb-4">
+              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-4">
                 <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files here</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                     <span className="text-[var(--text-primary)] font-mono">127 / 5,000</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
-                    <div className="h-full rounded-full bg-[rgba(0,0,0,0.1)]" style={{ width: "2.5%" }} />
+                    <div className="h-full rounded-full bg-[var(--text-primary)]" style={{ width: "2.5%" }} />
                   </div>
                 </div>
               </div>

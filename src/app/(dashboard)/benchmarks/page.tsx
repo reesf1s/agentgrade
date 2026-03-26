@@ -57,7 +57,7 @@ export default function BenchmarksPage() {
                 />
                 {/* Median marker */}
                 <div
-                  className="absolute top-0 h-full w-0.5 bg-[rgba(0,0,0,0.1)]"
+                  className="absolute top-0 h-full w-0.5 bg-[rgba(0,0,0,0.15)]"
                   style={{ left: `${b.p50 * 100}%` }}
                 />
                 {/* Your score marker */}

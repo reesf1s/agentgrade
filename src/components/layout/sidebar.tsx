@@ -30,7 +30,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 pb-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[rgba(0,0,0,0.1)] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center">
             <Zap className="w-4 h-4 text-white" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">

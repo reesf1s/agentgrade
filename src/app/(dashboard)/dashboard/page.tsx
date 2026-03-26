@@ -83,7 +83,6 @@ export default function DashboardPage() {
                       background: "rgba(255,255,255,0.9)",
                       backdropFilter: "blur(12px)",
                       border: "1px solid rgba(0,0,0,0.06)",
-                      
                       borderRadius: "12px",
                       fontSize: 12,
                     }}
@@ -108,7 +107,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               {SEED_ALERTS.map((alert) => (
-                <div key={alert.id} className="p-3 rounded-xl bg-white/[0.05]">
+                <div key={alert.id} className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
                   <p className="text-sm font-medium text-[var(--text-primary)] mb-1">{alert.title}</p>
                   <p className="text-xs text-[var(--text-muted)]">{alert.description}</p>
                 </div>
@@ -121,7 +120,7 @@ export default function DashboardPage() {
               <Brain className="w-4 h-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Fix</h2>
             </div>
-            <div className="p-3 rounded-xl bg-white/[0.05]">
+            <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
               <p className="text-sm text-[var(--text-primary)] mb-2">
                 Agent fabricating non-existent integrations
               </p>

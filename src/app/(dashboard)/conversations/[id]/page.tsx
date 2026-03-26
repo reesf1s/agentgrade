@@ -125,7 +125,7 @@ export default function ConversationDetailPage() {
                     <p className="text-xs text-[var(--text-secondary)] mb-3">
                       <strong>Current behavior:</strong> {imp.current_behavior}
                     </p>
-                    <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.02)] font-mono text-xs text-[var(--text-primary)] leading-relaxed">
+                    <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.03)] font-mono text-xs text-[var(--text-primary)] leading-relaxed">
                       {imp.recommended_prompt_change}
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mt-2">

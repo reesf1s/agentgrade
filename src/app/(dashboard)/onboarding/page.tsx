@@ -28,10 +28,10 @@ export default function OnboardingPage() {
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                   isDone
-                    ? "bg-[rgba(0,0,0,0.1)] text-white"
+                    ? "bg-[var(--text-primary)] text-white"
                     : isActive
                     ? "bg-[rgba(0,0,0,0.08)] text-[var(--text-primary)]"
-                    : "bg-[rgba(0,0,0,0.02)] text-[var(--text-muted)]"
+                    : "bg-[rgba(0,0,0,0.03)] text-[var(--text-muted)]"
                 }`}
               >
                 {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
                 onClick={() => setPlatform(p.id)}
                 className={`p-4 rounded-xl text-left transition-all ${
                   platform === p.id
-                    ? "bg-[rgba(0,0,0,0.06)] border border-[rgba(0,0,0,0.08)]"
+                    ? "bg-[rgba(0,0,0,0.06)] border border-[rgba(0,0,0,0.12)]"
                     : "bg-[rgba(0,0,0,0.02)] border border-transparent hover:bg-[rgba(0,0,0,0.04)]"
                 }`}
               >
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
 
           {platform === "csv" && (
             <div className="mb-6">
-              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.1)] transition-colors cursor-pointer">
+              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
                 <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-secondary)]">Drop your CSV or JSON file here</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -145,7 +145,7 @@ export default function OnboardingPage() {
             Optional but recommended.
           </p>
 
-          <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.1)] transition-colors cursor-pointer mb-6">
+          <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-6">
             <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
             <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">

@@ -56,7 +56,7 @@ export default function ConversationsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-all capitalize ${
                 scoreFilter === f
                   ? "bg-[rgba(0,0,0,0.06)] text-[var(--text-primary)] font-medium"
-                  : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.02)]"
+                  : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.03)]"
               }`}
             >
               {f}
