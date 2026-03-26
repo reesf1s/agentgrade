@@ -1,35 +1,27 @@
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Only enable Clerk middleware when keys are configured
-const hasClerkKeys = !!(
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-  process.env.CLERK_SECRET_KEY
-);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
+  "/api/webhooks/ingest(.*)",
+]);
 
-export default async function middleware(request: NextRequest) {
-  if (hasClerkKeys) {
-    // Dynamic import to avoid initialization error when keys missing
-    const { clerkMiddleware, createRouteMatcher } = await import(
-      "@clerk/nextjs/server"
-    );
-    const isPublicRoute = createRouteMatcher([
-      "/",
-      "/sign-in(.*)",
-      "/sign-up(.*)",
-      "/api/webhooks(.*)",
-    ]);
-
-    return clerkMiddleware(async (auth, req) => {
-      if (!isPublicRoute(req)) {
-        await auth.protect();
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  })(request, {} as any);
+export default function middleware(request: NextRequest) {
+  // If Clerk keys are not set, let everything through (demo mode)
+  if (!process.env.CLERK_SECRET_KEY) {
+    return NextResponse.next();
   }
 
-  // No Clerk keys — let everything through (demo mode)
-  return NextResponse.next();
+  return clerkMiddleware(async (auth, req) => {
+    if (!isPublicRoute(req)) {
+      await auth.protect();
+    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  })(request, {} as any);
 }
 
 export const config = {

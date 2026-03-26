@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Light Theme (default) ─────────────────────────────────────── */
 :root {
   --background: #ffffff;
   --foreground: #111827;
@@ -10,9 +11,39 @@
   --glass-bg-elevated: rgba(255, 255, 255, 0.65);
   --glass-border: rgba(0, 0, 0, 0.06);
   --glass-border-hover: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --glass-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.06);
   --text-primary: #111827;
   --text-secondary: #6B7280;
   --text-muted: #9CA3AF;
+  --surface: rgba(0, 0, 0, 0.02);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --divider: rgba(0, 0, 0, 0.04);
+  --btn-primary-bg: rgba(0, 0, 0, 0.85);
+  --btn-primary-hover: rgba(0, 0, 0, 0.95);
+  --btn-primary-text: #ffffff;
+}
+
+/* ─── Dark Theme ────────────────────────────────────────────────── */
+.dark {
+  --background: #0A0A0F;
+  --foreground: rgba(255, 255, 255, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-hover: rgba(255, 255, 255, 0.06);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --glass-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.5);
+  --text-muted: rgba(255, 255, 255, 0.3);
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --divider: rgba(255, 255, 255, 0.04);
+  --btn-primary-bg: rgba(255, 255, 255, 0.1);
+  --btn-primary-hover: rgba(255, 255, 255, 0.15);
+  --btn-primary-text: rgba(255, 255, 255, 0.9);
 }
 
 body {
@@ -21,16 +52,18 @@ body {
   font-family: "Inter", var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Glass card base */
+/* ─── Glass Components ──────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--glass-shadow);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .glass:hover {
@@ -44,7 +77,7 @@ body {
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--glass-shadow-elevated);
 }
 
 .glass-static {
@@ -53,34 +86,39 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--glass-shadow);
 }
 
 .glass-sidebar {
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--glass-border);
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--glass-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
+  color: var(--text-primary);
   transition: all 0.2s ease;
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(0, 0, 0, 0.15);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0 0 3px rgba(128, 128, 128, 0.08);
+}
+
+.glass-input::placeholder {
+  color: var(--text-muted);
 }
 
 .glass-button {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
@@ -93,24 +131,23 @@ body {
 }
 
 .glass-button:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--glass-shadow);
 }
 
 .glass-button-primary {
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
-  border: 1px solid rgba(0, 0, 0, 0.9);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid transparent;
 }
 
 .glass-button-primary:hover {
-  background: rgba(0, 0, 0, 0.95);
-  border-color: rgba(0, 0, 0, 1);
-  color: white;
+  background: var(--btn-primary-hover);
+  color: var(--btn-primary-text);
 }
 
-/* Score colors */
+/* ─── Score Colors ──────────────────────────────────────────────── */
 .score-good { color: #10B981; }
 .score-warning { color: #F59E0B; }
 .score-critical { color: #EF4444; }
@@ -118,7 +155,7 @@ body {
 .score-bg-warning { background: rgba(245, 158, 11, 0.1); }
 .score-bg-critical { background: rgba(239, 68, 68, 0.1); }
 
-/* Glass table */
+/* ─── Glass Table ───────────────────────────────────────────────── */
 .glass-table {
   width: 100%;
   border-collapse: separate;
@@ -126,7 +163,7 @@ body {
 }
 
 .glass-table thead tr {
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--surface);
 }
 
 .glass-table thead th {
@@ -139,12 +176,12 @@ body {
 }
 
 .glass-table tbody tr {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid var(--divider);
   transition: background 0.15s ease;
 }
 
 .glass-table tbody tr:hover {
-  background: rgba(0, 0, 0, 0.015);
+  background: var(--surface);
 }
 
 .glass-table tbody td {
@@ -153,7 +190,7 @@ body {
   color: var(--text-primary);
 }
 
-/* Scrollbar */
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -163,10 +200,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--text-muted);
   border-radius: 3px;
+  opacity: 0.3;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  opacity: 0.5;
+}
+
+/* Dark mode select options */
+.dark select option {
+  background: #1a1a2e;
+  color: rgba(255, 255, 255, 0.9);
 }
