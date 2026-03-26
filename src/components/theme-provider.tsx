@@ -21,9 +21,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (stored) {
       setTheme(stored);
       document.documentElement.classList.toggle("dark", stored === "dark");
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
+    } else {
+      // Default to light — no OS preference detection
+      setTheme("light");
+      document.documentElement.classList.remove("dark");
     }
   }, []);
 
@@ -34,7 +35,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", next === "dark");
   };
 
-  // Prevent flash of wrong theme
   if (!mounted) return <>{children}</>;
 
   return (

@@ -37,8 +37,8 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const t = localStorage.getItem('agentgrade-theme');
-                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                var t = localStorage.getItem('agentgrade-theme');
+                if (t === 'dark') {
                   document.documentElement.classList.add('dark');
                 }
               } catch(e) {}
