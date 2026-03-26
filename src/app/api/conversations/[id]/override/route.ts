@@ -6,9 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     if (!body.dimension || body.override_score === undefined) {
@@ -21,7 +22,7 @@ export async function POST(
     // In production: store override in quality_overrides table
     // and use it to calibrate future scoring
     return NextResponse.json({
-      conversation_id: params.id,
+      conversation_id: id,
       dimension: body.dimension,
       original_score: body.original_score,
       override_score: body.override_score,
