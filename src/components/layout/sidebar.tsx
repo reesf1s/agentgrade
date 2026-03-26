@@ -10,8 +10,8 @@ import {
   BarChart3,
   Settings,
   Zap,
+  User,
 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -65,7 +65,9 @@ export function Sidebar() {
       {/* User */}
       <div className="p-4 border-t border-[var(--glass-border)]">
         <div className="flex items-center gap-3">
-          <UserButton />
+          <div className="w-8 h-8 rounded-full bg-[rgba(0,0,0,0.06)] flex items-center justify-center">
+            <User className="w-4 h-4 text-[var(--text-muted)]" />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-[var(--text-primary)] truncate">
               My Workspace
