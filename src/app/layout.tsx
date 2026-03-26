@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -20,22 +21,18 @@ export const metadata: Metadata = {
     "AI agent quality management platform. Automatically evaluate every conversation across accuracy, hallucination, resolution, tone, and sentiment.",
 };
 
-// Only use ClerkProvider with production keys
-const clerkPublishableKey =
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
-const isProductionClerk = clerkPublishableKey.startsWith("pk_live_");
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const inner = (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+  return (
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
               try {
                 var t = localStorage.getItem('agentgrade-theme');
                 if (t === 'dark') {
@@ -43,21 +40,15 @@ export default async function RootLayout({
                 }
               } catch(e) {}
             `,
-          }}
-        />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
+            }}
+          />
+        </head>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ThemeProvider>{children}</ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
-
-  if (isProductionClerk) {
-    const { ClerkProvider } = await import("@clerk/nextjs");
-    return <ClerkProvider>{inner}</ClerkProvider>;
-  }
-
-  return inner;
 }
