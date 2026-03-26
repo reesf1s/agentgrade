@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -21,18 +20,22 @@ export const metadata: Metadata = {
     "AI agent quality management platform. Automatically evaluate every conversation across accuracy, hallucination, resolution, tone, and sentiment.",
 };
 
-export default function RootLayout({
+// Only use ClerkProvider with production keys
+const clerkPublishableKey =
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
+const isProductionClerk = clerkPublishableKey.startsWith("pk_live_");
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
+  const inner = (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
               try {
                 const t = localStorage.getItem('agentgrade-theme');
                 if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -40,15 +43,21 @@ export default function RootLayout({
                 }
               } catch(e) {}
             `,
-            }}
-          />
-        </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <ThemeProvider>{children}</ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          }}
+        />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
   );
+
+  if (isProductionClerk) {
+    const { ClerkProvider } = await import("@clerk/nextjs");
+    return <ClerkProvider>{inner}</ClerkProvider>;
+  }
+
+  return inner;
 }
