@@ -21,20 +21,18 @@ export const metadata: Metadata = {
     "AI agent quality management platform. Automatically evaluate every conversation across accuracy, hallucination, resolution, tone, and sentiment.",
 };
 
-const hasClerkKeys = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const content = (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Prevent flash of wrong theme */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+  return (
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
               try {
                 const t = localStorage.getItem('agentgrade-theme');
                 if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -42,20 +40,15 @@ export default function RootLayout({
                 }
               } catch(e) {}
             `,
-          }}
-        />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
+            }}
+          />
+        </head>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ThemeProvider>{children}</ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
-
-  if (hasClerkKeys) {
-    return <ClerkProvider>{content}</ClerkProvider>;
-  }
-
-  return content;
 }
