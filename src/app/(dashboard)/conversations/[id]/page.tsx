@@ -1,18 +1,56 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
 import { GlassButton } from "@/components/ui/glass-button";
 import { scoreColor, formatScore } from "@/lib/utils";
-import { SEED_CONVERSATIONS } from "@/lib/db/seed-data";
 import { ArrowLeft, AlertTriangle, Brain, BookOpen, User, Bot, Headphones } from "lucide-react";
 import Link from "next/link";
+import type { Message, QualityScore, ClaimAnalysis } from "@/lib/db/types";
+
+interface ConversationDetail {
+  id: string;
+  customer_identifier?: string;
+  platform: string;
+  message_count: number;
+  was_escalated: boolean;
+  created_at: string;
+  messages: Message[];
+  quality_score: QualityScore | null;
+}
 
 export default function ConversationDetailPage() {
   const params = useParams();
-  const conv = SEED_CONVERSATIONS.find((c) => c.id === params.id);
+  const [conv, setConv] = useState<ConversationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!conv) {
+  useEffect(() => {
+    fetch(`/api/conversations/${params.id}`)
+      .then((r) => {
+        if (r.status === 404) { setNotFound(true); return null; }
+        return r.json();
+      })
+      .then((data) => { if (data) setConv(data); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl">
+        <Link href="/conversations" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-8">
+          <ArrowLeft className="w-4 h-4" /> Back to conversations
+        </Link>
+        <GlassCard className="p-12 text-center">
+          <p className="text-[var(--text-muted)]">Loading...</p>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  if (notFound || !conv) {
     return (
       <div className="max-w-4xl">
         <Link href="/conversations" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-8">
@@ -42,13 +80,13 @@ export default function ConversationDetailPage() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{conv.customer_identifier}</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{conv.customer_identifier || "Unknown"}</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             {conv.platform} &middot; {conv.message_count} messages
-            {conv.was_escalated && " \u00b7 Escalated"}
+            {conv.was_escalated && " · Escalated"}
           </p>
         </div>
-        <ScoreBadge score={qs.overall_score} size="lg" label="overall" />
+        {qs && <ScoreBadge score={qs.overall_score} size="lg" label="overall" />}
       </div>
 
       <div className="grid grid-cols-3 gap-6">
@@ -56,60 +94,57 @@ export default function ConversationDetailPage() {
         <div className="col-span-2 space-y-4">
           <GlassCard className="p-6">
             <h2 className="text-sm font-medium text-[var(--text-primary)] mb-5">Conversation</h2>
-            <div className="space-y-4">
-              {conv.messages.map((msg) => {
-                const config = roleConfig[msg.role];
-                const Icon = config.icon;
-                // Check if this message contains a flagged claim
-                const flaggedClaims = qs.claim_analysis.filter(
-                  (ca) => ca.verdict !== "verified" && msg.content.toLowerCase().includes(ca.claim.toLowerCase().slice(0, 20))
-                );
+            {conv.messages.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No messages found.</p>
+            ) : (
+              <div className="space-y-4">
+                {conv.messages.map((msg) => {
+                  const config = roleConfig[msg.role] || roleConfig.system;
+                  const Icon = config.icon;
+                  const flaggedClaims: ClaimAnalysis[] = qs?.claim_analysis?.filter(
+                    (ca) => ca.verdict !== "verified" && msg.content.toLowerCase().includes(ca.claim.toLowerCase().slice(0, 20))
+                  ) || [];
 
-                return (
-                  <div key={msg.id} className={`flex ${config.align === "ml-auto" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] ${config.bg} rounded-2xl p-4`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Icon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                        <span className="text-xs font-medium text-[var(--text-muted)]">{config.label}</span>
-                      </div>
-                      <p className="text-sm text-[var(--text-primary)] leading-relaxed">{msg.content}</p>
-
-                      {/* Inline annotations for flagged claims */}
-                      {flaggedClaims.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {flaggedClaims.map((claim, i) => (
-                            <div
-                              key={i}
-                              className={`flex items-start gap-2 p-2 rounded-lg text-xs ${
-                                claim.verdict === "fabricated"
-                                  ? "score-bg-critical"
-                                  : "score-bg-warning"
-                              }`}
-                            >
-                              <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
-                                claim.verdict === "fabricated" ? "score-critical" : "score-warning"
-                              }`} />
-                              <div>
-                                <span className={`font-medium capitalize ${
-                                  claim.verdict === "fabricated" ? "score-critical" : "score-warning"
-                                }`}>
-                                  {claim.verdict}:
-                                </span>{" "}
-                                <span className="text-[var(--text-secondary)]">{claim.evidence}</span>
-                              </div>
-                            </div>
-                          ))}
+                  return (
+                    <div key={msg.id} className={`flex ${config.align === "ml-auto" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] ${config.bg} rounded-2xl p-4`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                          <span className="text-xs font-medium text-[var(--text-muted)]">{config.label}</span>
                         </div>
-                      )}
+                        <p className="text-sm text-[var(--text-primary)] leading-relaxed">{msg.content}</p>
+                        {flaggedClaims.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {flaggedClaims.map((claim, i) => (
+                              <div
+                                key={i}
+                                className={`flex items-start gap-2 p-2 rounded-lg text-xs ${
+                                  claim.verdict === "fabricated" ? "score-bg-critical" : "score-bg-warning"
+                                }`}
+                              >
+                                <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
+                                  claim.verdict === "fabricated" ? "score-critical" : "score-warning"
+                                }`} />
+                                <div>
+                                  <span className={`font-medium capitalize ${
+                                    claim.verdict === "fabricated" ? "score-critical" : "score-warning"
+                                  }`}>{claim.verdict}:</span>{" "}
+                                  <span className="text-[var(--text-secondary)]">{claim.evidence}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </GlassCard>
 
           {/* Prompt Improvements */}
-          {qs.prompt_improvements.length > 0 && (
+          {qs && qs.prompt_improvements.length > 0 && (
             <GlassCard className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="w-4 h-4 text-[var(--text-secondary)]" />
@@ -128,9 +163,7 @@ export default function ConversationDetailPage() {
                     <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.03)] font-mono text-xs text-[var(--text-primary)] leading-relaxed">
                       {imp.recommended_prompt_change}
                     </div>
-                    <p className="text-xs text-[var(--text-muted)] mt-2">
-                      Expected impact: {imp.expected_impact}
-                    </p>
+                    <p className="text-xs text-[var(--text-muted)] mt-2">Expected impact: {imp.expected_impact}</p>
                   </div>
                 ))}
               </div>
@@ -138,7 +171,7 @@ export default function ConversationDetailPage() {
           )}
 
           {/* Knowledge Gaps */}
-          {qs.knowledge_gaps.length > 0 && (
+          {qs && qs.knowledge_gaps.length > 0 && (
             <GlassCard className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-4 h-4 text-[var(--text-secondary)]" />
@@ -159,90 +192,85 @@ export default function ConversationDetailPage() {
 
         {/* Score Sidebar */}
         <div className="space-y-4">
-          <GlassCard className="p-5">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-4">Quality Scores</h2>
-            <div className="space-y-4">
-              {[
-                { label: "Overall", score: qs.overall_score },
-                { label: "Accuracy", score: qs.accuracy_score },
-                { label: "Hallucination", score: qs.hallucination_score },
-                { label: "Resolution", score: qs.resolution_score },
-                { label: "Tone", score: qs.tone_score },
-                { label: "Sentiment", score: qs.sentiment_score },
-              ].map(({ label, score }) => (
-                <div key={label}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-[var(--text-secondary)]">{label}</span>
-                    <span className={`text-sm font-mono font-semibold ${scoreColor(score || 0)}`}>
-                      {formatScore(score || 0)}%
-                    </span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        (score || 0) >= 0.7
-                          ? "bg-score-good"
-                          : (score || 0) >= 0.4
-                          ? "bg-score-warning"
-                          : "bg-score-critical"
-                      }`}
-                      style={{ width: `${(score || 0) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-
-          {/* Summary */}
-          <GlassCard className="p-5">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary}</p>
-          </GlassCard>
-
-          {/* Flags */}
-          {qs.flags.length > 0 && (
-            <GlassCard className="p-5">
-              <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Flags</h2>
-              <div className="flex flex-wrap gap-2">
-                {qs.flags.map((flag, i) => (
-                  <span
-                    key={i}
-                    className="text-xs px-2.5 py-1 rounded-full bg-[rgba(239,68,68,0.08)] text-[#EF4444] font-medium"
-                  >
-                    {flag}
-                  </span>
-                ))}
-              </div>
-            </GlassCard>
-          )}
-
-          {/* Claim Analysis */}
-          {qs.claim_analysis.length > 0 && (
-            <GlassCard className="p-5">
-              <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Claim Verification</h2>
-              <div className="space-y-2.5">
-                {qs.claim_analysis.map((ca, i) => {
-                  const verdictColor = {
-                    verified: "score-good",
-                    unverifiable: "text-[var(--text-muted)]",
-                    contradicted: "score-warning",
-                    fabricated: "score-critical",
-                  }[ca.verdict];
-                  return (
-                    <div key={i} className="p-2.5 rounded-lg bg-[rgba(0,0,0,0.02)]">
-                      <p className="text-xs text-[var(--text-primary)] mb-1">{ca.claim}</p>
-                      <span className={`text-xs font-medium capitalize ${verdictColor}`}>
-                        {ca.verdict}
-                      </span>
+          {qs ? (
+            <>
+              <GlassCard className="p-5">
+                <h2 className="text-sm font-medium text-[var(--text-primary)] mb-4">Quality Scores</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: "Overall", score: qs.overall_score },
+                    { label: "Accuracy", score: qs.accuracy_score },
+                    { label: "Hallucination", score: qs.hallucination_score },
+                    { label: "Resolution", score: qs.resolution_score },
+                    { label: "Tone", score: qs.tone_score },
+                    { label: "Sentiment", score: qs.sentiment_score },
+                  ].map(({ label, score }) => (
+                    <div key={label}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+                        <span className={`text-sm font-mono font-semibold ${scoreColor(score || 0)}`}>
+                          {formatScore(score || 0)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            (score || 0) >= 0.7 ? "bg-score-good" : (score || 0) >= 0.4 ? "bg-score-warning" : "bg-score-critical"
+                          }`}
+                          style={{ width: `${(score || 0) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              </GlassCard>
+
+              <GlassCard className="p-5">
+                <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
+              </GlassCard>
+
+              {qs.flags.length > 0 && (
+                <GlassCard className="p-5">
+                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Flags</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {qs.flags.map((flag, i) => (
+                      <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-[rgba(239,68,68,0.08)] text-[#EF4444] font-medium">
+                        {flag}
+                      </span>
+                    ))}
+                  </div>
+                </GlassCard>
+              )}
+
+              {qs.claim_analysis.length > 0 && (
+                <GlassCard className="p-5">
+                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Claim Verification</h2>
+                  <div className="space-y-2.5">
+                    {qs.claim_analysis.map((ca, i) => {
+                      const verdictColor = {
+                        verified: "score-good",
+                        unverifiable: "text-[var(--text-muted)]",
+                        contradicted: "score-warning",
+                        fabricated: "score-critical",
+                      }[ca.verdict];
+                      return (
+                        <div key={i} className="p-2.5 rounded-lg bg-[rgba(0,0,0,0.02)]">
+                          <p className="text-xs text-[var(--text-primary)] mb-1">{ca.claim}</p>
+                          <span className={`text-xs font-medium capitalize ${verdictColor}`}>{ca.verdict}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </GlassCard>
+              )}
+            </>
+          ) : (
+            <GlassCard className="p-5">
+              <p className="text-sm text-[var(--text-muted)]">Scoring in progress...</p>
             </GlassCard>
           )}
 
-          {/* Override */}
           <GlassCard className="p-5">
             <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Override Score</h2>
             <p className="text-xs text-[var(--text-muted)] mb-3">
