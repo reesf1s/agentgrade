@@ -18,18 +18,18 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
 
 export default function LandingPage() {
   return (
-    <div className="gradient-bg-landing min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border-b border-[rgba(255,255,255,0.1)]">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass-sidebar !border-r-0 border-b border-[var(--glass-border)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center">
+              <Zap className="w-4 h-4 text-[var(--text-primary)]" />
             </div>
-            <span className="text-lg font-semibold tracking-tight text-white">AgentGrade</span>
+            <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">AgentGrade</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/sign-in" className="text-sm text-white/60 hover:text-white transition-colors">
+            <Link href="/sign-in" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
               Sign in
             </Link>
             <Link href="/sign-up" className="glass-button glass-button-primary text-sm !py-2 !px-4">
@@ -75,15 +75,15 @@ export default function LandingPage() {
                 { label: "Hallucination Rate", value: "6.3%", color: "score-critical" },
                 { label: "Escalation Rate", value: "9.4%", color: "score-warning" },
               ].map((stat) => (
-                <div key={stat.label} className="bg-white/[0.07] backdrop-blur-md border border-white/10 rounded-xl p-4">
-                  <p className="text-xs text-white/40 mb-1">{stat.label}</p>
-                  <p className={`text-2xl font-bold font-mono ${stat.color || "text-white"}`}>{stat.value}</p>
+                <div key={stat.label} className="bg-[rgba(0,0,0,0.04)] backdrop-blur-md border border-[var(--glass-border)] rounded-xl p-4">
+                  <p className="text-xs text-[var(--text-muted)] mb-1">{stat.label}</p>
+                  <p className={`text-2xl font-bold font-mono ${stat.color || "text-[var(--text-primary)]"}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
             <div className="glass-static !rounded-xl p-4 mb-4">
               <p className="text-sm font-medium text-[var(--text-primary)] mb-3">This week&apos;s top prompt improvement</p>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.05]">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[rgba(0,0,0,0.02)]">
                 <Brain className="w-5 h-5 text-white/50 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-[var(--text-primary)]">
@@ -100,7 +100,7 @@ export default function LandingPage() {
                   { customer: "anna@designco.com", score: 38, issue: "Fabricated Figma integration" },
                   { customer: "mike@startup.io", score: 45, issue: "Wrong refund amount" },
                 ].map((conv, i) => (
-                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.05]">
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-[rgba(0,0,0,0.02)]">
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-[var(--text-secondary)]">{conv.customer}</span>
                       <span className="text-xs text-[var(--text-muted)]">{conv.issue}</span>
@@ -130,8 +130,8 @@ export default function LandingPage() {
               { icon: Zap, title: "Webhook any agent", desc: "Send conversations via our webhook URL. Works with any custom-built AI agent." },
             ].map((step, i) => (
               <GlassCard key={i}>
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                  <step.icon className="w-5 h-5 text-white/60" />
+                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.06)] flex items-center justify-center mb-4">
+                  <step.icon className="w-5 h-5 text-[var(--text-secondary)]" />
                 </div>
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{step.title}</h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{step.desc}</p>
@@ -158,8 +158,8 @@ export default function LandingPage() {
               { icon: FileText, title: "Knowledge Gap Detection", desc: "Identifies topics your agent can't answer well and recommends exactly what to add to your knowledge base." },
             ].map((feature, i) => (
               <GlassCard key={i}>
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                  <feature.icon className="w-5 h-5 text-white/60" />
+                <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,0,0.06)] flex items-center justify-center mb-4">
+                  <feature.icon className="w-5 h-5 text-[var(--text-secondary)]" />
                 </div>
                 <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{feature.title}</h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{feature.desc}</p>
@@ -234,15 +234,15 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-8 px-6">
+      <footer className="border-t border-[var(--glass-border)] py-8 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center">
-              <Zap className="w-3 h-3 text-white" />
+            <div className="w-6 h-6 rounded-md bg-[rgba(0,0,0,0.1)] flex items-center justify-center">
+              <Zap className="w-3 h-3 text-[var(--text-primary)]" />
             </div>
-            <span className="text-sm font-medium text-white/60">AgentGrade</span>
+            <span className="text-sm font-medium text-[var(--text-secondary)]">AgentGrade</span>
           </div>
-          <p className="text-xs text-white/30">&copy; 2026 AgentGrade. All rights reserved.</p>
+          <p className="text-xs text-[var(--text-muted)]">&copy; 2026 AgentGrade. All rights reserved.</p>
         </div>
       </footer>
     </div>

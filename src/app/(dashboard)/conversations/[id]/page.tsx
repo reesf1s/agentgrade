@@ -28,10 +28,10 @@ export default function ConversationDetailPage() {
   const qs = conv.quality_score;
 
   const roleConfig = {
-    customer: { icon: User, label: "Customer", bg: "bg-white/5", align: "mr-auto" },
-    agent: { icon: Bot, label: "AI Agent", bg: "bg-white/[0.07]", align: "ml-auto" },
+    customer: { icon: User, label: "Customer", bg: "bg-[rgba(0,0,0,0.02)]", align: "mr-auto" },
+    agent: { icon: Bot, label: "AI Agent", bg: "bg-[rgba(0,0,0,0.04)]", align: "ml-auto" },
     human_agent: { icon: Headphones, label: "Human Agent", bg: "bg-[rgba(59,130,246,0.05)]", align: "ml-auto" },
-    system: { icon: Bot, label: "System", bg: "bg-white/5", align: "mx-auto" },
+    system: { icon: Bot, label: "System", bg: "bg-[rgba(0,0,0,0.02)]", align: "mx-auto" },
   };
 
   return (
@@ -117,7 +117,7 @@ export default function ConversationDetailPage() {
               </div>
               <div className="space-y-4">
                 {qs.prompt_improvements.map((imp, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-white/5">
+                  <div key={i} className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-medium text-[var(--text-primary)]">{imp.issue}</p>
                       <SeverityBadge severity={imp.priority === "high" ? "high" : imp.priority === "medium" ? "medium" : "low"} />
@@ -125,7 +125,7 @@ export default function ConversationDetailPage() {
                     <p className="text-xs text-[var(--text-secondary)] mb-3">
                       <strong>Current behavior:</strong> {imp.current_behavior}
                     </p>
-                    <div className="p-3 rounded-lg bg-white/5 font-mono text-xs text-[var(--text-primary)] leading-relaxed">
+                    <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.02)] font-mono text-xs text-[var(--text-primary)] leading-relaxed">
                       {imp.recommended_prompt_change}
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mt-2">
@@ -146,7 +146,7 @@ export default function ConversationDetailPage() {
               </div>
               <div className="space-y-3">
                 {qs.knowledge_gaps.map((gap, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-white/5">
+                  <div key={i} className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
                     <p className="text-sm font-medium text-[var(--text-primary)] capitalize mb-1">{gap.topic}</p>
                     <p className="text-xs text-[var(--text-secondary)] mb-2">{gap.description}</p>
                     <p className="text-xs text-[var(--text-muted)]">Suggested content: {gap.suggested_content}</p>
@@ -177,7 +177,7 @@ export default function ConversationDetailPage() {
                       {formatScore(score || 0)}%
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/[0.07]">
+                  <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
                     <div
                       className={`h-full rounded-full transition-all ${
                         (score || 0) >= 0.7
@@ -230,7 +230,7 @@ export default function ConversationDetailPage() {
                     fabricated: "score-critical",
                   }[ca.verdict];
                   return (
-                    <div key={i} className="p-2.5 rounded-lg bg-white/5">
+                    <div key={i} className="p-2.5 rounded-lg bg-[rgba(0,0,0,0.02)]">
                       <p className="text-xs text-[var(--text-primary)] mb-1">{ca.claim}</p>
                       <span className={`text-xs font-medium capitalize ${verdictColor}`}>
                         {ca.verdict}
