@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -677,7 +677,7 @@ function BillingTab() {
 }
 
 // ─── Main Settings page ───────────────────────────────────────────────────────
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams?.get("tab") ?? "connections");
 
@@ -719,5 +719,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

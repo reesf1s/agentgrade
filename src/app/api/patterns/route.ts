@@ -66,7 +66,7 @@ export async function POST() {
 }
 
 // Shared pattern detection helper used by GET (auto-detect) and POST (manual trigger)
-export async function detectAndStorePatterns(workspaceId: string) {
+async function detectAndStorePatterns(workspaceId: string) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

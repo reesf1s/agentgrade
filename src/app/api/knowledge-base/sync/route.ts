@@ -40,7 +40,7 @@ export async function POST() {
     const apiKey = connection.api_key_encrypted;
 
     // Fetch published articles from Intercom
-    let articles: IntercomArticle[] = [];
+    const articles: IntercomArticle[] = [];
     let page = 1;
     let hasMore = true;
 
