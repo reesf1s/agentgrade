@@ -2,42 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { runScoringPipeline } from "@/lib/scoring";
 
-type MessageRole = "agent" | "customer" | "human_agent" | "system";
-
 /**
- * POST /api/webhooks/intercom
- * Receives Intercom conversation webhooks.
- *
- * Auth: X-AgentGrade-Secret: <agent_connection.webhook_secret>
- *
- * Currently handles:
- *   - conversation.admin.closed  → ingest + score
- *   - ping                       → echo
+ * Intercom webhook receiver.
+ * Authenticate by linking your Intercom workspace to an AgentGrade agent_connection.
+ * Include your webhook_secret in the X-AgentGrade-Secret header.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const topic = body.topic;
 
-    // Respond to Intercom ping immediately
+    // Intercom ping/test
     if (topic === "ping") {
       return NextResponse.json({ received: true });
     }
 
-    // We only process closed conversations (complete, ready to score)
+    // Only process closed conversations (fully scored)
     if (topic !== "conversation.admin.closed") {
       return NextResponse.json({ received: true, topic, note: "Event type not processed" });
     }
 
     const intercomConversation = body.data?.item;
     if (!intercomConversation) {
-      return NextResponse.json({ error: "No conversation data in payload" }, { status: 400 });
+      return NextResponse.json({ error: "No conversation data" }, { status: 400 });
     }
 
-    // Authenticate via shared secret header to find workspace + connection
+    // Authenticate via secret header to find workspace
     const secret = request.headers.get("x-agentgrade-secret") || "";
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, is_active")
       .eq("webhook_secret", secret)
       .eq("platform", "intercom")
@@ -48,20 +41,26 @@ export async function POST(request: NextRequest) {
     if (connError || !connection) {
       return NextResponse.json({ error: "Invalid or missing X-AgentGrade-Secret" }, { status: 401 });
     }
+
     if (!connection.is_active) {
       return NextResponse.json({ error: "Agent connection is inactive" }, { status: 403 });
     }
 
-    // Map Intercom conversation → our message schema
+    // Transform Intercom conversation format to our schema
     const externalId = String(intercomConversation.id);
     const customerEmail =
       intercomConversation.source?.author?.email ||
       intercomConversation.contacts?.contacts?.[0]?.external_id ||
       null;
 
-    const conversationParts: Array<{ role: MessageRole; content: string; timestamp?: string }> = [];
+    // Build messages from conversation parts
+    const conversationParts: Array<{
+      role: "agent" | "customer" | "human_agent" | "system";
+      content: string;
+      timestamp?: string;
+    }> = [];
 
-    // Opening message from customer
+    // First message (customer's opening)
     if (intercomConversation.source?.body) {
       const text = stripHtml(intercomConversation.source.body);
       if (text) {
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Subsequent conversation parts (bot replies, admin messages, customer replies)
+    // Conversation parts (bot/admin replies + customer replies)
     const parts = intercomConversation.conversation_parts?.conversation_parts || [];
     for (const part of parts) {
       if (!part.body || part.part_type === "close" || part.part_type === "open") continue;
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
       if (!text) continue;
 
       const authorType = part.author?.type;
-      let role: MessageRole;
+      let role: "agent" | "customer" | "human_agent" | "system";
       if (authorType === "user" || authorType === "lead") {
         role = "customer";
       } else if (authorType === "bot") {
@@ -113,9 +112,9 @@ export async function POST(request: NextRequest) {
       .map((m) => new Date(m.timestamp!).getTime())
       .sort((a, b) => a - b);
 
-    // Idempotent upsert by external_id
+    // Upsert conversation (idempotent by external_id + workspace)
     const { data: existing } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id")
       .eq("workspace_id", connection.workspace_id)
       .eq("external_id", externalId)
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
       conversationId = existing.id;
     } else {
       const { data: conversation, error: convError } = await supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .insert({
           workspace_id: connection.workspace_id,
           agent_connection_id: connection.id,
@@ -154,7 +153,7 @@ export async function POST(request: NextRequest) {
       conversationId = conversation.id;
 
       // Insert messages
-      await supabaseAdmin.from("ag_messages").insert(
+      await supabaseAdmin.from("messages").insert(
         conversationParts.map((msg) => ({
           conversation_id: conversationId,
           role: msg.role,
@@ -165,19 +164,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log webhook event
-    // Non-fatal: log event asynchronously
-    void supabaseAdmin.from("ag_webhook_events").insert({
-      workspace_id: connection.workspace_id,
-      connection_id: connection.id,
-      event_source: "intercom",
-      event_type: topic,
-      payload: { intercom_id: externalId },
-      conversation_id: conversationId,
-      processed_at: new Date().toISOString(),
-    });
-
-    // Score asynchronously (don't re-score if already scored)
+    // Score asynchronously
     scoreIntercomConversationAsync(conversationId, conversationParts, connection.workspace_id);
 
     return NextResponse.json({ received: true, topic, conversation_id: conversationId });
@@ -187,25 +174,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── Async scoring ────────────────────────────────────────────────────────────
-
 async function scoreIntercomConversationAsync(
   conversationId: string,
   messages: Array<{ role: string; content: string; timestamp?: string }>,
   workspaceId: string
 ) {
   try {
-    // Skip if already scored
-    const { data: existingScore } = await supabaseAdmin
-      .from("ag_quality_scores")
+    // Don't re-score if already scored
+    const { data: existing } = await supabaseAdmin
+      .from("quality_scores")
       .select("id")
       .eq("conversation_id", conversationId)
       .single();
 
-    if (existingScore) return;
+    if (existing) return;
 
     const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .select("content")
       .eq("workspace_id", workspaceId)
       .limit(5);
@@ -224,7 +209,7 @@ async function scoreIntercomConversationAsync(
       knowledgeBaseContext,
     });
 
-    await supabaseAdmin.from("ag_quality_scores").insert({
+    await supabaseAdmin.from("quality_scores").insert({
       conversation_id: conversationId,
       ...scoreResult,
       scored_at: new Date().toISOString(),
@@ -235,8 +220,6 @@ async function scoreIntercomConversationAsync(
     console.error(`Scoring failed for Intercom conversation ${conversationId}:`, error);
   }
 }
-
-// ─── HTML stripping ───────────────────────────────────────────────────────────
 
 function stripHtml(html: string): string {
   return html

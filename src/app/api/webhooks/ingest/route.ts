@@ -3,32 +3,30 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { runScoringPipeline } from "@/lib/scoring";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
-type MessageRole = typeof VALID_ROLES[number];
 
 /**
- * POST /api/webhooks/ingest
- * Generic webhook for ingesting conversations from any platform.
+ * Generic webhook endpoint for ingesting conversations from any platform.
+ * Authenticate via: Authorization: Bearer <agent_connection.webhook_secret>
  *
- * Auth: Authorization: Bearer <agent_connection.webhook_secret>
- *
- * Body:
+ * Expected payload:
  * {
- *   conversation_id?: string,        // your platform's ID (for idempotency)
- *   platform?: string,               // defaults to connection.platform
- *   customer_identifier?: string,
- *   messages: [
- *     { role: 'agent'|'customer'|'human_agent'|'system', content: string, timestamp?: string }
+ *   "conversation_id": "ext-123",      // optional: your platform's ID
+ *   "platform": "custom",              // optional, defaults to "custom"
+ *   "customer_identifier": "user@example.com",  // optional
+ *   "messages": [
+ *     { "role": "customer", "content": "...", "timestamp": "2024-01-01T00:00:00Z" },
+ *     { "role": "agent",    "content": "...", "timestamp": "2024-01-01T00:01:00Z" }
  *   ],
- *   metadata?: object
+ *   "metadata": {}                     // optional
  * }
  */
 export async function POST(request: NextRequest) {
-  const receivedAt = new Date().toISOString();
-
   try {
-    // Authenticate: look up workspace connection by webhook_secret
+    // Authenticate: look up workspace by webhook_secret
     const authHeader = request.headers.get("authorization") || "";
-    const webhookSecret = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+    const webhookSecret = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
 
     if (!webhookSecret) {
       return NextResponse.json(
@@ -38,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, platform, is_active")
       .eq("webhook_secret", webhookSecret)
       .limit(1);
@@ -48,13 +46,14 @@ export async function POST(request: NextRequest) {
     if (connError || !connection) {
       return NextResponse.json({ error: "Invalid webhook secret" }, { status: 401 });
     }
+
     if (!connection.is_active) {
       return NextResponse.json({ error: "Agent connection is inactive" }, { status: 403 });
     }
 
     const body = await request.json();
 
-    // Validate messages array
+    // Validate messages
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return NextResponse.json(
         { error: "messages array is required and must not be empty" },
@@ -77,25 +76,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const messages = body.messages as Array<{ role: MessageRole; content: string; timestamp?: string }>;
-    const externalId: string | null = body.conversation_id || null;
-
-    // Idempotency: if we've already ingested this external_id for this workspace, return it
-    if (externalId) {
-      const { data: existing } = await supabaseAdmin
-        .from("ag_conversations")
-        .select("id")
-        .eq("workspace_id", connection.workspace_id)
-        .eq("external_id", externalId)
-        .single();
-      if (existing) {
-        return NextResponse.json({
-          success: true,
-          conversation_id: existing.id,
-          message: "Conversation already ingested (idempotent).",
-        });
-      }
-    }
+    const messages = body.messages as Array<{
+      role: typeof VALID_ROLES[number];
+      content: string;
+      timestamp?: string;
+    }>;
 
     const wasEscalated = messages.some((m) => m.role === "human_agent");
     const timestamps = messages
@@ -106,11 +91,11 @@ export async function POST(request: NextRequest) {
 
     // Insert conversation
     const { data: conversation, error: convError } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .insert({
         workspace_id: connection.workspace_id,
         agent_connection_id: connection.id,
-        external_id: externalId,
+        external_id: body.conversation_id || null,
         platform: body.platform || connection.platform || "custom",
         customer_identifier: body.customer_identifier || null,
         message_count: messages.length,
@@ -136,24 +121,14 @@ export async function POST(request: NextRequest) {
       metadata: {},
     }));
 
-    const { error: msgError } = await supabaseAdmin.from("ag_messages").insert(messageRows);
+    const { error: msgError } = await supabaseAdmin.from("messages").insert(messageRows);
+
     if (msgError) {
       console.error("Failed to insert messages:", msgError);
-      // Non-fatal — conversation was stored
+      // Don't fail the request - conversation was stored
     }
 
-    // Log webhook event
-    await supabaseAdmin.from("ag_webhook_events").insert({
-      workspace_id: connection.workspace_id,
-      connection_id: connection.id,
-      event_source: "ingest",
-      event_type: "conversation.ingested",
-      payload: { conversation_id: externalId, message_count: messages.length },
-      conversation_id: conversation.id,
-      processed_at: receivedAt,
-    });
-
-    // Trigger async scoring (fire-and-forget)
+    // Trigger scoring pipeline asynchronously (fire and forget)
     scoreConversationAsync(conversation.id, messages, connection.workspace_id);
 
     return NextResponse.json({
@@ -167,52 +142,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET /api/webhooks/ingest — returns integration docs
- */
-export async function GET() {
-  return NextResponse.json({
-    service: "AgentGrade Conversation Ingestion Webhook",
-    version: "1.0",
-    auth: "Authorization: Bearer <webhook_secret> (from Settings > Connections)",
-    docs: {
-      method: "POST",
-      content_type: "application/json",
-      required_fields: {
-        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system', content: string, timestamp?: string }",
-      },
-      optional_fields: {
-        conversation_id: "Your platform's conversation ID (used for idempotency)",
-        platform: "Platform name (defaults to connection platform)",
-        customer_identifier: "Customer email or ID",
-        metadata: "Additional metadata object",
-      },
-    },
-  });
-}
-
-// ─── Async scoring helper ────────────────────────────────────────────────────
-
 async function scoreConversationAsync(
   conversationId: string,
   messages: Array<{ role: string; content: string; timestamp?: string }>,
   workspaceId: string
 ) {
   try {
-    // Fetch KB context for this workspace (top 5 chunks)
+    // Fetch knowledge base context for this workspace (top 5 relevant chunks)
     const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .select("content")
       .eq("workspace_id", workspaceId)
       .limit(5);
 
     const knowledgeBaseContext = kbChunks?.map((c) => c.content) || [];
 
+    // Run full scoring pipeline (1 Claude API call)
     const scoreResult = await runScoringPipeline({
       messages: messages.map((m, i) => ({
         id: `msg-${i}`,
         conversation_id: conversationId,
-        role: m.role as MessageRole,
+        role: m.role as "agent" | "customer" | "human_agent" | "system",
         content: m.content,
         timestamp: m.timestamp || new Date().toISOString(),
         metadata: {},
@@ -221,15 +171,20 @@ async function scoreConversationAsync(
     });
 
     // Store quality score
-    await supabaseAdmin.from("ag_quality_scores").insert({
+    const { error: scoreError } = await supabaseAdmin.from("quality_scores").insert({
       conversation_id: conversationId,
       ...scoreResult,
       scored_at: new Date().toISOString(),
     });
 
-    // Check alert thresholds and fire alerts
+    if (scoreError) {
+      console.error("Failed to store quality score:", scoreError);
+      return;
+    }
+
+    // Check alert thresholds
     const { data: alertConfigs } = await supabaseAdmin
-      .from("ag_alert_configs")
+      .from("alert_configs")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("enabled", true);
@@ -246,7 +201,7 @@ async function scoreConversationAsync(
       for (const config of alertConfigs) {
         const actual = scoreMap[config.dimension];
         if (actual !== undefined && actual < config.threshold) {
-          await supabaseAdmin.from("ag_alerts").insert({
+          await supabaseAdmin.from("alerts").insert({
             workspace_id: workspaceId,
             alert_type: "score_below_threshold",
             title: `${config.dimension} score below threshold`,
@@ -261,14 +216,26 @@ async function scoreConversationAsync(
     console.log(`Scored conversation ${conversationId}: ${scoreResult.overall_score}`);
   } catch (error) {
     console.error(`Scoring failed for conversation ${conversationId}:`, error);
-
-    // Log the error to webhook_events (non-fatal)
-    void supabaseAdmin.from("ag_webhook_events").insert({
-      workspace_id: workspaceId,
-      event_source: "ingest",
-      event_type: "scoring.failed",
-      conversation_id: conversationId,
-      error: String(error),
-    });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    service: "AgentGrade Conversation Ingestion Webhook",
+    version: "1.0",
+    auth: "Authorization: Bearer <webhook_secret> (from Settings > Connections)",
+    docs: {
+      method: "POST",
+      content_type: "application/json",
+      required_fields: {
+        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system', content: string, timestamp?: string }",
+      },
+      optional_fields: {
+        conversation_id: "Your platform's conversation ID",
+        platform: "Platform name (defaults to 'custom')",
+        customer_identifier: "Customer email or ID",
+        metadata: "Additional metadata object",
+      },
+    },
+  });
 }

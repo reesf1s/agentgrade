@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 
-/**
- * PATCH /api/patterns/:id
- * Mark a failure pattern as resolved or re-open it.
- * Body: { is_resolved: boolean }
- */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,12 +15,8 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    if (typeof body.is_resolved !== "boolean") {
-      return NextResponse.json({ error: "is_resolved (boolean) is required" }, { status: 400 });
-    }
-
     const { error } = await supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .update({
         is_resolved: body.is_resolved,
         resolved_at: body.is_resolved ? new Date().toISOString() : null,

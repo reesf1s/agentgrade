@@ -4,13 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 /**
  * POST /api/conversations/:id/override
- * Submit a human quality override for a specific scoring dimension.
- * This calibrates future scoring without re-running the pipeline.
- *
- * Body: { dimension, override_score, reason? }
- *   dimension     — 'overall'|'accuracy'|'hallucination'|'resolution'|'tone'|'sentiment'
- *   override_score — 0.0–1.0
- *   reason        — optional explanation
+ * Submit a human quality override for a specific dimension.
  */
 export async function POST(
   request: NextRequest,
@@ -32,16 +26,9 @@ export async function POST(
       );
     }
 
-    if (body.override_score < 0 || body.override_score > 1) {
-      return NextResponse.json(
-        { error: "override_score must be between 0.0 and 1.0" },
-        { status: 400 }
-      );
-    }
-
     // Verify conversation belongs to this workspace
     const { data: conversation, error: convError } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id")
       .eq("id", conversationId)
       .eq("workspace_id", ctx.workspace.id)
@@ -53,7 +40,7 @@ export async function POST(
 
     // Get the quality score
     const { data: qualityScore, error: qsError } = await supabaseAdmin
-      .from("ag_quality_scores")
+      .from("quality_scores")
       .select("id, overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score")
       .eq("conversation_id", conversationId)
       .single();
@@ -79,8 +66,8 @@ export async function POST(
       );
     }
 
-    const { data: override, error: overrideError } = await supabaseAdmin
-      .from("ag_quality_overrides")
+    const { error: overrideError } = await supabaseAdmin
+      .from("quality_overrides")
       .insert({
         quality_score_id: qualityScore.id,
         dimension: body.dimension,
@@ -88,9 +75,7 @@ export async function POST(
         override_score: body.override_score,
         reason: body.reason || null,
         overridden_by: ctx.member.clerk_user_id,
-      })
-      .select("*")
-      .single();
+      });
 
     if (overrideError) {
       console.error("Failed to store override:", overrideError);
@@ -99,8 +84,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      override,
       conversation_id: conversationId,
+      dimension: body.dimension,
+      original_score: originalScore,
+      override_score: body.override_score,
       message: "Override recorded. This will calibrate future scoring.",
     });
   } catch (error) {

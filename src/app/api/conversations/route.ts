@@ -15,19 +15,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search        = searchParams.get("search") || "";
-    const scoreFilter   = searchParams.get("score_filter") || "all";
-    const platform      = searchParams.get("platform") || "all";
-    const escalated     = searchParams.get("escalated") || "all";
-    const dateFrom      = searchParams.get("from") || "";
-    const dateTo        = searchParams.get("to") || "";
-    const limit         = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    // Support both offset-based (new) and page-based (legacy) pagination
-    const offsetParam   = searchParams.get("offset");
-    const pageParam     = searchParams.get("page");
-    const offset = offsetParam !== null
-      ? parseInt(offsetParam)
-      : (parseInt(pageParam || "1") - 1) * limit;
+    const search = searchParams.get("search") || "";
+    const scoreFilter = searchParams.get("score_filter") || "all";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
       .from("conversations")
@@ -37,23 +29,9 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (search) {
-      query = query.ilike("customer_identifier", `%${search}%`);
-    }
-    if (platform !== "all") {
-      query = query.eq("platform", platform);
-    }
-    if (escalated === "yes") {
-      query = query.eq("was_escalated", true);
-    } else if (escalated === "no") {
-      query = query.eq("was_escalated", false);
-    }
-    if (dateFrom) {
-      query = query.gte("created_at", new Date(dateFrom).toISOString());
-    }
-    if (dateTo) {
-      const to = new Date(dateTo);
-      to.setDate(to.getDate() + 1); // include the full to-day
-      query = query.lt("created_at", to.toISOString());
+      query = query.or(
+        `customer_identifier.ilike.%${search}%`
+      );
     }
 
     const { data, count, error } = await query;
@@ -80,8 +58,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       conversations,
       total: count || 0,
+      page,
       limit,
-      offset,
     });
   } catch (error) {
     console.error("Conversations API error:", error);

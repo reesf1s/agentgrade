@@ -2,107 +2,77 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 
-const VALID_DIMENSIONS = ["overall", "accuracy", "hallucination", "resolution", "tone", "sentiment"];
-
 /**
  * GET /api/alerts/config
- * Returns the current alert threshold configuration for the workspace.
+ * Returns the alert threshold configuration for the workspace.
  */
 export async function GET() {
   try {
     const ctx = await getWorkspaceContext();
-    if (!ctx) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data, error } = await supabaseAdmin
-      .from("ag_alert_configs")
+      .from("alert_configs")
       .select("*")
-      .eq("workspace_id", ctx.workspace.id)
-      .order("dimension");
+      .eq("workspace_id", ctx.workspace.id);
 
     if (error) {
       return NextResponse.json({ error: "Failed to fetch alert configs" }, { status: 500 });
     }
 
-    // Fill in defaults for dimensions that haven't been configured yet
-    const configuredDimensions = new Set((data || []).map((c) => c.dimension));
-    const defaults = VALID_DIMENSIONS
-      .filter((d) => !configuredDimensions.has(d))
-      .map((d) => ({
-        id: null,
-        workspace_id: ctx.workspace.id,
-        dimension: d,
-        threshold: d === "hallucination" ? 0.6 : 0.5,
-        enabled: false, // not yet saved
-      }));
-
-    return NextResponse.json({
-      configs: [...(data || []), ...defaults],
-    });
-  } catch (error) {
-    console.error("Alert config GET error:", error);
+    return NextResponse.json({ configs: data || [] });
+  } catch (err) {
+    console.error("alerts/config GET error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 /**
  * POST /api/alerts/config
- * Set or update alert thresholds.
- * Body: { configs: [{ dimension, threshold, enabled }] }
- * Or a single: { dimension, threshold, enabled }
+ * Saves alert threshold configuration for the workspace.
+ * Body: { thresholds: [{ dimension, threshold, enabled }], notification_email? }
  */
 export async function POST(request: NextRequest) {
   try {
     const ctx = await getWorkspaceContext();
-    if (!ctx) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!["owner", "admin"].includes(ctx.member.role)) {
-      return NextResponse.json({ error: "Only owners and admins can configure alerts" }, { status: 403 });
-    }
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
+    const { thresholds, notification_email } = body;
 
-    // Support both array and single object
-    const updates = Array.isArray(body.configs) ? body.configs : [body];
+    if (!Array.isArray(thresholds)) {
+      return NextResponse.json({ error: "thresholds must be an array" }, { status: 400 });
+    }
 
-    for (const update of updates) {
-      if (!update.dimension) {
-        return NextResponse.json({ error: "dimension is required for each config" }, { status: 400 });
-      }
-      if (!VALID_DIMENSIONS.includes(update.dimension)) {
-        return NextResponse.json(
-          { error: `Invalid dimension '${update.dimension}'. Must be one of: ${VALID_DIMENSIONS.join(", ")}` },
-          { status: 400 }
+    // Upsert each threshold — alert_configs table has (workspace_id, dimension) unique
+    for (const t of thresholds) {
+      if (!t.dimension || t.threshold === undefined) continue;
+      await supabaseAdmin
+        .from("alert_configs")
+        .upsert(
+          {
+            workspace_id: ctx.workspace.id,
+            dimension: t.dimension,
+            threshold: typeof t.threshold === "number" && t.threshold > 1
+              ? t.threshold / 100  // Convert % value to decimal
+              : t.threshold,
+            enabled: t.enabled !== false,
+          },
+          { onConflict: "workspace_id,dimension" }
         );
-      }
-      if (update.threshold !== undefined && (update.threshold < 0 || update.threshold > 1)) {
-        return NextResponse.json({ error: "threshold must be between 0.0 and 1.0" }, { status: 400 });
-      }
     }
 
-    // Upsert all configs
-    const upsertRows = updates.map((update: { dimension: string; threshold?: number; enabled?: boolean }) => ({
-      workspace_id: ctx.workspace.id,
-      dimension: update.dimension,
-      threshold: update.threshold ?? 0.5,
-      enabled: update.enabled ?? true,
-    }));
-
-    const { data, error } = await supabaseAdmin
-      .from("ag_alert_configs")
-      .upsert(upsertRows, { onConflict: "workspace_id,dimension" })
-      .select("*");
-
-    if (error) {
-      return NextResponse.json({ error: "Failed to save alert configs" }, { status: 500 });
+    // Optionally save notification email to workspace record
+    if (notification_email) {
+      await supabaseAdmin
+        .from("workspaces")
+        .update({ notification_email })
+        .eq("id", ctx.workspace.id);
     }
 
-    return NextResponse.json({ success: true, configs: data || [] });
-  } catch (error) {
-    console.error("Alert config POST error:", error);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("alerts/config POST error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -34,11 +34,10 @@ interface SeverityBadgeProps {
 }
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
-  // Use CSS-variable-aware styles that work in both light and dark mode
   const styles = {
-    low:      "bg-[rgba(156,163,175,0.12)] text-[rgba(156,163,175,0.9)]",
-    medium:   "score-bg-warning score-warning",
-    high:     "bg-[rgba(249,115,22,0.12)] text-[#F97316]",
+    low: "bg-gray-100 text-gray-600",
+    medium: "score-bg-warning score-warning",
+    high: "bg-orange-100 text-orange-700",
     critical: "score-bg-critical score-critical",
   };
 

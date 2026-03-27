@@ -1,45 +1,66 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 
 /**
- * GET /api/alerts
- * Returns unacknowledged alerts for the workspace, most recent first.
- * Query params: include_acknowledged=true to include all alerts.
+ * GET /api/alerts - fetch active alerts
+ * PATCH /api/alerts/:id - acknowledge an alert
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const ctx = await getWorkspaceContext();
     if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const includeAcknowledged = searchParams.get("include_acknowledged") === "true";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const offset = (page - 1) * limit;
-
-    let query = supabaseAdmin
-      .from("ag_alerts")
-      .select("*", { count: "exact" })
+    const { data, error } = await supabaseAdmin
+      .from("alerts")
+      .select("*")
       .eq("workspace_id", ctx.workspace.id)
-      .order("triggered_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (!includeAcknowledged) {
-      query = query.is("acknowledged_at", null);
-    }
-
-    const { data, count, error } = await query;
+      .is("acknowledged_at", null)
+      .order("triggered_at", { ascending: false });
 
     if (error) {
       return NextResponse.json({ error: "Failed to fetch alerts" }, { status: 500 });
     }
 
-    return NextResponse.json({ alerts: data || [], total: count || 0, page, limit });
+    return NextResponse.json({ alerts: data || [] });
   } catch (error) {
     console.error("Alerts GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const ctx = await getWorkspaceContext();
+    if (!ctx) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "alert id required" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("alerts")
+      .update({
+        acknowledged_at: new Date().toISOString(),
+        acknowledged_by: ctx.member.clerk_user_id,
+      })
+      .eq("id", id)
+      .eq("workspace_id", ctx.workspace.id);
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to acknowledge alert" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Alerts PATCH error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

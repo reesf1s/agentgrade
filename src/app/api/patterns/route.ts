@@ -5,7 +5,7 @@ import { detectPatterns } from "@/lib/scoring";
 
 /**
  * GET /api/patterns
- * Returns unresolved failure patterns. Auto-detects from recent conversations if none exist.
+ * Returns failure patterns. Re-runs detection on recent unresolved conversations if needed.
  */
 export async function GET() {
   try {
@@ -16,8 +16,9 @@ export async function GET() {
 
     const workspaceId = ctx.workspace.id;
 
+    // Return existing unresolved patterns
     const { data: patterns, error } = await supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
@@ -27,11 +28,11 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch patterns" }, { status: 500 });
     }
 
-    // Auto-detect from recent conversations if none exist
+    // If no patterns, try to detect from recent scored conversations
     if (!patterns || patterns.length === 0) {
       await detectAndStorePatterns(workspaceId);
       const { data: freshPatterns } = await supabaseAdmin
-        .from("ag_failure_patterns")
+        .from("failure_patterns")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("is_resolved", false)
@@ -48,7 +49,7 @@ export async function GET() {
 
 /**
  * POST /api/patterns
- * Re-runs pattern detection against recent conversations.
+ * Re-run pattern detection against recent conversations.
  */
 export async function POST() {
   try {
@@ -65,24 +66,23 @@ export async function POST() {
   }
 }
 
-// Shared pattern detection helper used by GET (auto-detect) and POST (manual trigger)
 async function detectAndStorePatterns(workspaceId: string) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: convs } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("id, created_at, was_escalated, ag_quality_scores(*)")
+    .from("conversations")
+    .select("id, created_at, quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
-    .not("ag_quality_scores", "is", null);
+    .not("quality_scores", "is", null);
 
   if (!convs || convs.length < 3) return;
 
   const scoredConversations = convs
-    .filter((c) => c.ag_quality_scores)
+    .filter((c) => c.quality_scores)
     .map((c) => {
-      const qs = (c.ag_quality_scores as unknown) as {
+      const qs = (c.quality_scores as unknown) as {
         overall_score: number;
         hallucination_score?: number;
         flags?: string[];
@@ -93,7 +93,6 @@ async function detectAndStorePatterns(workspaceId: string) {
       return {
         id: c.id,
         created_at: c.created_at,
-        was_escalated: c.was_escalated,
         quality_score: {
           overall_score: qs.overall_score,
           hallucination_score: qs.hallucination_score,
@@ -102,6 +101,7 @@ async function detectAndStorePatterns(workspaceId: string) {
           prompt_improvements: qs.prompt_improvements || [],
           knowledge_gaps: qs.knowledge_gaps || [],
         },
+        was_escalated: false,
       };
     });
 
@@ -111,9 +111,9 @@ async function detectAndStorePatterns(workspaceId: string) {
   const newPatterns = detectPatterns(scoredConversations as any);
 
   for (const pattern of newPatterns) {
-    // Upsert by title — avoid creating duplicates for the same pattern
+    // Upsert by title to avoid duplicates
     const { data: existing } = await supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("title", pattern.title)
@@ -121,7 +121,7 @@ async function detectAndStorePatterns(workspaceId: string) {
       .single();
 
     if (!existing) {
-      await supabaseAdmin.from("ag_failure_patterns").insert({
+      await supabaseAdmin.from("failure_patterns").insert({
         workspace_id: workspaceId,
         pattern_type: pattern.pattern_type,
         title: pattern.title,

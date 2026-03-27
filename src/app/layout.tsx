@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -36,14 +35,10 @@ export default function RootLayout({
               __html: `
               try {
                 var t = localStorage.getItem('agentgrade-theme');
-                // Default to dark mode unless user explicitly chose light
-                if (t !== 'light') {
+                if (t === 'dark') {
                   document.documentElement.classList.add('dark');
                 }
-              } catch(e) {
-                // Fallback: default to dark
-                document.documentElement.classList.add('dark');
-              }
+              } catch(e) {}
             `,
             }}
           />
@@ -51,9 +46,7 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <ThemeProvider>
-            <ToastProvider>{children}</ToastProvider>
-          </ThemeProvider>
+          <ThemeProvider>{children}</ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -5,15 +5,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 /**
  * POST /api/onboarding
  * Saves onboarding configuration: agent connection + alert thresholds.
- *
- * Body:
- * {
- *   platform: 'intercom'|'zendesk'|'custom'|'csv',
- *   name?: string,
- *   api_key?: string,
- *   config?: object,
- *   alert_thresholds?: [{ dimension: string, value: number (0–100) }]
- * }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,24 +17,19 @@ export async function POST(request: NextRequest) {
     const { platform, name, api_key, config, alert_thresholds } = body;
 
     const workspaceId = ctx.workspace.id;
+    let connectionId: string | null = null;
 
-    // Create agent connection if platform was provided
+    // Create agent connection if platform is provided
     if (platform) {
-      const validPlatforms = ["intercom", "zendesk", "custom", "csv"];
-      if (!validPlatforms.includes(platform)) {
-        return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
-      }
-
-      const webhookSecret = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentgrade.com";
-      const webhookUrl = `${appUrl}/api/webhooks/ingest`;
+      const webhookSecret = crypto.randomUUID().replace(/-/g, "");
+      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/ingest`;
 
       const { data: connection, error: connError } = await supabaseAdmin
-        .from("ag_agent_connections")
+        .from("agent_connections")
         .insert({
           workspace_id: workspaceId,
           platform,
-          name: name || `${platform.charAt(0).toUpperCase() + platform.slice(1)} Connection`,
+          name: name || `${platform} Connection`,
           api_key_encrypted: api_key || null,
           webhook_url: webhookUrl,
           webhook_secret: webhookSecret,
@@ -58,17 +44,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Failed to save agent connection" }, { status: 500 });
       }
 
-      // Upsert alert thresholds
+      connectionId = connection.id;
+
+      // Save alert thresholds
       if (alert_thresholds && Array.isArray(alert_thresholds)) {
         for (const threshold of alert_thresholds) {
           if (!threshold.dimension || threshold.value === undefined) continue;
           await supabaseAdmin
-            .from("ag_alert_configs")
+            .from("alert_configs")
             .upsert(
               {
                 workspace_id: workspaceId,
                 dimension: threshold.dimension,
-                threshold: threshold.value / 100, // convert % → decimal
+                threshold: threshold.value / 100, // Convert from % to decimal
                 enabled: true,
               },
               { onConflict: "workspace_id,dimension" }
@@ -78,18 +66,18 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        connection_id: connection.id,
+        connection_id: connectionId,
         webhook_url: connection.webhook_url,
         webhook_secret: connection.webhook_secret,
       });
     }
 
-    // No platform — just save alert thresholds
+    // Save just alert thresholds
     if (alert_thresholds && Array.isArray(alert_thresholds)) {
       for (const threshold of alert_thresholds) {
         if (!threshold.dimension || threshold.value === undefined) continue;
         await supabaseAdmin
-          .from("ag_alert_configs")
+          .from("alert_configs")
           .upsert(
             {
               workspace_id: workspaceId,

@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { PromptImprovement, KnowledgeGap } from "@/lib/db/types";
 
 /**
- * GET /api/reports?week_start=YYYY-MM-DD
- * Returns weekly report data. Defaults to the current week if no week_start given.
+ * GET /api/reports
+ * Returns the latest weekly report data aggregated from real conversations.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const ctx = await getWorkspaceContext();
     if (!ctx) {
@@ -15,19 +15,12 @@ export async function GET(request: NextRequest) {
     }
 
     const workspaceId = ctx.workspace.id;
-    const url = new URL(request.url);
-    const weekStartParam = url.searchParams.get("week_start");
-
-    // Determine week boundaries
-    const sevenDaysAgo = weekStartParam
-      ? new Date(weekStartParam)
-      : (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d; })();
-
-    const fourteenDaysAgo = new Date(sevenDaysAgo);
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 7);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    const thirtyDaysAgo = new Date(sevenDaysAgo);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 23); // 30-day window ending at week end
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const [thisWeekRes, lastWeekRes, trendRes] = await Promise.all([
       supabaseAdmin
@@ -152,8 +145,7 @@ export async function GET(request: NextRequest) {
       }));
 
     const weekStart = new Date(sevenDaysAgo);
-    const weekEnd = new Date(sevenDaysAgo);
-    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEnd = new Date();
 
     return NextResponse.json({
       week_start: weekStart.toISOString().slice(0, 10),

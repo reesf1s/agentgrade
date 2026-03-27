@@ -5,7 +5,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 /**
  * GET /api/connections
  * Returns all agent connections for the workspace.
- * Note: webhook_secret is redacted — fetch via GET /api/connections/:id if needed.
  */
 export async function GET() {
   try {
@@ -15,7 +14,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, platform, name, is_active, last_sync_at, webhook_url, created_at")
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false });
@@ -33,9 +32,7 @@ export async function GET() {
 
 /**
  * POST /api/connections
- * Creates a new agent connection and generates its webhook_secret.
- *
- * Body: { platform, name?, api_key?, config? }
+ * Creates a new agent connection.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -47,25 +44,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { platform, name, api_key, config } = body;
 
-    const validPlatforms = ["intercom", "zendesk", "custom", "csv"];
-    if (!platform || !validPlatforms.includes(platform)) {
-      return NextResponse.json(
-        { error: `Invalid platform. Must be one of: ${validPlatforms.join(", ")}` },
-        { status: 400 }
-      );
+    if (!platform || !["intercom", "zendesk", "custom", "csv"].includes(platform)) {
+      return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
     }
 
-    // Generate a random 32-char hex secret
-    const webhookSecret = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentgrade.com";
-    const webhookUrl = `${appUrl}/api/webhooks/ingest`;
+    const webhookSecret = crypto.randomUUID().replace(/-/g, "");
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/ingest`;
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .insert({
         workspace_id: ctx.workspace.id,
         platform,
-        name: name || `${platform.charAt(0).toUpperCase() + platform.slice(1)} Connection`,
+        name: name || `${platform} Connection`,
         api_key_encrypted: api_key || null,
         webhook_url: webhookUrl,
         webhook_secret: webhookSecret,

@@ -12,16 +12,20 @@ const ThemeContext = createContext<{
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("agentgrade-theme") as Theme | null;
-    // Default to dark mode if no preference stored
-    const active = stored ?? "dark";
-    setTheme(active);
-    document.documentElement.classList.toggle("dark", active === "dark");
+    if (stored) {
+      setTheme(stored);
+      document.documentElement.classList.toggle("dark", stored === "dark");
+    } else {
+      // Default to light — no OS preference detection
+      setTheme("light");
+      document.documentElement.classList.remove("dark");
+    }
   }, []);
 
   const toggleTheme = () => {

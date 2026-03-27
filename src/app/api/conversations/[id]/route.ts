@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 /**
  * GET /api/conversations/:id
- * Returns a single conversation with messages, quality score, and overrides.
+ * Returns a single conversation with messages and quality score.
  */
 export async function GET(
   _request: NextRequest,
@@ -18,23 +18,22 @@ export async function GET(
 
     const { id } = await params;
 
-    // Fetch conversation, messages, and quality score in parallel
     const [convRes, messagesRes, scoreRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .select("*")
         .eq("id", id)
         .eq("workspace_id", ctx.workspace.id)
         .single(),
 
       supabaseAdmin
-        .from("ag_messages")
+        .from("messages")
         .select("*")
         .eq("conversation_id", id)
         .order("timestamp", { ascending: true }),
 
       supabaseAdmin
-        .from("ag_quality_scores")
+        .from("quality_scores")
         .select("*")
         .eq("conversation_id", id)
         .single(),
@@ -44,23 +43,10 @@ export async function GET(
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    // Fetch overrides for this quality score (if scored)
-    let overrides = null;
-    if (scoreRes.data) {
-      const { data } = await supabaseAdmin
-        .from("ag_quality_overrides")
-        .select("*")
-        .eq("quality_score_id", scoreRes.data.id)
-        .order("created_at", { ascending: false });
-      overrides = data || [];
-    }
-
     return NextResponse.json({
       ...convRes.data,
       messages: messagesRes.data || [],
-      quality_score: scoreRes.data
-        ? { ...scoreRes.data, overrides }
-        : null,
+      quality_score: scoreRes.data || null,
     });
   } catch (error) {
     console.error("Conversation detail API error:", error);
