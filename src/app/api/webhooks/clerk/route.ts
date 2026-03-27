@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
       // Create workspace
       const { data: workspace, error: wsError } = await supabaseAdmin
-        .from("workspaces")
+        .from("ag_workspaces")
         .insert({
           name: workspaceName,
           slug,
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
       // Create owner membership
       const { error: memberError } = await supabaseAdmin
-        .from("workspace_members")
+        .from("ag_workspace_members")
         .insert({
           workspace_id: workspace.id,
           clerk_user_id: user.id,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       if (memberError) {
         console.error("Failed to create workspace member:", memberError);
         // Rollback workspace creation
-        await supabaseAdmin.from("workspaces").delete().eq("id", workspace.id);
+        await supabaseAdmin.from("ag_workspaces").delete().eq("id", workspace.id);
         return NextResponse.json({ error: "Failed to create workspace member" }, { status: 500 });
       }
 

@@ -90,12 +90,12 @@ export async function scoreConversation(conversationId: string): Promise<{
   // ── Load conversation + messages from DB ────────────────────────
   const [convResult, msgResult] = await Promise.all([
     supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .select("*")
       .eq("id", conversationId)
       .single(),
     supabaseAdmin
-      .from("messages")
+      .from("ag_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("timestamp", { ascending: true }),
@@ -195,7 +195,7 @@ export async function scoreConversation(conversationId: string): Promise<{
   // ── Persist score to DB ─────────────────────────────────────────
   // Upsert so re-scoring overwrites the previous result
   const { error: upsertError } = await supabaseAdmin
-    .from("quality_scores")
+    .from("ag_quality_scores")
     .upsert(
       {
         ...scoreData,
@@ -213,7 +213,7 @@ export async function scoreConversation(conversationId: string): Promise<{
   // Structural analysis determines escalation — sync it back to the conversation row
   if (structuralMetrics.escalation_turn !== undefined) {
     await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .update({ was_escalated: true })
       .eq("id", conversationId);
   }
@@ -253,7 +253,7 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: convs } = await supabaseAdmin
-    .from("conversations")
+    .from("ag_conversations")
     .select("id, created_at, platform, quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
@@ -284,7 +284,7 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
   // Persist each new pattern (skip if title already exists and is unresolved)
   for (const pattern of newPatterns) {
     const { data: existing } = await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("title", pattern.title)
@@ -292,7 +292,7 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
       .maybeSingle();
 
     if (!existing) {
-      await supabaseAdmin.from("failure_patterns").insert({
+      await supabaseAdmin.from("ag_failure_patterns").insert({
         workspace_id: workspaceId,
         pattern_type: pattern.pattern_type,
         title: pattern.title,

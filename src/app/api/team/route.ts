@@ -12,7 +12,7 @@ export async function GET() {
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data, error } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .select("id, clerk_user_id, role, created_at, email")
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: true });
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Store invitation — in a real system this would also send an email via Clerk
     const { data, error } = await supabaseAdmin
-      .from("workspace_invitations")
+      .from("ag_workspace_invitations")
       .insert({
         workspace_id: ctx.workspace.id,
         email,
@@ -102,7 +102,7 @@ export async function DELETE(request: NextRequest) {
 
     // Cannot remove yourself or the owner
     const { data: targetMember } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .select("role, clerk_user_id")
       .eq("id", member_id)
       .eq("workspace_id", ctx.workspace.id)
@@ -121,7 +121,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .delete()
       .eq("id", member_id)
       .eq("workspace_id", ctx.workspace.id);

@@ -12,7 +12,7 @@ export async function GET() {
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data, error } = await supabaseAdmin
-      .from("alert_configs")
+      .from("ag_alert_configs")
       .select("*")
       .eq("workspace_id", ctx.workspace.id);
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     for (const t of thresholds) {
       if (!t.dimension || t.threshold === undefined) continue;
       await supabaseAdmin
-        .from("alert_configs")
+        .from("ag_alert_configs")
         .upsert(
           {
             workspace_id: ctx.workspace.id,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Optionally save notification email to workspace record
     if (notification_email) {
       await supabaseAdmin
-        .from("workspaces")
+        .from("ag_workspaces")
         .update({ notification_email })
         .eq("id", ctx.workspace.id);
     }

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Authenticate via secret header to find workspace
     const secret = request.headers.get("x-agentgrade-secret") || "";
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("agent_connections")
+      .from("ag_agent_connections")
       .select("id, workspace_id, is_active")
       .eq("webhook_secret", secret)
       .eq("platform", "intercom")
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert conversation (idempotent by external_id + workspace)
     const { data: existing } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .select("id")
       .eq("workspace_id", connection.workspace_id)
       .eq("external_id", externalId)
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       conversationId = existing.id;
     } else {
       const { data: conversation, error: convError } = await supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .insert({
           workspace_id: connection.workspace_id,
           agent_connection_id: connection.id,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       conversationId = conversation.id;
 
       // Insert messages
-      await supabaseAdmin.from("messages").insert(
+      await supabaseAdmin.from("ag_messages").insert(
         conversationParts.map((msg) => ({
           conversation_id: conversationId,
           role: msg.role,
@@ -182,7 +182,7 @@ async function scoreIntercomConversationAsync(
   try {
     // Don't re-score if already scored
     const { data: existing } = await supabaseAdmin
-      .from("quality_scores")
+      .from("ag_quality_scores")
       .select("id")
       .eq("conversation_id", conversationId)
       .single();
@@ -190,7 +190,7 @@ async function scoreIntercomConversationAsync(
     if (existing) return;
 
     const { data: kbChunks } = await supabaseAdmin
-      .from("knowledge_base")
+      .from("ag_knowledge_base_items")
       .select("content")
       .eq("workspace_id", workspaceId)
       .limit(5);
@@ -209,7 +209,7 @@ async function scoreIntercomConversationAsync(
       knowledgeBaseContext,
     });
 
-    await supabaseAdmin.from("quality_scores").insert({
+    await supabaseAdmin.from("ag_quality_scores").insert({
       conversation_id: conversationId,
       ...scoreResult,
       scored_at: new Date().toISOString(),

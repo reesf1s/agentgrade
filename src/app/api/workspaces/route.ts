@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("workspaces")
+      .from("ag_workspaces")
       .update(updates)
       .eq("id", ctx.workspace.id)
       .select()

@@ -1,12 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassInput } from "@/components/ui/glass-input";
-import { Plug, Bell, Users, CreditCard, BookOpen, Trash2 } from "lucide-react";
+import { Plug, Bell, Users, CreditCard, BookOpen, Trash2, Plus } from "lucide-react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("connections");
+  const [connections, setConnections] = useState<Array<{ id: string; name: string; platform: string; last_synced_at: string | null }>>([]);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [knowledgeItems, setKnowledgeItems] = useState<Array<{ id: string; title: string; chunk_count: number; created_at: string }>>([]);
+
+  useEffect(() => {
+    setWebhookUrl(`${window.location.origin}/api/webhooks/ingest`);
+    fetch("/api/connections").then(r => r.json()).then(d => setConnections(d.connections ?? [])).catch(() => {});
+    fetch("/api/knowledge-base").then(r => r.json()).then(d => setKnowledgeItems(d.sources ?? [])).catch(() => {});
+  }, []);
 
   const tabs = [
     { id: "connections", label: "Connections", icon: Plug },
@@ -33,8 +42,8 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left ${
                   activeTab === tab.id
-                    ? "bg-[rgba(0,0,0,0.05)] text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.02)]"
+                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)] font-medium"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface)]"
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -51,26 +60,39 @@ export default function SettingsPage() {
               <GlassCard className="p-6">
                 <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Agent Connections</h2>
 
-                {/* Existing connection */}
-                <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">Intercom — Support Bot</p>
-                      <p className="text-xs text-[var(--text-muted)] mt-0.5">Connected &middot; Last sync: 2 hours ago</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-score-good" />
-                      <GlassButton size="sm">Sync now</GlassButton>
-                    </div>
+                {connections.length > 0 ? (
+                  <div className="space-y-2 mb-6">
+                    {connections.map((conn) => (
+                      <div key={conn.id} className="p-4 rounded-xl bg-[var(--surface)] mb-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-[var(--text-primary)]">{conn.name}</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                              {conn.platform} &middot; {conn.last_synced_at ? `Last sync: ${new Date(conn.last_synced_at).toLocaleString()}` : "Never synced"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-score-good" />
+                            <GlassButton size="sm">Sync now</GlassButton>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="p-6 rounded-xl bg-[var(--surface)] text-center mb-6">
+                    <Plug className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
+                    <p className="text-sm text-[var(--text-secondary)]">No connections yet</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Connect your agent below to get started</p>
+                  </div>
+                )}
 
-                <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3 mt-6">Add new connection</h3>
+                <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Add new connection</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {["Intercom", "Zendesk", "Custom Webhook"].map((platform) => (
                     <button
                       key={platform}
-                      className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-center"
+                      className="p-4 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] transition-colors text-center"
                     >
                       <p className="text-sm font-medium text-[var(--text-primary)]">{platform}</p>
                       <p className="text-xs text-[var(--text-muted)] mt-0.5">Connect</p>
@@ -80,7 +102,7 @@ export default function SettingsPage() {
 
                 <div className="mt-6">
                   <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Or upload conversations</h3>
-                  <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
+                  <div className="border-2 border-dashed border-[var(--glass-border)] rounded-xl p-8 text-center hover:border-[var(--text-muted)] transition-colors cursor-pointer">
                     <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
                     <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
                   </div>
@@ -95,10 +117,10 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <input
                     readOnly
-                    value="https://agentgrade.com/api/webhooks/ingest/ws-demo"
+                    value={webhookUrl}
                     className="glass-input flex-1 px-3 py-2 text-xs font-mono"
                   />
-                  <GlassButton size="sm">Copy</GlassButton>
+                  <GlassButton size="sm" onClick={() => navigator.clipboard.writeText(webhookUrl)}>Copy</GlassButton>
                 </div>
               </GlassCard>
             </div>
@@ -137,7 +159,7 @@ export default function SettingsPage() {
             <GlassCard className="p-6">
               <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Team Members</h2>
               <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)]">
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)]">You</p>
                     <p className="text-xs text-[var(--text-muted)]">Owner</p>
@@ -146,7 +168,10 @@ export default function SettingsPage() {
               </div>
               <div className="flex gap-2">
                 <GlassInput placeholder="Email address" className="flex-1" />
-                <GlassButton>Invite</GlassButton>
+                <GlassButton>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Invite
+                </GlassButton>
               </div>
             </GlassCard>
           )}
@@ -157,56 +182,40 @@ export default function SettingsPage() {
               <p className="text-xs text-[var(--text-muted)] mb-6">
                 Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
               </p>
-              <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-4">
+              <div className="border-2 border-dashed border-[var(--glass-border)] rounded-xl p-8 text-center hover:border-[var(--text-muted)] transition-colors cursor-pointer mb-4">
                 <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
                 <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files here</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-sm text-[var(--text-primary)]">refund-policy.pdf</p>
-                    <p className="text-xs text-[var(--text-muted)]">12 chunks &middot; Uploaded Mar 20</p>
-                  </div>
-                  <button className="text-[var(--text-muted)] hover:text-score-critical transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {knowledgeItems.length > 0 ? (
+                <div className="space-y-2">
+                  {knowledgeItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)]">
+                      <div>
+                        <p className="text-sm text-[var(--text-primary)]">{item.title}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{item.chunk_count} chunks &middot; {new Date(item.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <button className="text-[var(--text-muted)] hover:text-score-critical transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-sm text-[var(--text-primary)]">product-faq.txt</p>
-                    <p className="text-xs text-[var(--text-muted)]">8 chunks &middot; Uploaded Mar 18</p>
-                  </div>
-                  <button className="text-[var(--text-muted)] hover:text-score-critical transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)] text-center py-4">No documents uploaded yet</p>
+              )}
             </GlassCard>
           )}
 
           {activeTab === "billing" && (
             <GlassCard className="p-6">
               <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
-              <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">Starter Plan</p>
-                    <p className="text-xs text-[var(--text-muted)]">&pound;199/month &middot; 5,000 conversations</p>
-                  </div>
-                  <GlassButton size="sm">Upgrade</GlassButton>
-                </div>
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[var(--text-secondary)]">Usage this month</span>
-                    <span className="text-[var(--text-primary)] font-mono">127 / 5,000</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
-                    <div className="h-full rounded-full bg-[var(--text-primary)]" style={{ width: "2.5%" }} />
-                  </div>
-                </div>
+              <div className="p-6 rounded-xl bg-[var(--surface)] mb-6 text-center">
+                <p className="text-sm text-[var(--text-secondary)]">Loading billing information&hellip;</p>
               </div>
-              <GlassButton>Manage billing</GlassButton>
+              <GlassButton onClick={() => fetch("/api/billing/portal", { method: "POST" }).then(r => r.json()).then(d => { if (d.url) window.open(d.url, "_blank"); })}>
+                Manage billing
+              </GlassButton>
             </GlassCard>
           )}
         </div>

@@ -16,7 +16,7 @@ export async function PATCH(
     const body = await request.json();
 
     const { error } = await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .update({
         is_resolved: body.is_resolved,
         resolved_at: body.is_resolved ? new Date().toISOString() : null,

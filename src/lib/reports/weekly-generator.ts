@@ -72,7 +72,7 @@ async function computeFixImprovements(
 ): Promise<{ pattern_title: string; quality_before: number; quality_after: number; delta: number }[]> {
   // Fetch patterns resolved during this week
   const { data: resolvedPatterns } = await supabaseAdmin
-    .from("failure_patterns")
+    .from("ag_failure_patterns")
     .select("id, title, affected_conversation_ids, resolved_at")
     .eq("workspace_id", workspaceId)
     .eq("is_resolved", true)
@@ -89,7 +89,7 @@ async function computeFixImprovements(
 
     // Quality before: average score of the affected (pre-fix) conversations
     const { data: beforeScores } = await supabaseAdmin
-      .from("quality_scores")
+      .from("ag_quality_scores")
       .select("overall_score")
       .in("conversation_id", affectedIds);
 
@@ -101,7 +101,7 @@ async function computeFixImprovements(
 
     // Quality after: average score of conversations since the pattern was resolved
     const { data: afterConvs } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .select("quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", pattern.resolved_at)
@@ -150,7 +150,7 @@ export async function generateWeeklyReport(
 
   // ── Fetch this week's conversations ───────────────────────────
   const { data: thisWeekRaw } = await supabaseAdmin
-    .from("conversations")
+    .from("ag_conversations")
     .select("id, created_at, was_escalated, quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", weekStartISO)
@@ -164,7 +164,7 @@ export async function generateWeeklyReport(
   lastWeekStart.setDate(lastWeekStart.getDate() - 6);
 
   const { data: lastWeekRaw } = await supabaseAdmin
-    .from("conversations")
+    .from("ag_conversations")
     .select("quality_scores(overall_score)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", lastWeekStart.toISOString())
@@ -215,7 +215,7 @@ export async function generateWeeklyReport(
 
   // ── Top failure patterns this week ────────────────────────────
   const { data: activePatterns } = await supabaseAdmin
-    .from("failure_patterns")
+    .from("ag_failure_patterns")
     .select("title, severity, description")
     .eq("workspace_id", workspaceId)
     .eq("is_resolved", false)
@@ -259,7 +259,7 @@ export async function generateWeeklyReport(
   // ── Upsert report to DB ───────────────────────────────────────
   // One report per week per workspace — overwrite if regenerated
   const { data: existing } = await supabaseAdmin
-    .from("weekly_reports")
+    .from("ag_weekly_reports")
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("week_start", weekStart)
@@ -270,7 +270,7 @@ export async function generateWeeklyReport(
   if (existing?.id) {
     // Update existing report
     await supabaseAdmin
-      .from("weekly_reports")
+      .from("ag_weekly_reports")
       .update({
         summary,
         generated_at: new Date().toISOString(),
@@ -281,7 +281,7 @@ export async function generateWeeklyReport(
   } else {
     // Insert new report
     const { data: newReport, error } = await supabaseAdmin
-      .from("weekly_reports")
+      .from("ag_weekly_reports")
       .insert({
         workspace_id: workspaceId,
         week_start: weekStart,

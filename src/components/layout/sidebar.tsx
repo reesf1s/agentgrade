@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { UserButton } from "@clerk/nextjs";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -11,7 +12,6 @@ import {
   BarChart3,
   Settings,
   Zap,
-  User,
 } from "lucide-react";
 
 const navItems = [
@@ -67,15 +67,8 @@ export function Sidebar() {
       {/* User */}
       <div className="p-4 border-t border-[var(--glass-border)]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--surface-hover)] flex items-center justify-center">
-            <User className="w-4 h-4 text-[var(--text-muted)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-              My Workspace
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">Starter Plan</p>
-          </div>
+          <UserButton />
+          <p className="text-xs text-[var(--text-muted)]">Account</p>
         </div>
       </div>
     </aside>

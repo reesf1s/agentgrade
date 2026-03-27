@@ -2,7 +2,7 @@
  * Server-side workspace helpers.
  * All functions use supabaseAdmin (service_role) — call only from API routes / server components.
  */
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUser } from "@/lib/auth/get-user";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Workspace, WorkspaceMember } from "@/lib/db/types";
 
@@ -16,9 +16,9 @@ export interface WorkspaceContext {
  * Returns null if the user is not authenticated or has no workspace.
  */
 export async function getWorkspaceContext(): Promise<WorkspaceContext | null> {
-  const { userId } = await auth();
-  if (!userId) return null;
-  return getWorkspaceForUser(userId);
+  const user = await getAuthUser();
+  if (!user) return null;
+  return getWorkspaceForUser(user.userId);
 }
 
 /**
@@ -26,15 +26,15 @@ export async function getWorkspaceContext(): Promise<WorkspaceContext | null> {
  */
 export async function getWorkspaceForUser(clerkUserId: string): Promise<WorkspaceContext | null> {
   const { data: member, error } = await supabaseAdmin
-    .from("workspace_members")
-    .select("*, workspaces(*)")
+    .from("ag_workspace_members")
+    .select("*, ag_workspaces(*)")
     .eq("clerk_user_id", clerkUserId)
     .single();
 
   if (error || !member) return null;
 
   return {
-    workspace: member.workspaces as unknown as Workspace,
+    workspace: member.ag_workspaces as unknown as Workspace,
     member: {
       id: member.id,
       workspace_id: member.workspace_id,

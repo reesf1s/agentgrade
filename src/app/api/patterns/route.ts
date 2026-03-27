@@ -18,7 +18,7 @@ export async function GET() {
 
     // Return existing unresolved patterns
     const { data: patterns, error } = await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
@@ -32,7 +32,7 @@ export async function GET() {
     if (!patterns || patterns.length === 0) {
       await detectAndStorePatterns(workspaceId);
       const { data: freshPatterns } = await supabaseAdmin
-        .from("failure_patterns")
+        .from("ag_failure_patterns")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("is_resolved", false)
@@ -71,7 +71,7 @@ async function detectAndStorePatterns(workspaceId: string) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: convs } = await supabaseAdmin
-    .from("conversations")
+    .from("ag_conversations")
     .select("id, created_at, quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
@@ -113,7 +113,7 @@ async function detectAndStorePatterns(workspaceId: string) {
   for (const pattern of newPatterns) {
     // Upsert by title to avoid duplicates
     const { data: existing } = await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("title", pattern.title)
@@ -121,7 +121,7 @@ async function detectAndStorePatterns(workspaceId: string) {
       .single();
 
     if (!existing) {
-      await supabaseAdmin.from("failure_patterns").insert({
+      await supabaseAdmin.from("ag_failure_patterns").insert({
         workspace_id: workspaceId,
         pattern_type: pattern.pattern_type,
         title: pattern.title,
