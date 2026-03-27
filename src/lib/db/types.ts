@@ -63,6 +63,8 @@ export interface ClaimAnalysis {
   verdict: "verified" | "unverifiable" | "contradicted" | "fabricated";
   evidence?: string;
   kb_source?: string;
+  // How dangerous this claim is if wrong
+  severity?: "low" | "medium" | "high" | "critical";
 }
 
 export interface PromptImprovement {
@@ -89,6 +91,10 @@ export interface QualityScore {
   resolution_score?: number;
   tone_score?: number;
   sentiment_score?: number;
+  // How well the agent handled unusual or unexpected queries
+  edge_case_score?: number;
+  // How appropriately the agent handled escalation (1.0 = perfect, N/A defaults to 0.8)
+  escalation_score?: number;
   structural_metrics: StructuralMetrics;
   claim_analysis: ClaimAnalysis[];
   flags: string[];
@@ -182,4 +188,17 @@ export interface AlertConfig {
   dimension: string;
   threshold: number;
   enabled: boolean;
+}
+
+export interface KnowledgeBaseItem {
+  id: string;
+  workspace_id: string;
+  title: string;
+  content: string;
+  chunk_index: number;
+  embedding?: number[];
+  source_file?: string;
+  created_at: string;
+  // Returned by pgvector similarity search
+  similarity?: number;
 }

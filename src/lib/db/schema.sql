@@ -78,6 +78,10 @@ create table quality_scores (
   resolution_score float,
   tone_score float,
   sentiment_score float,
+  -- How well the agent handled unusual/unexpected queries (1.0 = excellent, 0.8 = N/A)
+  edge_case_score float,
+  -- How appropriately the agent managed escalation (1.0 = perfect, 0.85 = N/A)
+  escalation_score float,
   structural_metrics jsonb default '{}',
   claim_analysis jsonb default '[]',
   flags jsonb default '[]',
@@ -186,6 +190,54 @@ create index idx_quality_scores_overall on quality_scores(overall_score);
 create index idx_failure_patterns_workspace on failure_patterns(workspace_id);
 create index idx_alerts_workspace on alerts(workspace_id);
 create index idx_knowledge_base_workspace on knowledge_base(workspace_id);
+
+-- pgvector index for fast cosine similarity search on KB embeddings
+-- Uses IVFFlat (approximate) — faster than exact search at scale
+-- Build after inserting initial data: set lists = sqrt(row_count)
+create index idx_knowledge_base_embedding on knowledge_base
+  using ivfflat (embedding vector_cosine_ops)
+  with (lists = 100);
+
+-- ─── pgvector Semantic Search Function ─────────────────────────────
+-- Called by src/lib/knowledge-base/index.ts → searchKnowledgeBase()
+-- Returns top-K chunks ordered by cosine similarity to query embedding
+create or replace function match_knowledge_base(
+  p_workspace_id uuid,
+  p_query_embedding vector(1536),
+  p_match_count int default 5
+)
+returns table (
+  id uuid,
+  title text,
+  content text,
+  source_file text,
+  similarity float,
+  chunk_index int
+)
+language sql stable
+as $$
+  select
+    kb.id,
+    kb.title,
+    kb.content,
+    kb.source_file,
+    1 - (kb.embedding <=> p_query_embedding) as similarity,
+    kb.chunk_index
+  from knowledge_base kb
+  where
+    kb.workspace_id = p_workspace_id
+    and kb.embedding is not null
+    -- Only return chunks with meaningful similarity (>20%)
+    and 1 - (kb.embedding <=> p_query_embedding) > 0.2
+  order by kb.embedding <=> p_query_embedding
+  limit p_match_count;
+$$;
+
+-- ─── Migration: add edge_case_score and escalation_score ────────────
+-- Run this if you already created the quality_scores table without these columns:
+--
+--   alter table quality_scores add column if not exists edge_case_score float;
+--   alter table quality_scores add column if not exists escalation_score float;
 
 -- Enable RLS
 alter table workspaces enable row level security;
