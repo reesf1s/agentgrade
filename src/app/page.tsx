@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
+import { getUserId } from "@/lib/auth/get-user";
 import {
   Zap,
   Shield,
@@ -20,10 +19,8 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
 }
 
 export default async function LandingPage() {
-  const { userId } = await auth();
-  const cookieStore = await cookies();
-  const clientUat = cookieStore.get('__client_uat')?.value;
-  const isSignedIn = !!userId || (!!clientUat && clientUat !== '0');
+  const userId = await getUserId();
+  const isSignedIn = !!userId;
 
   return (
     <div className="min-h-screen bg-[var(--background)] light-page">
