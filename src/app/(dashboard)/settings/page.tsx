@@ -21,6 +21,9 @@ interface ConnectionSetupDetails {
   webhook_url: string;
   api_key: string;
   snippet: string;
+  env_example: string;
+  install_steps: string[];
+  env_help: Record<string, string>;
 }
 
 interface TeamMember {
@@ -114,6 +117,9 @@ function ConnectionsTab() {
             webhook_url: data.webhook_url,
             api_key: data.api_key,
             snippet: data.snippet,
+            env_example: data.env_example,
+            install_steps: data.install_steps || [],
+            env_help: data.env_help || {},
           },
         }));
         setExpandedConnectionId(connectionId);
@@ -185,7 +191,23 @@ function ConnectionsTab() {
                 </div>
 
                 {expandedConnectionId === conn.id && setupByConnection[conn.id] && (
-                  <div className="mt-4 space-y-3 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white/40 p-4">
+                  <div className="mt-4 space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        Integration steps
+                      </p>
+                      <ol className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+                        {setupByConnection[conn.id].install_steps.map((step, index) => (
+                          <li key={step} className="flex gap-3">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-strong)] text-[11px] font-semibold text-[var(--text-primary)]">
+                              {index + 1}
+                            </span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
                     <div>
                       <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Webhook endpoint</p>
                       <div className="flex gap-2">
@@ -215,6 +237,25 @@ function ConnectionsTab() {
                       <p className="mt-2 text-xs text-[var(--text-muted)]">
                         Send every transcript update with `Authorization: Bearer &lt;secret&gt;`. Re-sending the same `conversation_id` now appends new messages and re-scores instead of being ignored.
                       </p>
+                    </div>
+
+                    <div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <p className="text-xs font-medium text-[var(--text-primary)]">Env vars for your app</p>
+                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].env_example)}>
+                          Copy env vars
+                        </GlassButton>
+                      </div>
+                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+                        {setupByConnection[conn.id].env_example}
+                      </pre>
+                      <div className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+                        {Object.entries(setupByConnection[conn.id].env_help).map(([key, value]) => (
+                          <p key={key}>
+                            <span className="font-mono text-[var(--text-primary)]">{key}</span>: {value}
+                          </p>
+                        ))}
+                      </div>
                     </div>
 
                     <div>
@@ -481,6 +522,10 @@ function TeamTab() {
 function KnowledgeTab() {
   const [sources, setSources] = useState<KBSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [syncingUrl, setSyncingUrl] = useState(false);
+  const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/knowledge-base")
@@ -496,6 +541,56 @@ function KnowledgeTab() {
     setSources((prev) => prev.filter((s) => s.id !== id));
   }
 
+  async function ingestUrl() {
+    if (!sourceUrl) return;
+    setSyncingUrl(true);
+    setUrlError(null);
+    try {
+      const response = await fetch("/api/knowledge-base/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setUrlError(data.error || "Failed to ingest URL");
+        return;
+      }
+      setSourceUrl("");
+      const refreshed = await fetch("/api/knowledge-base");
+      const refreshedData = await refreshed.json();
+      setSources(refreshedData.sources || []);
+    } catch {
+      setUrlError("Network error");
+    } finally {
+      setSyncingUrl(false);
+    }
+  }
+
+  async function syncHelpCenter(platform: "intercom" | "zendesk") {
+    setSyncingPlatform(platform);
+    setUrlError(null);
+    try {
+      const response = await fetch("/api/knowledge-base/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setUrlError(data.error || `Failed to sync ${platform} knowledge base`);
+        return;
+      }
+      const refreshed = await fetch("/api/knowledge-base");
+      const refreshedData = await refreshed.json();
+      setSources(refreshedData.sources || []);
+    } catch {
+      setUrlError("Network error");
+    } finally {
+      setSyncingPlatform(null);
+    }
+  }
+
   return (
     <GlassCard className="p-6">
       <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Knowledge Base</h2>
@@ -506,6 +601,38 @@ function KnowledgeTab() {
         <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
         <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files here</p>
         <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
+      </div>
+      <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+        <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Or import a help center URL</p>
+        <div className="flex gap-2">
+          <GlassInput
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://help.example.com/article"
+            className="flex-1"
+          />
+          <GlassButton onClick={ingestUrl} disabled={!sourceUrl || syncingUrl}>
+            {syncingUrl ? "Importing..." : "Import URL"}
+          </GlassButton>
+        </div>
+        {urlError ? <p className="mt-2 text-xs text-score-critical">{urlError}</p> : null}
+      </div>
+      <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+        <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Sync from a connected help center</p>
+        <div className="flex flex-wrap gap-2">
+          <GlassButton
+            onClick={() => syncHelpCenter("intercom")}
+            disabled={syncingPlatform !== null}
+          >
+            {syncingPlatform === "intercom" ? "Syncing Intercom..." : "Sync Intercom Articles"}
+          </GlassButton>
+          <GlassButton
+            onClick={() => syncHelpCenter("zendesk")}
+            disabled={syncingPlatform !== null}
+          >
+            {syncingPlatform === "zendesk" ? "Syncing Zendesk..." : "Sync Zendesk Help Center"}
+          </GlassButton>
+        </div>
       </div>
       {loading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading...</p>

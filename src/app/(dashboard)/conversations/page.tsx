@@ -9,6 +9,7 @@ import Link from "next/link";
 interface ConversationRow {
   id: string;
   customer_identifier?: string;
+  external_id?: string;
   platform: string;
   was_escalated: boolean;
   created_at: string;
@@ -18,6 +19,8 @@ interface ConversationRow {
     hallucination_score?: number;
     resolution_score?: number;
     summary?: string;
+    flags?: string[];
+    confidence_level?: "high" | "medium" | "low";
   } | null;
 }
 
@@ -27,12 +30,18 @@ export default function ConversationsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<string>("all");
+  const [platform, setPlatform] = useState<string>("all");
+  const [escalated, setEscalated] = useState<string>("all");
+  const [flag, setFlag] = useState("");
 
   const fetchConversations = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (scoreFilter !== "all") params.set("score_filter", scoreFilter);
+    if (platform !== "all") params.set("platform", platform);
+    if (escalated !== "all") params.set("escalated", escalated);
+    if (flag) params.set("flag", flag);
     params.set("limit", "50");
 
     fetch(`/api/conversations?${params}`)
@@ -43,7 +52,7 @@ export default function ConversationsPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [search, scoreFilter]);
+  }, [search, scoreFilter, platform, escalated, flag]);
 
   useEffect(() => {
     const debounce = setTimeout(fetchConversations, 300);
@@ -60,7 +69,7 @@ export default function ConversationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
@@ -87,6 +96,34 @@ export default function ConversationsPage() {
             </button>
           ))}
         </div>
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          className="glass-input px-3 py-2 text-sm"
+        >
+          <option value="all">All platforms</option>
+          <option value="intercom">Intercom</option>
+          <option value="zendesk">Zendesk</option>
+          <option value="voiceflow">Voiceflow</option>
+          <option value="custom">Custom</option>
+          <option value="csv">CSV / JSON</option>
+        </select>
+        <select
+          value={escalated}
+          onChange={(e) => setEscalated(e.target.value)}
+          className="glass-input px-3 py-2 text-sm"
+        >
+          <option value="all">All escalation states</option>
+          <option value="true">Escalated</option>
+          <option value="false">Not escalated</option>
+        </select>
+        <input
+          type="text"
+          placeholder="Filter by flag..."
+          value={flag}
+          onChange={(e) => setFlag(e.target.value)}
+          className="glass-input px-3 py-2 text-sm"
+        />
       </div>
 
       {/* Table */}
@@ -97,6 +134,7 @@ export default function ConversationsPage() {
               <th>Customer</th>
               <th>Platform</th>
               <th>Overall</th>
+              <th>Confidence</th>
               <th>Accuracy</th>
               <th>Hallucination</th>
               <th>Resolution</th>
@@ -122,6 +160,9 @@ export default function ConversationsPage() {
                   ) : (
                     <span className="text-xs text-[var(--text-muted)]">Pending</span>
                   )}
+                </td>
+                <td className="text-xs capitalize text-[var(--text-secondary)]">
+                  {conv.quality_scores?.confidence_level || "—"}
                 </td>
                 <td>
                   {conv.quality_scores?.accuracy_score !== undefined ? (

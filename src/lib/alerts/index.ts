@@ -15,6 +15,8 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Alert, AlertConfig, QualityScore } from "@/lib/db/types";
 
+const ALERT_DEDUPE_WINDOW_HOURS = 6;
+
 // ─── Dimension → Display Name Map ──────────────────────────────────
 const DIMENSION_LABELS: Record<string, string> = {
   overall: "Overall Quality",
@@ -60,6 +62,22 @@ export async function createAlert(
   thresholdValue?: number,
   actualValue?: number
 ): Promise<string | null> {
+  const recentCutoff = new Date();
+  recentCutoff.setHours(recentCutoff.getHours() - ALERT_DEDUPE_WINDOW_HOURS);
+
+  const { data: existing } = await supabaseAdmin
+    .from("alerts")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("alert_type", alertType)
+    .eq("title", title)
+    .gte("triggered_at", recentCutoff.toISOString())
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return existing[0].id as string;
+  }
+
   const { data, error } = await supabaseAdmin
     .from("alerts")
     .insert({

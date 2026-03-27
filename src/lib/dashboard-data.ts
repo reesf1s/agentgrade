@@ -37,6 +37,7 @@ export interface DashboardData {
   stats: DashboardStats;
   conversations: DashboardConversationRow[];
   alerts: Alert[];
+  patterns: FailurePattern[];
   trend_data: DashboardTrendPoint[];
 }
 
@@ -44,6 +45,8 @@ export interface ReportData {
   week_start: string;
   week_end: string;
   summary: WeeklyReportSummary;
+  alerts: Alert[];
+  patterns: FailurePattern[];
   trend_data: Array<{ date: string; overall: number; accuracy?: number; hallucination?: number }>;
 }
 
@@ -72,7 +75,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [conversationsRes, alertsRes, trendRes] = await Promise.all([
+  const [conversationsRes, alertsRes, trendRes, patternsRes] = await Promise.all([
     supabaseAdmin
       .from("conversations")
       .select("*, quality_scores:quality_scores(*)")
@@ -93,10 +96,18 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
+    supabaseAdmin
+      .from("failure_patterns")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("is_resolved", false)
+      .order("detected_at", { ascending: false })
+      .limit(5),
   ]);
 
   const conversations = (conversationsRes.data || []) as DashboardConversationRow[];
   const alerts = (alertsRes.data || []) as Alert[];
+  const patterns = (patternsRes.data || []) as FailurePattern[];
   const scored = conversations.filter(
     (conversation) =>
       getJoinedRecord(conversation.quality_scores)?.overall_score !== undefined
@@ -150,6 +161,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
     },
     conversations,
     alerts,
+    patterns,
     trend_data: Object.entries(trendByDay)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([date, scores]) => ({
@@ -182,7 +194,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [thisWeekRes, lastWeekRes, trendRes] = await Promise.all([
+  const [thisWeekRes, lastWeekRes, trendRes, alertsRes, patternsRes] = await Promise.all([
     supabaseAdmin
       .from("conversations")
       .select("*, quality_scores:quality_scores(*)")
@@ -200,6 +212,20 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
+    supabaseAdmin
+      .from("alerts")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .gte("triggered_at", sevenDaysAgo.toISOString())
+      .order("triggered_at", { ascending: false })
+      .limit(10),
+    supabaseAdmin
+      .from("failure_patterns")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("is_resolved", false)
+      .order("detected_at", { ascending: false })
+      .limit(5),
   ]);
 
   const thisWeek = thisWeekRes.data || [];
@@ -419,6 +445,8 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       prompt_improvements: promptImprovements,
       knowledge_gaps: knowledgeGaps,
     },
+    alerts: (alertsRes.data || []) as Alert[],
+    patterns: (patternsRes.data || []) as FailurePattern[],
     trend_data: Object.entries(trendByDay)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([date, values]) => ({

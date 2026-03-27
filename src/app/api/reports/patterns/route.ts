@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { buildDerivedFixFromPattern } from "@/lib/fixes/derived";
+
+function isMissingTableError(error: { code?: string } | null | undefined) {
+  return error?.code === "PGRST205";
+}
 
 /**
  * GET /api/reports/patterns
  * Returns detected failure patterns with aggregated fix suggestions.
- * Combines failure_patterns with associated ag_suggested_fixes.
+ * Combines failure_patterns with associated suggested_fixes.
  */
 export async function GET() {
   try {
@@ -25,15 +30,21 @@ export async function GET() {
         .order("detected_at", { ascending: false }),
 
       supabaseAdmin
-        .from("ag_suggested_fixes")
+        .from("suggested_fixes")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .in("status", ["pending", "approved"])
+        .in("status", ["draft", "approved"])
         .order("occurrence_count", { ascending: false }),
     ]);
 
     const patterns = patternsRes.data || [];
-    const fixes = fixesRes.data || [];
+    const fixes = isMissingTableError(fixesRes.error)
+      ? patterns.map((pattern) => buildDerivedFixFromPattern(pattern, workspaceId))
+      : fixesRes.data || [];
+
+    if (fixesRes.error && !isMissingTableError(fixesRes.error)) {
+      return NextResponse.json({ error: "Failed to fetch pattern fixes" }, { status: 500 });
+    }
 
     // Attach relevant fixes to each pattern by matching source conversation IDs
     const patternsWithFixes = patterns.map((pattern) => {
@@ -60,7 +71,7 @@ export async function GET() {
         total_patterns: patterns.length,
         critical: patterns.filter((p) => p.severity === "critical").length,
         high: patterns.filter((p) => p.severity === "high").length,
-        pending_fixes: fixes.filter((f) => f.status === "pending").length,
+        pending_fixes: fixes.filter((f) => f.status === "draft").length,
       },
     });
   } catch (error) {

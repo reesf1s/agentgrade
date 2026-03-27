@@ -24,6 +24,11 @@ interface ClerkSessionPayload {
   v?: number;
 }
 
+interface CookieLike {
+  name: string;
+  value: string;
+}
+
 function getPayloadWithoutVerification(token: string): ClerkSessionPayload | null {
   const parts = token.split(".");
   if (parts.length < 2) {
@@ -169,15 +174,10 @@ export async function verifyClerkSessionToken(
   }
 }
 
-export async function getUserId(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
-  const host =
-    headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? undefined;
-  const protocol = headerStore.get("x-forwarded-proto") ?? "https";
-  const origin = host ? `${protocol}://${host}` : undefined;
-  const candidateTokens = cookieStore
-    .getAll()
+export function getCandidateSessionTokens(
+  cookieValues: CookieLike[],
+): string[] {
+  return cookieValues
     .filter((cookie) => cookie.name === "__session" || cookie.name.startsWith("__session_"))
     .map((cookie) => cookie.value)
     .filter(Boolean)
@@ -186,6 +186,16 @@ export async function getUserId(): Promise<string | null> {
       const rightExp = getPayloadWithoutVerification(right)?.exp ?? 0;
       return rightExp - leftExp;
     });
+}
+
+export async function getUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const host =
+    headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? undefined;
+  const protocol = headerStore.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${protocol}://${host}` : undefined;
+  const candidateTokens = getCandidateSessionTokens(cookieStore.getAll());
 
   for (const token of candidateTokens) {
     const userId = await verifyClerkSessionToken(token, origin);

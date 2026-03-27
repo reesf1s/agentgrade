@@ -23,6 +23,12 @@ import { checkThresholds } from "@/lib/alerts";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Message, QualityScore } from "@/lib/db/types";
 
+function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false;
+  if (error.code === "42703" || error.code === "PGRST204") return true;
+  return typeof error.message === "string" && error.message.includes("quality_scores");
+}
+
 // Re-export individual passes for direct use by API routes
 export { analyzeStructure } from "./structural-analyzer";
 export { evaluateWithClaude, scoreConversation as evaluateMessages } from "./claude-scorer";
@@ -62,10 +68,14 @@ export async function runScoringPipeline(
     sentiment_score: claudeResult.sentiment_score,
     edge_case_score: claudeResult.edge_case_score,
     escalation_score: claudeResult.escalation_score,
-    structural_metrics: structuralMetrics,
+    structural_metrics: {
+      ...structuralMetrics,
+      confidence_level: claudeResult.confidence_level,
+    },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
     summary: claudeResult.summary,
+    confidence_level: claudeResult.confidence_level,
     prompt_improvements: claudeResult.prompt_improvements,
     knowledge_gaps: claudeResult.knowledge_gaps,
     scoring_model_version: "v1",
@@ -167,6 +177,7 @@ export async function scoreConversation(conversationId: string): Promise<{
       claim_analysis: [] as QualityScore["claim_analysis"],
       flags: ["scoring_error"] as string[],
       summary: "Automated scoring failed. Manual review recommended.",
+      confidence_level: "low" as const,
       prompt_improvements: [] as QualityScore["prompt_improvements"],
       knowledge_gaps: [] as QualityScore["knowledge_gaps"],
     };
@@ -183,26 +194,58 @@ export async function scoreConversation(conversationId: string): Promise<{
     sentiment_score: claudeResult.sentiment_score,
     edge_case_score: claudeResult.edge_case_score,
     escalation_score: claudeResult.escalation_score,
-    structural_metrics: structuralMetrics,
+    structural_metrics: {
+      ...structuralMetrics,
+      confidence_level: claudeResult.confidence_level,
+    },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
     summary: claudeResult.summary,
+    confidence_level: claudeResult.confidence_level,
     prompt_improvements: claudeResult.prompt_improvements,
     knowledge_gaps: claudeResult.knowledge_gaps,
     scoring_model_version: "v1",
   };
 
   // ── Persist score to DB ─────────────────────────────────────────
+  const scoredAt = new Date().toISOString();
+  const fullRecord = {
+    ...scoreData,
+    scored_at: scoredAt,
+  };
+  const legacyRecord = {
+    conversation_id: conversationId,
+    overall_score: claudeResult.overall_score,
+    accuracy_score: claudeResult.accuracy_score,
+    hallucination_score: claudeResult.hallucination_score,
+    resolution_score: claudeResult.resolution_score,
+    tone_score: claudeResult.tone_score,
+    sentiment_score: claudeResult.sentiment_score,
+    structural_metrics: {
+      ...structuralMetrics,
+      confidence_level: claudeResult.confidence_level,
+    },
+    claim_analysis: claudeResult.claim_analysis,
+    flags: claudeResult.flags,
+    summary: claudeResult.summary,
+    prompt_improvements: claudeResult.prompt_improvements,
+    knowledge_gaps: claudeResult.knowledge_gaps,
+    scoring_model_version: "v1",
+    scored_at: scoredAt,
+  };
+
+  let upsertError;
+
   // Upsert so re-scoring overwrites the previous result
-  const { error: upsertError } = await supabaseAdmin
+  ({ error: upsertError } = await supabaseAdmin
     .from("quality_scores")
-    .upsert(
-      {
-        ...scoreData,
-        scored_at: new Date().toISOString(),
-      },
-      { onConflict: "conversation_id" }
-    );
+    .upsert(fullRecord, { onConflict: "conversation_id" }));
+
+  if (isLegacyQualityScoresColumnError(upsertError)) {
+    ({ error: upsertError } = await supabaseAdmin
+      .from("quality_scores")
+      .upsert(legacyRecord, { onConflict: "conversation_id" }));
+  }
 
   if (upsertError) {
     // Log but don't throw — the score is computed and can still be returned

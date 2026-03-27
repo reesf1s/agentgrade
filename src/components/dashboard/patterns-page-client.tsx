@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, BookOpen, Brain, Check } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -106,6 +107,26 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
               </div>
 
               <p className="mb-4 text-sm leading-relaxed text-[var(--text-secondary)]">{pattern.description}</p>
+
+              {pattern.affected_conversation_ids.length > 0 && (
+                <div className="mb-3 rounded-xl bg-[rgba(0,0,0,0.02)] p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                    <span className="text-xs font-medium text-[var(--text-primary)]">Affected conversations</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {pattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
+                      <Link
+                        key={conversationId}
+                        href={`/conversations/${conversationId}`}
+                        className="rounded-full bg-white px-3 py-1 text-xs text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                      >
+                        {conversationId.slice(0, 8)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {pattern.prompt_fix && (
                 <div className="mb-3 rounded-xl bg-[rgba(0,0,0,0.02)] p-4">

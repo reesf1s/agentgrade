@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
 interface IngestMessage {
-  role: "agent" | "customer" | "human_agent" | "system";
+  role: "agent" | "customer" | "human_agent" | "system" | "tool";
   content: string;
   timestamp?: string;
 }

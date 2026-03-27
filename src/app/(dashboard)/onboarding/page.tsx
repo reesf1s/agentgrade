@@ -53,6 +53,7 @@ export default function OnboardingPage() {
   const [agentName, setAgentName] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [subdomain, setSubdomain] = useState("");
+  const [zendeskEmail, setZendeskEmail] = useState("");
   const [thresholds, setThresholds] = useState<Record<string, number>>(
     Object.fromEntries(DEFAULT_THRESHOLDS.map((threshold) => [threshold.dimension, threshold.default]))
   );
@@ -84,7 +85,7 @@ export default function OnboardingPage() {
         platform,
         name: agentName || `${platform} Connection`,
         api_key: apiKey || undefined,
-        config: platform === "zendesk" ? { subdomain } : {},
+        config: platform === "zendesk" ? { subdomain, email: zendeskEmail } : {},
       }),
     });
 
@@ -110,8 +111,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (platform === "zendesk" && (!subdomain.trim() || !apiKey.trim())) {
-      setError("Enter your Zendesk subdomain and API token to continue.");
+    if (platform === "zendesk" && (!subdomain.trim() || !zendeskEmail.trim() || !apiKey.trim())) {
+      setError("Enter your Zendesk subdomain, support email, and API token to continue.");
       return;
     }
 
@@ -228,8 +229,17 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-12">
-      <div className="flex items-center justify-center gap-3 mb-12">
+    <div className="mx-auto max-w-4xl py-10">
+      <div className="mb-10">
+        <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+          Set up AgentGrade
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+          Connect one or more support agents, add knowledge sources, and set the thresholds that should trigger review.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 mb-10">
         {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = currentStep === step.id;
@@ -269,10 +279,11 @@ export default function OnboardingPage() {
       )}
 
       {currentStep === 1 && (
-        <GlassCard className="p-8">
+        <GlassCard className="grid gap-8 p-8 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+          <div>
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Connect your AI agent</h2>
           <p className="text-sm text-[var(--text-secondary)] mb-8">
-            Choose how conversations should flow into AgentGrade. You can add multiple bots per workspace, and each connection gets its own secure webhook and scoring history.
+            Choose how conversations should flow into AgentGrade. Each connection gets its own secret, setup guide, and scoring history.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
@@ -333,12 +344,21 @@ export default function OnboardingPage() {
                 onChange={(e) => setSubdomain(e.target.value)}
               />
               <GlassInput
+                label="Zendesk Support Email"
+                placeholder="support@yourcompany.com"
+                value={zendeskEmail}
+                onChange={(e) => setZendeskEmail(e.target.value)}
+              />
+              <GlassInput
                 label="API Token"
                 placeholder="Enter your Zendesk API token"
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
+              <p className="text-xs text-[var(--text-muted)]">
+                Zendesk API token auth uses your agent email plus an API token. AgentGrade uses both to sync ticket comments and Help Center articles.
+              </p>
             </div>
           )}
 
@@ -389,11 +409,27 @@ export default function OnboardingPage() {
           >
             {saving ? "Setting up..." : "Continue"} <ArrowRight className="w-4 h-4" />
           </GlassButton>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              Best path for most teams
+            </p>
+            <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+              <li>Use `Custom Webhook` for in-product copilots, command menus, and internal chatbots.</li>
+              <li>Use `Voiceflow` when you want AgentGrade to expect Voiceflow-shaped payloads.</li>
+              <li>Use `Upload CSV/JSON` if you want an immediate historical audit before going live.</li>
+            </ul>
+            <div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-xs text-[var(--text-muted)]">
+              AgentGrade supports multiple bots per workspace, so you can connect your live assistant, fallback assistant, and internal support copilot separately.
+            </div>
+          </div>
         </GlassCard>
       )}
 
       {currentStep === 2 && (
-        <GlassCard className="p-8">
+        <GlassCard className="grid gap-8 p-8 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+          <div>
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
             Upload your knowledge base
           </h2>
@@ -475,6 +511,37 @@ export default function OnboardingPage() {
             <GlassButton onClick={() => handleKnowledgeBaseContinue(true)} className="!py-3">
               Skip for now
             </GlassButton>
+          </div>
+          </div>
+
+          <div className="space-y-4">
+            {(platform === "custom" || platform === "voiceflow") && webhookSecret && (
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  Hand this to a developer
+                </p>
+                <div className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+                  <p>1. Add these env vars to the chatbot app and Vercel project.</p>
+                  <pre className="overflow-x-auto rounded-xl bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)]">
+{`AGENTGRADE_WEBHOOK_URL=${webhookUrl || `${browserOrigin}/api/webhooks/${platform === "voiceflow" ? "voiceflow" : "ingest"}`}
+AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
+                  </pre>
+                  <p>2. Restart the app so the env vars load.</p>
+                  <p>3. POST the latest transcript after each assistant reply or when the chat closes.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Why add a knowledge base
+              </p>
+              <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+                <li>Improves hallucination detection by grounding the scoring engine.</li>
+                <li>Makes explanations more trustworthy because the evaluator has source material.</li>
+                <li>Turns missing documentation into explicit knowledge gaps and recommendations.</li>
+              </ul>
+            </div>
           </div>
         </GlassCard>
       )}

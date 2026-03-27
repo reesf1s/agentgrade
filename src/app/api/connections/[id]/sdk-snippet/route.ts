@@ -49,9 +49,42 @@ ${baseExample.replace(
 
   return `// AgentGrade SDK — auto-log conversations
 // Connection: ${input.connectionName}
-// Install: npm install agentgrade  (or paste this inline)
+// Add these env vars to your app or Vercel project:
+// AGENTGRADE_WEBHOOK_URL=${input.webhookUrl}
+// AGENTGRADE_BEARER_SECRET=${input.secret}
+//
+// What they mean:
+// - AGENTGRADE_WEBHOOK_URL: where your app sends transcript updates
+// - AGENTGRADE_BEARER_SECRET: the workspace-specific secret for Authorization: Bearer <secret>
+//
+// Then call AgentGrade from the place where your chatbot already has
+// the latest transcript or turn events.
 
 ${baseExample}`;
+}
+
+function buildEnvExample(input: { webhookUrl: string; secret: string }) {
+  return `AGENTGRADE_WEBHOOK_URL=${input.webhookUrl}
+AGENTGRADE_BEARER_SECRET=${input.secret}`;
+}
+
+function buildInstallSteps(input: { platform: string; webhookUrl: string; secret: string }) {
+  const baseSteps = [
+    "Add the AgentGrade env vars to your local .env.local and your Vercel project env vars.",
+    "Restart your app so the new env vars load.",
+    "Hook the send call into your chatbot flow where you already have the transcript or latest turn.",
+    "Send one test conversation and confirm it appears in AgentGrade.",
+  ];
+
+  if (input.platform === "voiceflow") {
+    return [
+      "Create a Voiceflow custom action that POSTs the current transcript to AgentGrade.",
+      "Use the Voiceflow-specific endpoint if you want AgentGrade to normalize Voiceflow payloads for you.",
+      ...baseSteps.slice(3),
+    ];
+  }
+
+  return baseSteps;
 }
 
 /**
@@ -78,7 +111,10 @@ export async function GET(
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
-    const webhookUrl = `${resolveAppUrl(_request)}/api/webhooks/ingest`;
+    const webhookUrl =
+      connection.platform === "voiceflow"
+        ? `${resolveAppUrl(_request)}/api/webhooks/voiceflow`
+        : `${resolveAppUrl(_request)}/api/webhooks/ingest`;
 
     const snippet = buildSnippet({
       webhookUrl,
@@ -87,7 +123,26 @@ export async function GET(
       connectionName: connection.name,
     });
 
-    return NextResponse.json({ snippet, webhook_url: webhookUrl, api_key: connection.webhook_secret });
+    return NextResponse.json({
+      snippet,
+      webhook_url: webhookUrl,
+      api_key: connection.webhook_secret,
+      env_example: buildEnvExample({
+        webhookUrl,
+        secret: connection.webhook_secret,
+      }),
+      install_steps: buildInstallSteps({
+        platform: connection.platform || "custom",
+        webhookUrl,
+        secret: connection.webhook_secret,
+      }),
+      env_help: {
+        AGENTGRADE_WEBHOOK_URL:
+          "The AgentGrade endpoint your app should POST transcripts to.",
+        AGENTGRADE_BEARER_SECRET:
+          "The workspace-specific bearer token sent in Authorization: Bearer <secret>.",
+      },
+    });
   } catch (err) {
     console.error("sdk-snippet GET error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

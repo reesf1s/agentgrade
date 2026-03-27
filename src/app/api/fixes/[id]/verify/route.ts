@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 
+function isMissingTableError(error: { code?: string } | null | undefined) {
+  return error?.code === "PGRST205";
+}
+
 /**
  * GET /api/fixes/:id/verify
  * Checks quality before/after a fix was pushed by comparing score averages.
@@ -22,13 +26,19 @@ export async function GET(
     const { id } = await params;
 
     const { data: fix, error: fetchError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("*")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
       .single();
 
     if (fetchError || !fix) {
+      if (isMissingTableError(fetchError)) {
+        return NextResponse.json(
+          { error: "Suggested fixes storage is not configured yet in this environment" },
+          { status: 501 }
+        );
+      }
       return NextResponse.json({ error: "Fix not found" }, { status: 404 });
     }
 
@@ -114,6 +124,52 @@ export async function GET(
     });
   } catch (error) {
     console.error("Fix verify error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const ctx = await getWorkspaceContext();
+    if (!ctx) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!["owner", "admin"].includes(ctx.member.role)) {
+      return NextResponse.json({ error: "Only owners and admins can verify fixes" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("suggested_fixes")
+      .update({
+        status: "verified",
+        verified_at: new Date().toISOString(),
+        verified_by: ctx.member.clerk_user_id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("workspace_id", ctx.workspace.id)
+      .select("*")
+      .single();
+
+    if (error || !updated) {
+      if (isMissingTableError(error)) {
+        return NextResponse.json(
+          { error: "Suggested fixes storage is not configured yet in this environment" },
+          { status: 501 }
+        );
+      }
+      return NextResponse.json({ error: "Failed to verify fix" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, fix: updated });
+  } catch (error) {
+    console.error("Fix verify POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

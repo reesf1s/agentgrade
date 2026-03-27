@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { decryptSecret } from "@/lib/secrets";
+import { uploadAndProcess } from "@/lib/knowledge-base";
+import { syncZendeskHelpCenter } from "@/lib/integrations/zendesk";
 
 /**
  * POST /api/knowledge-base/sync
@@ -10,7 +13,7 @@ import { supabaseAdmin } from "@/lib/supabase";
  * Fetches published articles from the Intercom Articles API,
  * chunks them, and stores in knowledge_base.
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const ctx = await getWorkspaceContext();
     if (!ctx) {
@@ -18,26 +21,50 @@ export async function POST() {
     }
 
     const workspaceId = ctx.workspace.id;
+    const body = await request.json().catch(() => ({}));
+    const requestedPlatform =
+      body && typeof body.platform === "string" ? body.platform : null;
 
-    // Find active Intercom connection with API key
+    // Find active supported connection with API key
     const { data: connections } = await supabaseAdmin
       .from("agent_connections")
-      .select("id, api_key_encrypted")
+      .select("id, platform, api_key_encrypted, config")
       .eq("workspace_id", workspaceId)
-      .eq("platform", "intercom")
       .eq("is_active", true)
-      .limit(1);
+      .in("platform", requestedPlatform ? [requestedPlatform] : ["intercom", "zendesk"])
+      .order("created_at", { ascending: false });
 
-    const connection = connections?.[0];
+    const connection =
+      connections?.find((item) => item.platform === requestedPlatform) ||
+      connections?.find((item) => item.platform === "intercom") ||
+      connections?.find((item) => item.platform === "zendesk");
 
     if (!connection?.api_key_encrypted) {
       return NextResponse.json(
-        { error: "No active Intercom connection with API key found. Add your Intercom API key in connection settings." },
+        { error: "No active Intercom or Zendesk connection with API key found. Add one in connection settings." },
         { status: 400 }
       );
     }
 
-    const apiKey = connection.api_key_encrypted;
+    const apiKey = await decryptSecret(connection.api_key_encrypted);
+
+    if (connection.platform === "zendesk") {
+      const result = await syncZendeskHelpCenter({
+        workspaceId,
+        config: (connection.config || {}) as { subdomain?: string; email?: string },
+        apiKey,
+      });
+      await supabaseAdmin
+        .from("agent_connections")
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq("id", connection.id);
+
+      return NextResponse.json({
+        success: true,
+        platform: "zendesk",
+        ...result,
+      });
+    }
 
     // Fetch published articles from Intercom
     const articles: IntercomArticle[] = [];
@@ -80,14 +107,14 @@ export async function POST() {
     let skipped = 0;
 
     for (const article of articles) {
-      const sourceUrl = `https://help.intercom.com/en/articles/${article.id}`;
+      const sourceFile = `intercom_article_${article.id}.txt`;
 
-      // Skip if this article URL is already in the KB
+      // Skip if this article has already been imported
       const { data: existing } = await supabaseAdmin
         .from("knowledge_base")
         .select("id")
         .eq("workspace_id", workspaceId)
-        .eq("source_url", sourceUrl)
+        .eq("source_file", sourceFile)
         .limit(1);
 
       if (existing && existing.length > 0) {
@@ -99,33 +126,14 @@ export async function POST() {
       const plainText = stripHtml(article.body || "");
       if (!plainText.trim()) continue;
 
-      // Chunk the article
-      const chunks = chunkText(plainText);
-
-      // Delete old versions of this article (by URL)
-      await supabaseAdmin
-        .from("knowledge_base")
-        .delete()
-        .eq("workspace_id", workspaceId)
-        .eq("source_url", sourceUrl);
-
-      // Insert chunks
-      await supabaseAdmin.from("knowledge_base").insert(
-        chunks.map((chunk, i) => ({
-          workspace_id: workspaceId,
-          title: article.title,
-          content: chunk,
-          chunk_index: i,
-          source_url: sourceUrl,
-          source_type: "intercom" as const,
-        }))
-      );
+      await uploadAndProcess(workspaceId, plainText, sourceFile);
 
       synced++;
     }
 
     return NextResponse.json({
       success: true,
+      platform: "intercom",
       articles_synced: synced,
       articles_skipped: skipped,
       total_articles: articles.length,
@@ -159,28 +167,4 @@ function stripHtml(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function chunkText(text: string): string[] {
-  const CHUNK_SIZE = 1000;
-  const CHUNK_OVERLAP = 100;
-
-  const cleaned = text.replace(/\r\n/g, "\n").trim();
-  if (cleaned.length <= CHUNK_SIZE) return cleaned ? [cleaned] : [];
-
-  const sentences = cleaned.split(/(?<=[.!?])\s+/);
-  const chunks: string[] = [];
-  let current = "";
-
-  for (const sentence of sentences) {
-    if (current.length + sentence.length > CHUNK_SIZE && current.length > 0) {
-      chunks.push(current.trim());
-      current = current.slice(-CHUNK_OVERLAP) + " " + sentence;
-    } else {
-      current += (current ? " " : "") + sentence;
-    }
-  }
-
-  if (current.trim()) chunks.push(current.trim());
-  return chunks.filter((c) => c.length > 50);
 }

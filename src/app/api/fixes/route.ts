@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { PromptImprovement, KnowledgeGap } from "@/lib/db/types";
+import { buildDerivedFixFromPattern, classifyInterventionType } from "@/lib/fixes/derived";
+
+function isMissingTableError(error: { code?: string } | null | undefined) {
+  return error?.code === "PGRST205";
+}
 
 /**
  * GET /api/fixes
@@ -9,7 +14,7 @@ import type { PromptImprovement, KnowledgeGap } from "@/lib/db/types";
  * Fixes are synthesized from prompt_improvements and knowledge_gaps across scored conversations.
  *
  * Query params:
- *   status    — 'pending' | 'approved' | 'pushed' | 'dismissed' | 'all' (default: pending)
+ *   status    — 'draft' | 'approved' | 'pushed' | 'verified' | 'dismissed' | 'all' (default: draft)
  *   fix_type  — 'prompt_improvement' | 'knowledge_gap'
  *   priority  — 'high' | 'medium' | 'low'
  */
@@ -22,7 +27,8 @@ export async function GET(request: NextRequest) {
 
     const workspaceId = ctx.workspace.id;
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") || "pending";
+    const rawStatus = searchParams.get("status") || "draft";
+    const status = rawStatus === "pending" ? "draft" : rawStatus;
     const fixType = searchParams.get("fix_type");
     const priority = searchParams.get("priority");
 
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest) {
     await ensureFixesSynthesized(workspaceId);
 
     let query = supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("occurrence_count", { ascending: false })
@@ -47,6 +53,38 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query;
+
+    if (isMissingTableError(error)) {
+      const { data: patterns, error: patternsError } = await supabaseAdmin
+        .from("failure_patterns")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("is_resolved", false)
+        .order("detected_at", { ascending: false });
+
+      if (patternsError) {
+        return NextResponse.json({ error: "Failed to fetch fallback fixes" }, { status: 500 });
+      }
+
+      let fixes = (patterns || []).map((pattern) =>
+        buildDerivedFixFromPattern(pattern, workspaceId)
+      );
+
+      if (status !== "all") {
+        fixes = fixes.filter((fix) => fix.status === status);
+      }
+      if (fixType) {
+        fixes = fixes.filter((fix) => fix.fix_type === fixType);
+      }
+      if (priority) {
+        fixes = fixes.filter((fix) => fix.priority === priority);
+      }
+
+      return NextResponse.json({
+        fixes,
+        note: "Showing fixes derived from failure patterns. Apply the suggested_fixes migration to enable approval, push, and verification persistence.",
+      });
+    }
 
     if (error) {
       return NextResponse.json({ error: "Failed to fetch fixes" }, { status: 500 });
@@ -68,10 +106,21 @@ export async function GET(request: NextRequest) {
  */
 async function ensureFixesSynthesized(workspaceId: string) {
   const { data: existing } = await supabaseAdmin
-    .from("ag_suggested_fixes")
+    .from("suggested_fixes")
     .select("id")
     .eq("workspace_id", workspaceId)
     .limit(1);
+
+  // The current live schema may not have suggested_fixes yet.
+  // Degrade cleanly instead of throwing from every GET.
+  if (!existing) {
+    const { error: tableError } = await supabaseAdmin
+      .from("suggested_fixes")
+      .select("id", { count: "exact", head: true })
+      .limit(1);
+
+    if (isMissingTableError(tableError)) return;
+  }
 
   if (existing && existing.length > 0) return; // already synthesized
 
@@ -127,6 +176,12 @@ async function ensureFixesSynthesized(workspaceId: string) {
     ...improvements.map(({ imp, count, convIds }) => ({
       workspace_id: workspaceId,
       fix_type: "prompt_improvement" as const,
+      intervention_type: classifyInterventionType({
+        pattern_type: "prompt_improvement",
+        title: imp.issue,
+        description: imp.current_behavior,
+        prompt_fix: imp.recommended_prompt_change,
+      }),
       title: imp.issue,
       description: imp.current_behavior,
       current_behavior: imp.current_behavior,
@@ -135,10 +190,17 @@ async function ensureFixesSynthesized(workspaceId: string) {
       priority: imp.priority,
       source_conversation_ids: convIds,
       occurrence_count: count,
+      status: "draft" as const,
     })),
     ...gaps.map(({ gap, count, convIds }) => ({
       workspace_id: workspaceId,
       fix_type: "knowledge_gap" as const,
+      intervention_type: classifyInterventionType({
+        pattern_type: "knowledge_gap",
+        title: gap.topic,
+        description: gap.description,
+        knowledge_base_suggestion: gap.suggested_content,
+      }),
       title: gap.topic,
       description: gap.description,
       recommended_change: gap.suggested_content,
@@ -146,10 +208,12 @@ async function ensureFixesSynthesized(workspaceId: string) {
       priority: count >= 5 ? "high" : count >= 2 ? "medium" : "low",
       source_conversation_ids: convIds,
       occurrence_count: count,
+      status: "draft" as const,
     })),
   ];
 
   if (fixesToInsert.length > 0) {
-    await supabaseAdmin.from("ag_suggested_fixes").insert(fixesToInsert);
+    const { error } = await supabaseAdmin.from("suggested_fixes").insert(fixesToInsert);
+    if (isMissingTableError(error)) return;
   }
 }

@@ -25,6 +25,11 @@ export default function ConversationDetailPage() {
   const [conv, setConv] = useState<ConversationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideDimension, setOverrideDimension] = useState("overall");
+  const [overrideScore, setOverrideScore] = useState("50");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     fetch(`/api/conversations/${params.id}`)
@@ -64,13 +69,48 @@ export default function ConversationDetailPage() {
   }
 
   const qs = conv.quality_score;
+  const confidenceLevel = qs?.confidence_level ?? qs?.structural_metrics?.confidence_level;
+  const confidenceTone = confidenceLevel === "high"
+    ? "score-good"
+    : confidenceLevel === "medium"
+      ? "score-warning"
+      : "score-critical";
 
   const roleConfig = {
     customer: { icon: User, label: "Customer", bg: "bg-[rgba(0,0,0,0.02)]", align: "mr-auto" },
     agent: { icon: Bot, label: "AI Agent", bg: "bg-[rgba(0,0,0,0.04)]", align: "ml-auto" },
     human_agent: { icon: Headphones, label: "Human Agent", bg: "bg-[rgba(59,130,246,0.05)]", align: "ml-auto" },
+    tool: { icon: Bot, label: "Tool", bg: "bg-[rgba(16,185,129,0.06)]", align: "mx-auto" },
     system: { icon: Bot, label: "System", bg: "bg-[rgba(0,0,0,0.02)]", align: "mx-auto" },
   };
+
+  async function submitOverride() {
+    if (!conv) return;
+
+    setOverrideState("saving");
+    try {
+      const response = await fetch(`/api/conversations/${conv.id}/override`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dimension: overrideDimension,
+          override_score: Math.max(0, Math.min(1, Number(overrideScore) / 100)),
+          reason: overrideReason || null,
+        }),
+      });
+
+      if (!response.ok) {
+        setOverrideState("error");
+        return;
+      }
+
+      setOverrideState("saved");
+      setShowOverrideForm(false);
+      setOverrideReason("");
+    } catch {
+      setOverrideState("error");
+    }
+  }
 
   return (
     <div className="max-w-6xl">
@@ -228,6 +268,14 @@ export default function ConversationDetailPage() {
               <GlassCard className="p-5">
                 <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
+                {confidenceLevel ? (
+                  <div className="mt-4 rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+                    <p className="text-xs text-[var(--text-muted)]">Confidence</p>
+                    <p className={`mt-1 text-sm font-medium capitalize ${confidenceTone}`}>
+                      {confidenceLevel}
+                    </p>
+                  </div>
+                ) : null}
               </GlassCard>
 
               {qs.flags.length > 0 && (
@@ -276,7 +324,55 @@ export default function ConversationDetailPage() {
             <p className="text-xs text-[var(--text-muted)] mb-3">
               Disagree with the assessment? Override a score to calibrate the model.
             </p>
-            <GlassButton size="sm" className="w-full">Submit Override</GlassButton>
+            {showOverrideForm ? (
+              <div className="space-y-3">
+                <select
+                  value={overrideDimension}
+                  onChange={(e) => setOverrideDimension(e.target.value)}
+                  className="glass-input w-full px-3 py-2 text-sm"
+                >
+                  <option value="overall">Overall</option>
+                  <option value="accuracy">Accuracy</option>
+                  <option value="hallucination">Hallucination</option>
+                  <option value="resolution">Resolution</option>
+                  <option value="tone">Tone</option>
+                  <option value="sentiment">Sentiment</option>
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={overrideScore}
+                  onChange={(e) => setOverrideScore(e.target.value)}
+                  className="glass-input w-full px-3 py-2 text-sm"
+                  placeholder="Adjusted score %"
+                />
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  className="glass-input min-h-[88px] w-full px-3 py-2 text-sm"
+                  placeholder="Why is the current score wrong?"
+                />
+                <div className="flex gap-2">
+                  <GlassButton size="sm" className="w-full" onClick={submitOverride} disabled={overrideState === "saving"}>
+                    {overrideState === "saving" ? "Saving..." : "Save override"}
+                  </GlassButton>
+                  <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowOverrideForm(false)}>
+                    Cancel
+                  </GlassButton>
+                </div>
+              </div>
+            ) : (
+              <GlassButton size="sm" className="w-full" onClick={() => setShowOverrideForm(true)}>
+                Submit Override
+              </GlassButton>
+            )}
+            {overrideState === "saved" ? (
+              <p className="mt-3 text-xs text-score-good">Override saved.</p>
+            ) : null}
+            {overrideState === "error" ? (
+              <p className="mt-3 text-xs text-score-critical">Failed to save override.</p>
+            ) : null}
           </GlassCard>
         </div>
       </div>

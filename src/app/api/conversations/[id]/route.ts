@@ -43,10 +43,20 @@ export async function GET(
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
+    const qualityScore = scoreRes.data
+      ? {
+          ...scoreRes.data,
+          confidence_level:
+            scoreRes.data.confidence_level ||
+            scoreRes.data.structural_metrics?.confidence_level ||
+            undefined,
+        }
+      : null;
+
     return NextResponse.json({
       ...convRes.data,
       messages: messagesRes.data || [],
-      quality_score: scoreRes.data || null,
+      quality_score: qualityScore,
     });
   } catch (error) {
     console.error("Conversation detail API error:", error);

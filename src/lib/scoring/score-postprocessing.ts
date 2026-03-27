@@ -59,6 +59,67 @@ function pushUniqueFlag(flags: string[], flag: string) {
   }
 }
 
+function deriveConfidenceLevel(
+  input: ScoringInput,
+  result: ScoringResult
+): { level: "high" | "medium" | "low"; reasons: string[] } {
+  const reasons: string[] = [];
+  let penalty = 0;
+
+  if (!input.knowledgeBaseContext?.length) {
+    penalty += 1;
+    reasons.push("No workspace knowledge base evidence was available for grounding.");
+  }
+
+  const claims = result.claim_analysis || [];
+  const fabricatedClaims = claims.filter((claim) => claim.verdict === "fabricated");
+  const contradictedClaims = claims.filter((claim) => claim.verdict === "contradicted");
+  const unverifiableClaims = claims.filter((claim) => claim.verdict === "unverifiable");
+  const verifiedClaims = claims.filter((claim) => claim.verdict === "verified");
+
+  if (fabricatedClaims.length > 0 || contradictedClaims.length > 0) {
+    penalty += 2;
+    reasons.push("The conversation contains contradicted or fabricated claims.");
+  } else if (unverifiableClaims.length >= 2) {
+    penalty += 1;
+    reasons.push("Several important claims could not be verified confidently.");
+  }
+
+  if (claims.length > 0 && verifiedClaims.length === 0) {
+    penalty += 1;
+    reasons.push("No extracted claims were positively verified.");
+  }
+
+  if (input.messages.length < 3) {
+    penalty += 1;
+    reasons.push("The transcript is very short, which reduces scoring certainty.");
+  }
+
+  if (result.flags.includes("scoring_error")) {
+    penalty += 3;
+    reasons.push("Automated scoring had to fall back to a degraded path.");
+  }
+
+  if (result.flags.includes("limited_grounding_context")) {
+    penalty += 1;
+    reasons.push("Grounding context was limited for factual verification.");
+  }
+
+  if (penalty >= 4) {
+    return { level: "low", reasons };
+  }
+
+  if (penalty >= 2) {
+    return { level: "medium", reasons };
+  }
+
+  if (reasons.length === 0) {
+    reasons.push("The evaluation had transcript evidence and no major verification uncertainty signals.");
+  }
+
+  return { level: "high", reasons };
+}
+
 export function applyScoringGuardrails(
   input: ScoringInput,
   result: ScoringResult
@@ -136,6 +197,12 @@ export function applyScoringGuardrails(
       adjusted.edge_case_score * 0.03 +
       adjusted.escalation_score * 0.02
   );
+
+  const confidence = deriveConfidenceLevel(input, adjusted);
+  adjusted.confidence_level = confidence.level;
+  adjusted.summary =
+    adjusted.summary ||
+    `Confidence: ${confidence.level}. ${confidence.reasons[0] ?? "Evaluation complete."}`;
 
   return adjusted;
 }

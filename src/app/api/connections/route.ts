@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { resolveAppUrl } from "@/lib/url";
+import { encryptSecret } from "@/lib/secrets";
 
 const SUPPORTED_PLATFORMS = [
   "intercom",
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { platform, name, api_key, config } = body;
+    const encryptedApiKey = await encryptSecret(api_key);
 
     if (
       !platform ||
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
         workspace_id: ctx.workspace.id,
         platform,
         name: name || `${platform} Connection`,
-        api_key_encrypted: api_key || null,
+        api_key_encrypted: encryptedApiKey,
         webhook_url: webhookUrl,
         webhook_secret: webhookSecret,
         is_active: true,

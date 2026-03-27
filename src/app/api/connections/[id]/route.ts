@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { encryptSecret } from "@/lib/secrets";
 
 /**
  * GET /api/connections/:id
@@ -61,7 +62,9 @@ export async function PATCH(
     if (body.name !== undefined) updates.name = body.name;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
     if (body.config !== undefined) updates.config = body.config;
-    if (body.api_key !== undefined) updates.api_key_encrypted = body.api_key;
+    if (body.api_key !== undefined) {
+      updates.api_key_encrypted = await encryptSecret(body.api_key);
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No updatable fields provided" }, { status: 400 });

@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
             content: chunk,
             chunk_index: j,
             source_file: fileName,
-            source_type: "upload" as const,
           })));
 
           const { error } = await supabaseAdmin.from("knowledge_base").insert(rows);
@@ -104,7 +103,6 @@ export async function POST(request: NextRequest) {
       content: chunk,
       chunk_index: i,
       source_file: fileName,
-      source_type: "upload" as const,
       ...(embeddings?.[i] ? { embedding: embeddings[i] } : {}),
     }));
 

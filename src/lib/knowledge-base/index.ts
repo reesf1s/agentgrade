@@ -14,6 +14,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase";
 import type { KnowledgeBaseItem } from "@/lib/db/types";
+import { decryptSecret } from "@/lib/secrets";
 
 // ─── Chunking Config ────────────────────────────────────────────────
 // ~500 tokens ≈ 2000 characters (rough 4 chars/token estimate)
@@ -252,7 +253,7 @@ export async function syncIntercomArticles(connectionId: string): Promise<{
   }
 
   const workspaceId = connection.workspace_id as string;
-  const intercomToken = connection.api_key_encrypted as string;
+  const intercomToken = await decryptSecret(connection.api_key_encrypted as string);
 
   // Fetch articles from Intercom API
   let articles: { id: string; title: string; body: string; state: string }[] = [];

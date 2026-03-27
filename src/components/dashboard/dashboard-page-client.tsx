@@ -25,25 +25,20 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
     <div className="max-w-6xl pb-10">
       <div className="mb-10 flex items-end justify-between gap-6">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[var(--text-muted)]">
-            Quality cockpit
-          </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
             Dashboard
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-            A floating command surface for the last 30 days of agent quality, customer risk, and system drift.
+            Monitor conversation quality, hallucinations, escalations, and recurring failures across your support agents.
           </p>
         </div>
-        <div className="glass-static hidden min-w-[260px] rounded-[1.75rem] p-5 lg:block">
-          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
-            Live posture
+        <div className="glass-static hidden min-w-[280px] rounded-[1.25rem] p-5 lg:block">
+          <p className="text-xs font-medium text-[var(--text-muted)]">
+            Monitoring status
           </p>
           <div className="mt-3 flex items-center gap-3">
-            <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_20px_rgba(74,222,128,0.6)]" />
-            <p className="text-sm text-[var(--text-primary)]">
-              Monitoring is active across your connected agents
-            </p>
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <p className="text-sm text-[var(--text-primary)]">Connected agents are being monitored in real time</p>
           </div>
         </div>
       </div>
@@ -88,7 +83,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
         <div>
-          <GlassCard className="glass-highlight rounded-[2rem] p-7">
+          <GlassCard className="glass-highlight rounded-[1.25rem] p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
@@ -110,7 +105,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.trend_data}>
-                    <CartesianGrid stroke="rgba(0,0,0,0.04)" strokeDasharray="3 3" />
+                    <CartesianGrid stroke="rgba(0,0,0,0.04)" vertical={false} />
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 11, fill: "var(--text-muted)" }}
@@ -127,12 +122,12 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "rgba(255,255,255,0.72)",
-                        backdropFilter: "blur(18px)",
-                        border: "1px solid rgba(255,255,255,0.6)",
-                        borderRadius: "18px",
+                        background: "var(--panel)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "14px",
                         fontSize: 12,
-                        boxShadow: "0 18px 44px rgba(148,163,184,0.2)",
+                        boxShadow: "var(--glass-shadow)",
                       }}
                       formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]}
                     />
@@ -145,7 +140,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
 
         <div className="space-y-4">
-          <GlassCard className="glass-highlight rounded-[2rem] p-5">
+          <GlassCard className="glass-highlight rounded-[1.25rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Active Alerts</h2>
@@ -155,7 +150,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             ) : (
               <div className="space-y-3">
                 {data.alerts.map((alert) => (
-                  <div key={alert.id} className="rounded-[1.25rem] bg-white/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                  <div key={alert.id} className="rounded-[1rem] bg-[var(--surface)] p-3">
                     <p className="mb-1 text-sm font-medium text-[var(--text-primary)]">{alert.title}</p>
                     <p className="text-xs text-[var(--text-muted)]">{alert.description}</p>
                   </div>
@@ -164,26 +159,31 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             )}
           </GlassCard>
 
-          <GlassCard className="glass-highlight rounded-[2rem] p-5">
+          <GlassCard className="glass-highlight rounded-[1.25rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Fix</h2>
+              <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
             </div>
-            {data.conversations.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">Score some conversations to see recommendations.</p>
+            {data.patterns.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)]">Score conversations to detect recurring quality failures.</p>
             ) : (
-              <div className="rounded-[1.25rem] bg-white/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                <p className="mb-2 text-sm text-[var(--text-primary)]">
-                  Ingest conversations to generate prompt improvement recommendations.
-                </p>
-                <SeverityBadge severity="medium" />
+              <div className="space-y-3">
+                {data.patterns.slice(0, 3).map((pattern) => (
+                  <Link key={pattern.id} href="/patterns" className="block rounded-[1rem] bg-[var(--surface)] p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{pattern.title}</p>
+                      <SeverityBadge severity={pattern.severity} />
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)]">{pattern.description}</p>
+                  </Link>
+                ))}
               </div>
             )}
           </GlassCard>
         </div>
       </div>
 
-      <GlassCard className="glass-highlight mt-6 rounded-[2rem] p-7">
+      <GlassCard className="glass-highlight mt-6 rounded-[1.25rem] p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />

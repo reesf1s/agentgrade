@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyClerkSessionToken } from "@/lib/auth/get-user";
+import { getCandidateSessionTokens, verifyClerkSessionToken } from "@/lib/auth/get-user";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -22,13 +22,13 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const fallbackUserId = await verifyClerkSessionToken(
-    req.cookies.get("__session")?.value,
-    req.nextUrl.origin,
-  );
+  const candidateTokens = getCandidateSessionTokens(req.cookies.getAll());
 
-  if (fallbackUserId) {
-    return NextResponse.next();
+  for (const token of candidateTokens) {
+    const fallbackUserId = await verifyClerkSessionToken(token, req.nextUrl.origin);
+    if (fallbackUserId) {
+      return NextResponse.next();
+    }
   }
 
   const signInUrl = new URL("/sign-in", req.url);

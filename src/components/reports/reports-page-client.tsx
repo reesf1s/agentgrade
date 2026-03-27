@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, BookOpen, Brain } from "lucide-react";
+import { AlertTriangle, BookOpen, Brain, Siren, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -20,6 +20,40 @@ import type { KnowledgeGap, PromptImprovement } from "@/lib/db/types";
 export function ReportsPageClient({ report }: { report: ReportData }) {
   const summary = report.summary;
   const trendData = report.trend_data || [];
+  const trendDelta = summary?.score_trend ?? 0;
+  const trendTone =
+    trendDelta > 0.02
+      ? {
+          title: "Quality improved this week",
+          description: `Overall quality increased by ${(trendDelta * 100).toFixed(1)} points versus the prior week.`,
+          icon: TrendingUp,
+        }
+      : trendDelta < -0.02
+        ? {
+            title: "Quality deteriorated this week",
+            description: `Overall quality fell by ${Math.abs(trendDelta * 100).toFixed(1)} points versus the prior week.`,
+            icon: TrendingDown,
+          }
+        : {
+            title: "Quality stayed broadly stable",
+            description: "Scores were within a narrow range of the prior week, so there was no material shift in overall quality.",
+            icon: TrendingUp,
+          };
+  const notableIconClass = trendDelta < -0.02 ? "text-score-critical" : "text-score-good";
+  const recommendedInterventions = report.patterns
+    .slice(0, 3)
+    .map((pattern) => ({
+      id: pattern.id,
+      title: pattern.title,
+      intervention:
+        pattern.recommendation ||
+        pattern.prompt_fix ||
+        pattern.knowledge_base_suggestion ||
+        "Manual review required to identify the right remediation.",
+      severity: pattern.severity,
+      href: `/conversations/${pattern.affected_conversation_ids[0]}`,
+    }));
+  const NotableIcon = trendTone.icon;
 
   return (
     <div className="max-w-6xl">
@@ -91,6 +125,21 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       <div className="mb-6 grid grid-cols-2 gap-6">
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
+            <NotableIcon className={`h-4 w-4 ${notableIconClass}`} />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Notable Change</h2>
+          </div>
+          <p className="text-sm font-medium text-[var(--text-primary)]">{trendTone.title}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+            {trendTone.description}
+          </p>
+          <p className="mt-3 text-xs text-[var(--text-muted)]">
+            Hallucinations this week: {summary?.hallucination_count ?? 0}. Escalation issues this
+            week: {summary?.escalation_count ?? 0}.
+          </p>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Improvements</h2>
           </div>
@@ -110,7 +159,9 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
             </div>
           )}
         </GlassCard>
+      </div>
 
+      <div className="mb-6 grid grid-cols-2 gap-6">
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
@@ -128,6 +179,86 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                     Affects {gap.affected_conversations} conversations
                   </p>
                 </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Siren className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts Triggered</h2>
+          </div>
+          {report.alerts.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No alerts triggered this week.</p>
+          ) : (
+            <div className="space-y-3">
+              {report.alerts.map((alert) => (
+                <div key={alert.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{alert.title}</p>
+                    <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      {alert.alert_type.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {alert.description || "Threshold crossed."}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-6">
+        <GlassCard className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
+          </div>
+          {report.patterns.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No recurring patterns detected this week.</p>
+          ) : (
+            <div className="space-y-3">
+              {report.patterns.map((pattern) => (
+                <Link
+                  key={pattern.id}
+                  href={pattern.affected_conversation_ids[0] ? `/conversations/${pattern.affected_conversation_ids[0]}` : "/patterns"}
+                  className="block rounded-xl bg-[rgba(0,0,0,0.02)] p-3 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{pattern.title}</p>
+                    <SeverityBadge severity={pattern.severity} />
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)]">{pattern.description}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recommended Interventions</h2>
+          </div>
+          {recommendedInterventions.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No interventions recommended this week.</p>
+          ) : (
+            <div className="space-y-3">
+              {recommendedInterventions.map((intervention) => (
+                <Link
+                  key={intervention.id}
+                  href={intervention.href}
+                  className="block rounded-xl bg-[rgba(0,0,0,0.02)] p-3 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{intervention.title}</p>
+                    <SeverityBadge severity={intervention.severity} />
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)]">{intervention.intervention}</p>
+                </Link>
               ))}
             </div>
           )}

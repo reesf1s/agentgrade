@@ -1,5 +1,5 @@
 // ============================================================
-// AgentGrade — TypeScript types matching the ag_ Supabase tables
+// AgentGrade — TypeScript types matching the live Supabase tables
 // ============================================================
 
 export interface Workspace {
@@ -58,7 +58,7 @@ export interface Conversation {
 export interface Message {
   id: string;
   conversation_id: string;
-  role: "agent" | "customer" | "human_agent" | "system";
+  role: "agent" | "customer" | "human_agent" | "system" | "tool";
   content: string;
   timestamp: string;
   metadata: Record<string, unknown>;
@@ -100,6 +100,8 @@ export interface StructuralMetrics {
   conversation_type: string;
   extracted_claims: string[];
   sentiment_per_turn: { turn: number; role: string; sentiment: number }[];
+  confidence_level?: "high" | "medium" | "low";
+  confidence_reasons?: string[];
 }
 
 export interface QualityScore {
@@ -119,6 +121,7 @@ export interface QualityScore {
   claim_analysis: ClaimAnalysis[];
   flags: string[];
   summary?: string;
+  confidence_level?: "high" | "medium" | "low";
   prompt_improvements: PromptImprovement[];
   knowledge_gaps: KnowledgeGap[];
   scoring_model_version: string;
@@ -156,7 +159,14 @@ export interface FailurePattern {
 export interface SuggestedFix {
   id: string;
   workspace_id: string;
+  pattern_id?: string;
   fix_type: "prompt_improvement" | "knowledge_gap";
+  intervention_type:
+    | "knowledge_fix"
+    | "retrieval_or_prompt_fix"
+    | "escalation_policy_fix"
+    | "coverage_gap"
+    | "manual_review_required";
   title: string;
   description: string;
   current_behavior?: string;
@@ -165,11 +175,13 @@ export interface SuggestedFix {
   priority: "high" | "medium" | "low";
   source_conversation_ids: string[];
   occurrence_count: number;
-  status: "pending" | "approved" | "pushed" | "dismissed";
+  status: "draft" | "approved" | "pushed" | "verified" | "dismissed";
   approved_at?: string;
   approved_by?: string;
   pushed_at?: string;
   push_result?: Record<string, unknown>;
+  verified_at?: string;
+  verified_by?: string;
   created_at: string;
   updated_at: string;
 }

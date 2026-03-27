@@ -181,6 +181,7 @@ export interface ScoringResult {
   claim_analysis: ClaimAnalysis[];
   flags: string[];
   summary: string;
+  confidence_level?: "high" | "medium" | "low";
   prompt_improvements: PromptImprovement[];
   knowledge_gaps: KnowledgeGap[];
   // Metadata (not stored in DB, logged for cost monitoring)
@@ -358,6 +359,7 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
       claim_analysis: [],
       flags: ["scoring_error"],
       summary: "Automated scoring failed. Manual review recommended.",
+      confidence_level: "low",
       prompt_improvements: [],
       knowledge_gaps: [],
     };

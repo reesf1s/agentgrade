@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { decryptSecret } from "@/lib/secrets";
+
+function isMissingTableError(error: { code?: string } | null | undefined) {
+  return error?.code === "PGRST205";
+}
 
 /**
  * POST /api/fixes/:id/push
@@ -29,13 +34,19 @@ export async function POST(
     const { id } = await params;
 
     const { data: fix, error: fetchError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("*")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
       .single();
 
     if (fetchError || !fix) {
+      if (isMissingTableError(fetchError)) {
+        return NextResponse.json(
+          { error: "Suggested fixes storage is not configured yet in this environment" },
+          { status: 501 }
+        );
+      }
       return NextResponse.json({ error: "Fix not found" }, { status: 404 });
     }
 
@@ -70,7 +81,7 @@ export async function POST(
 
     // Mark fix as pushed
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .update({
         status: "pushed",
         pushed_at: new Date().toISOString(),
@@ -82,6 +93,12 @@ export async function POST(
       .single();
 
     if (updateError) {
+      if (isMissingTableError(updateError)) {
+        return NextResponse.json(
+          { error: "Suggested fixes storage is not configured yet in this environment" },
+          { status: 501 }
+        );
+      }
       console.error("Failed to mark fix as pushed:", updateError);
     }
 
@@ -112,8 +129,13 @@ async function pushKnowledgeGapToIntercom(
     .limit(1);
 
   const connection = connections?.[0];
+  const intercomApiKey = await decryptSecret(connection?.api_key_encrypted || null);
+  const intercomAppId =
+    connection && connection.config && typeof connection.config === "object"
+      ? (connection.config as { app_id?: string }).app_id || ""
+      : "";
 
-  if (!connection?.api_key_encrypted) {
+  if (!intercomApiKey) {
     return {
       type: "knowledge_gap",
       message: "No active Intercom connection with API key found. Article draft returned for manual creation.",
@@ -136,7 +158,7 @@ async function pushKnowledgeGapToIntercom(
     const response = await fetch("https://api.intercom.io/articles", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${connection.api_key_encrypted}`,
+        Authorization: `Bearer ${intercomApiKey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
         "Intercom-Version": "2.10",
@@ -162,7 +184,7 @@ async function pushKnowledgeGapToIntercom(
       success: true,
       platform: "intercom",
       article_id: article.id,
-      article_url: `https://app.intercom.com/a/apps/${(connection.config as { app_id?: string })?.app_id || ""}/articles/${article.id}`,
+      article_url: `https://app.intercom.com/a/apps/${intercomAppId}/articles/${article.id}`,
       message: "Draft article created in Intercom Help Center. Review and publish it to make it live.",
     };
   } catch (err) {

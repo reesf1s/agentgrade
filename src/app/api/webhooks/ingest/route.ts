@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
 
-const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
+const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
 
 /**
  * Generic webhook endpoint for ingesting conversations from any platform.
@@ -124,7 +124,7 @@ export async function GET() {
       method: "POST",
       content_type: "application/json",
       required_fields: {
-        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system', content: string, timestamp?: string }",
+        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system'|'tool', content: string, timestamp?: string }",
       },
       optional_fields: {
         conversation_id: "Your platform's conversation ID",

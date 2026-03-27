@@ -16,7 +16,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from("knowledge_base")
-      .select("id, title, chunk_index, source_file, source_url, source_type, created_at")
+      .select("id, title, chunk_index, source_file, created_at")
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false });
 
@@ -28,11 +28,18 @@ export async function GET() {
     const grouped = new Map<string, { source: string; source_type: string; chunks: number; created_at: string; id: string }>();
 
     for (const item of data || []) {
-      const key = item.source_file || item.source_url || item.title;
+      const key = item.source_file || item.title;
+      const sourceType = key.startsWith("intercom_article_")
+        ? "intercom"
+        : key.startsWith("zendesk_article_")
+          ? "zendesk"
+          : key.endsWith(".url.txt")
+            ? "url"
+            : "upload";
       if (!grouped.has(key)) {
         grouped.set(key, {
           source: key,
-          source_type: item.source_type,
+          source_type: sourceType,
           chunks: 1,
           created_at: item.created_at,
           id: item.id,

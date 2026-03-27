@@ -17,7 +17,7 @@ export function SetupEmptyState({
 }: SetupEmptyStateProps) {
   return (
     <div className="max-w-4xl">
-      <GlassCard className="glass-highlight rounded-[2rem] p-8 md:p-10">
+      <GlassCard className="glass-highlight rounded-[1.25rem] p-8 md:p-10">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-white/20 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
             <Bot className="h-5 w-5 text-[var(--text-primary)]" />
@@ -36,7 +36,7 @@ export function SetupEmptyState({
           {description}
         </p>
 
-        <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/8 p-4 text-sm text-[var(--text-secondary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+        <div className="mt-6 rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-sm text-[var(--text-secondary)]">
           <div className="mb-2 flex items-center gap-2 text-[var(--text-primary)]">
             <Sparkles className="h-4 w-4" />
             <span className="font-medium">What happens next</span>

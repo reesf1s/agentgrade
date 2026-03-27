@@ -30,7 +30,7 @@ export async function GET() {
 
 /**
  * POST /api/team
- * Invites a new team member by email. Creates a pending invitation record.
+ * Invites a new team member by email. Requires a workspace invitations table.
  * Body: { email, role }
  */
 export async function POST(request: NextRequest) {
@@ -54,9 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // Store invitation — in a real system this would also send an email via Clerk
     const { data, error } = await supabaseAdmin
-      .from("ag_workspace_invitations")
+      .from("workspace_invitations")
       .insert({
         workspace_id: ctx.workspace.id,
         email,
@@ -68,8 +67,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      // Table may not exist yet — return success with note
-      return NextResponse.json({ success: true, note: "Invitation saved" });
+      console.error("team POST invitation error:", error);
+      return NextResponse.json(
+        { error: "Workspace invitations are not configured in this environment yet" },
+        { status: 501 }
+      );
     }
 
     return NextResponse.json({ success: true, invitation: data }, { status: 201 });

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
 
-const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
+const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
 type MessageRole = typeof VALID_ROLES[number];
 
 /**

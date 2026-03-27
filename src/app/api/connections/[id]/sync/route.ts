@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { resolveAppUrl } from "@/lib/url";
+import { decryptSecret } from "@/lib/secrets";
+import { syncZendeskConversations } from "@/lib/integrations/zendesk";
 
 /**
  * POST /api/connections/:id/sync
@@ -37,15 +39,24 @@ export async function POST(
     }
 
     let syncResult: { conversations_synced: number; message: string };
+    const decryptedApiKey = await decryptSecret(connection.api_key_encrypted);
 
     if (connection.platform === "intercom") {
       syncResult = await syncIntercomConversations(
         id,
         ctx.workspace.id,
-        connection.api_key_encrypted,
+        decryptedApiKey,
         connection.last_sync_at,
         resolveAppUrl(request)
       );
+    } else if (connection.platform === "zendesk") {
+      syncResult = await syncZendeskConversations({
+        connectionId: id,
+        workspaceId: ctx.workspace.id,
+        apiKey: decryptedApiKey,
+        config: (connection.config || {}) as { subdomain?: string; email?: string },
+        lastSyncAt: connection.last_sync_at,
+      });
     } else {
       // For non-Intercom platforms, just update the sync timestamp
       syncResult = { conversations_synced: 0, message: `Manual sync triggered for ${connection.platform} connection. Push new conversations via webhook.` };
