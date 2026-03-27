@@ -15,7 +15,15 @@ const isProtectedRoute = createRouteMatcher([
 // Build the Clerk handler once (not per-request)
 const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
-    await auth.protect();
+    // With dev keys (pk_test_) on Vercel Edge, Clerk cannot verify sessions server-side —
+    // auth.protect() incorrectly redirects users who ARE signed in.
+    // __client_uat is set by Clerk to a non-zero Unix timestamp whenever a user is active.
+    // Trust it as a fast-path: only call auth.protect() if no active session cookie exists.
+    const clientUat = req.cookies.get("__client_uat")?.value;
+    const hasActiveSession = clientUat && clientUat !== "0";
+    if (!hasActiveSession) {
+      await auth.protect();
+    }
   }
 });
 
