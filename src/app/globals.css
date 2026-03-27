@@ -214,3 +214,28 @@ body {
   background: #1a1a2e;
   color: rgba(255, 255, 255, 0.9);
 }
+
+/* ─── Force light mode on marketing/landing pages ───────────────── */
+.light-page,
+.dark .light-page {
+  --background: #ffffff;
+  --foreground: #111827;
+  --glass-bg: rgba(255, 255, 255, 0.5);
+  --glass-bg-hover: rgba(255, 255, 255, 0.7);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-border-hover: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --glass-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --surface: rgba(0, 0, 0, 0.02);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --divider: rgba(0, 0, 0, 0.04);
+  --btn-primary-bg: rgba(0, 0, 0, 0.85);
+  --btn-primary-hover: rgba(0, 0, 0, 0.95);
+  --btn-primary-text: #ffffff;
+  background: #ffffff;
+  color: #111827;
+}
