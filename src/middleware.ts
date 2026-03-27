@@ -1,29 +1,25 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifyClerkSessionToken } from "@/lib/auth/get-user";
 
-const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  "/conversations(.*)",
-  "/reports(.*)",
-  "/patterns(.*)",
-  "/benchmarks(.*)",
-  "/settings(.*)",
-  "/onboarding(.*)",
-]);
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/conversations",
+  "/reports",
+  "/patterns",
+  "/benchmarks",
+  "/settings",
+  "/onboarding",
+];
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isProtectedRoute(req)) {
-    return;
-  }
+function isProtectedRoute(pathname: string) {
+  return PROTECTED_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
 
-  try {
-    const authState = await auth();
-    if (authState.userId) {
-      return NextResponse.next();
-    }
-  } catch {
-    // Fall back to direct session-token verification below.
+export default async function middleware(req: NextRequest) {
+  if (!isProtectedRoute(req.nextUrl.pathname)) {
+    return NextResponse.next();
   }
 
   const fallbackUserId = await verifyClerkSessionToken(
@@ -38,7 +34,7 @@ export default clerkMiddleware(async (auth, req) => {
   const signInUrl = new URL("/sign-in", req.url);
   signInUrl.searchParams.set("redirect_url", req.url);
   return NextResponse.redirect(signInUrl);
-});
+}
 
 export const config = {
   matcher: [
