@@ -1,3 +1,7 @@
+// ============================================================
+// AgentGrade — TypeScript types matching the ag_ Supabase tables
+// ============================================================
+
 export interface Workspace {
   id: string;
   name: string;
@@ -7,12 +11,14 @@ export interface Workspace {
   stripe_subscription_id?: string;
   monthly_conversation_limit: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface WorkspaceMember {
   id: string;
   workspace_id: string;
   clerk_user_id: string;
+  email?: string;
   role: "owner" | "admin" | "member";
   created_at: string;
 }
@@ -44,7 +50,7 @@ export interface Conversation {
   customer_identifier?: string;
   metadata: Record<string, unknown>;
   created_at: string;
-  // Joined
+  // Joined from quality_scores
   quality_score?: QualityScore;
   messages?: Message[];
 }
@@ -80,6 +86,20 @@ export interface KnowledgeGap {
   suggested_content: string;
 }
 
+export interface StructuralMetrics {
+  turn_count: number;
+  agent_turns: number;
+  customer_turns: number;
+  avg_agent_response_length: number;
+  avg_customer_message_length: number;
+  conversation_duration_seconds?: number;
+  escalation_turn?: number;
+  repetition_count: number;
+  conversation_type: string;
+  extracted_claims: string[];
+  sentiment_per_turn: { turn: number; role: string; sentiment: number }[];
+}
+
 export interface QualityScore {
   id: string;
   conversation_id: string;
@@ -97,20 +117,6 @@ export interface QualityScore {
   knowledge_gaps: KnowledgeGap[];
   scoring_model_version: string;
   scored_at: string;
-}
-
-export interface StructuralMetrics {
-  turn_count: number;
-  agent_turns: number;
-  customer_turns: number;
-  avg_agent_response_length: number;
-  avg_customer_message_length: number;
-  conversation_duration_seconds?: number;
-  escalation_turn?: number;
-  repetition_count: number;
-  conversation_type: string;
-  extracted_claims: string[];
-  sentiment_per_turn: { turn: number; role: string; sentiment: number }[];
 }
 
 export interface QualityOverride {
@@ -137,15 +143,41 @@ export interface FailurePattern {
   knowledge_base_suggestion?: string;
   detected_at: string;
   is_resolved: boolean;
+  resolved_at?: string;
 }
 
-export interface WeeklyReport {
+// Actionable fix surfaced from quality_scores.prompt_improvements / knowledge_gaps
+export interface SuggestedFix {
   id: string;
   workspace_id: string;
-  week_start: string;
-  week_end: string;
-  summary: WeeklyReportSummary;
-  generated_at: string;
+  fix_type: "prompt_improvement" | "knowledge_gap";
+  title: string;
+  description: string;
+  current_behavior?: string;
+  recommended_change: string;
+  expected_impact?: string;
+  priority: "high" | "medium" | "low";
+  source_conversation_ids: string[];
+  occurrence_count: number;
+  status: "pending" | "approved" | "pushed" | "dismissed";
+  approved_at?: string;
+  approved_by?: string;
+  pushed_at?: string;
+  push_result?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeBaseItem {
+  id: string;
+  workspace_id: string;
+  title: string;
+  content: string;
+  chunk_index: number;
+  source_file?: string;
+  source_url?: string;
+  source_type: "upload" | "intercom" | "manual";
+  created_at: string;
 }
 
 export interface WeeklyReportSummary {
@@ -155,12 +187,21 @@ export interface WeeklyReportSummary {
   avg_accuracy: number;
   avg_hallucination: number;
   avg_resolution: number;
-  score_trend: number; // positive = improving
+  score_trend: number; // positive = improving vs prior week
   hallucination_count: number;
   escalation_count: number;
   top_failures: { conversation_id: string; score: number; summary: string }[];
   prompt_improvements: PromptImprovement[];
   knowledge_gaps: KnowledgeGap[];
+}
+
+export interface WeeklyReport {
+  id: string;
+  workspace_id: string;
+  week_start: string;
+  week_end: string;
+  summary: WeeklyReportSummary;
+  generated_at: string;
 }
 
 export interface Alert {
@@ -182,4 +223,62 @@ export interface AlertConfig {
   dimension: string;
   threshold: number;
   enabled: boolean;
+  created_at: string;
 }
+
+export interface WebhookEvent {
+  id: string;
+  workspace_id?: string;
+  connection_id?: string;
+  event_source: "ingest" | "intercom" | "clerk" | "stripe";
+  event_type?: string;
+  payload?: Record<string, unknown>;
+  conversation_id?: string;
+  processed_at?: string;
+  error?: string;
+  created_at: string;
+}
+
+export interface Benchmark {
+  id: string;
+  industry?: string;
+  company_size_bucket?: string;
+  dimension: string;
+  percentile_25: number;
+  percentile_50: number;
+  percentile_75: number;
+  sample_size: number;
+  calculated_at: string;
+}
+
+// Plan limits
+export const PLAN_LIMITS: Record<string, number> = {
+  starter: 5000,
+  growth: 25000,
+  enterprise: -1, // unlimited
+};
+
+// Stripe price IDs (UK pricing, GBP)
+export const STRIPE_PRICES = {
+  starter: {
+    productId: "prod_UDoyfrjxGQzQmS",
+    priceId: "price_1TFNL98v5Z7lw9xvEZtaAnuJ",
+    amount: 199,
+    currency: "gbp",
+    conversations: 5000,
+  },
+  growth: {
+    productId: "prod_UDoy5EjVVo2mTA",
+    priceId: "price_1TFNLB8v5Z7lw9xvHUV1bd5y",
+    amount: 499,
+    currency: "gbp",
+    conversations: 25000,
+  },
+  enterprise: {
+    productId: "prod_UDoy2jCtbVcWmE",
+    priceId: "price_1TFNLB8v5Z7lw9xvazyojuVr",
+    amount: 999,
+    currency: "gbp",
+    conversations: -1, // unlimited
+  },
+} as const;
