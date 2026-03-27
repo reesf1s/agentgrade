@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAppUrl } from "@/lib/url";
 
 /**
  * POST /api/connections/:id/sync
@@ -9,7 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase";
  * For other platforms: updates last_sync_at timestamp.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -42,7 +43,8 @@ export async function POST(
         id,
         ctx.workspace.id,
         connection.api_key_encrypted,
-        connection.last_sync_at
+        connection.last_sync_at,
+        resolveAppUrl(request)
       );
     } else {
       // For non-Intercom platforms, just update the sync timestamp
@@ -68,7 +70,8 @@ async function syncIntercomConversations(
   connectionId: string,
   workspaceId: string,
   apiKey: string | null,
-  lastSyncAt: string | null
+  lastSyncAt: string | null,
+  appUrl: string
 ): Promise<{ conversations_synced: number; message: string }> {
   if (!apiKey) {
     return { conversations_synced: 0, message: "No Intercom API key configured. Add one in connection settings." };
@@ -127,7 +130,6 @@ async function syncIntercomConversations(
       const detail = await detailResponse.json();
 
       // Use the Intercom webhook handler logic via internal fetch
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentgrade.com";
       // Get the connection's webhook_secret for internal call
       const { data: connData } = await supabaseAdmin
         .from("ag_agent_connections")

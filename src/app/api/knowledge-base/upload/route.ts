@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 
+export const runtime = "nodejs";
+
 const CHUNK_SIZE = 1000; // characters per chunk (overlap via sentence boundaries)
 const CHUNK_OVERLAP = 100;
 
@@ -31,10 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     const fileName = file.name;
-    const fileText = await file.text();
+    const fileText = await extractTextFromFile(file);
 
     if (!fileText.trim()) {
-      return NextResponse.json({ error: "File is empty" }, { status: 400 });
+      return NextResponse.json({ error: "No readable text could be extracted from this file" }, { status: 400 });
     }
 
     // Parse content based on file type
@@ -129,8 +131,44 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Knowledge base upload error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    const status = message.startsWith("Unsupported file type") ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
+}
+
+async function extractTextFromFile(file: File): Promise<string> {
+  const fileName = file.name.toLowerCase();
+
+  if (fileName.endsWith(".pdf")) {
+    const { PDFParse } = await import("pdf-parse");
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const parser = new PDFParse({ data: buffer });
+
+    try {
+      const parsed = await parser.getText();
+      return parsed.text.trim();
+    } finally {
+      await parser.destroy();
+    }
+  }
+
+  if (fileName.endsWith(".docx")) {
+    const mammoth = await import("mammoth");
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const parsed = await mammoth.extractRawText({ buffer });
+    return parsed.value.trim();
+  }
+
+  if (
+    fileName.endsWith(".txt") ||
+    fileName.endsWith(".md") ||
+    fileName.endsWith(".json")
+  ) {
+    return (await file.text()).trim();
+  }
+
+  throw new Error("Unsupported file type. Upload PDF, DOCX, TXT, Markdown, or JSON.");
 }
 
 // ─── Text chunking ────────────────────────────────────────────────────────────

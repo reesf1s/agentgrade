@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runScoringPipeline } from "@/lib/scoring";
+import { scoreConversation } from "@/lib/scoring";
+import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
 
@@ -82,140 +83,35 @@ export async function POST(request: NextRequest) {
       timestamp?: string;
     }>;
 
-    const wasEscalated = messages.some((m) => m.role === "human_agent");
-    const timestamps = messages
-      .filter((m) => m.timestamp)
-      .map((m) => new Date(m.timestamp!).getTime())
-      .filter((t) => !isNaN(t))
-      .sort((a, b) => a - b);
+    const ingestionResult = await upsertConversationWithMessages(connection, {
+      messages,
+      externalId: body.conversation_id || null,
+      platform: body.platform || connection.platform || "custom",
+      customerIdentifier: body.customer_identifier || null,
+      metadata: body.metadata || {},
+    });
 
-    // Insert conversation
-    const { data: conversation, error: convError } = await supabaseAdmin
-      .from("ag_conversations")
-      .insert({
-        workspace_id: connection.workspace_id,
-        agent_connection_id: connection.id,
-        external_id: body.conversation_id || null,
-        platform: body.platform || connection.platform || "custom",
-        customer_identifier: body.customer_identifier || null,
-        message_count: messages.length,
-        was_escalated: wasEscalated,
-        started_at: timestamps.length > 0 ? new Date(timestamps[0]).toISOString() : null,
-        ended_at: timestamps.length > 0 ? new Date(timestamps[timestamps.length - 1]).toISOString() : null,
-        metadata: body.metadata || {},
-      })
-      .select("id")
-      .single();
-
-    if (convError || !conversation) {
-      console.error("Failed to insert conversation:", convError);
-      return NextResponse.json({ error: "Failed to store conversation" }, { status: 500 });
-    }
-
-    // Insert messages
-    const messageRows = messages.map((msg) => ({
-      conversation_id: conversation.id,
-      role: msg.role,
-      content: msg.content,
-      timestamp: msg.timestamp ? new Date(msg.timestamp).toISOString() : new Date().toISOString(),
-      metadata: {},
-    }));
-
-    const { error: msgError } = await supabaseAdmin.from("ag_messages").insert(messageRows);
-
-    if (msgError) {
-      console.error("Failed to insert messages:", msgError);
-      // Don't fail the request - conversation was stored
-    }
-
-    // Trigger scoring pipeline asynchronously (fire and forget)
-    scoreConversationAsync(conversation.id, messages, connection.workspace_id);
+    after(async () => {
+      try {
+        await scoreConversation(ingestionResult.conversationId);
+      } catch (scoreError) {
+        console.error(`Scoring failed for conversation ${ingestionResult.conversationId}:`, scoreError);
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      conversation_id: conversation.id,
-      message: `Conversation ingested with ${messages.length} messages. Scoring in progress.`,
+      conversation_id: ingestionResult.conversationId,
+      inserted_messages: ingestionResult.insertedMessages,
+      message: ingestionResult.created
+        ? `Conversation ingested with ${messages.length} messages. Scoring in progress.`
+        : ingestionResult.insertedMessages > 0
+          ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`
+          : "Conversation already up to date.",
     });
   } catch (error) {
     console.error("Ingest webhook error:", error);
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-}
-
-async function scoreConversationAsync(
-  conversationId: string,
-  messages: Array<{ role: string; content: string; timestamp?: string }>,
-  workspaceId: string
-) {
-  try {
-    // Fetch knowledge base context for this workspace (top 5 relevant chunks)
-    const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
-      .select("content")
-      .eq("workspace_id", workspaceId)
-      .limit(5);
-
-    const knowledgeBaseContext = kbChunks?.map((c) => c.content) || [];
-
-    // Run full scoring pipeline (1 Claude API call)
-    const scoreResult = await runScoringPipeline({
-      messages: messages.map((m, i) => ({
-        id: `msg-${i}`,
-        conversation_id: conversationId,
-        role: m.role as "agent" | "customer" | "human_agent" | "system",
-        content: m.content,
-        timestamp: m.timestamp || new Date().toISOString(),
-        metadata: {},
-      })),
-      knowledgeBaseContext,
-    });
-
-    // Store quality score
-    const { error: scoreError } = await supabaseAdmin.from("ag_quality_scores").insert({
-      conversation_id: conversationId,
-      ...scoreResult,
-      scored_at: new Date().toISOString(),
-    });
-
-    if (scoreError) {
-      console.error("Failed to store quality score:", scoreError);
-      return;
-    }
-
-    // Check alert thresholds
-    const { data: alertConfigs } = await supabaseAdmin
-      .from("ag_alert_configs")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("enabled", true);
-
-    if (alertConfigs) {
-      const scoreMap: Record<string, number | undefined> = {
-        overall: scoreResult.overall_score,
-        accuracy: scoreResult.accuracy_score ?? undefined,
-        hallucination: scoreResult.hallucination_score ?? undefined,
-        resolution: scoreResult.resolution_score ?? undefined,
-        tone: scoreResult.tone_score ?? undefined,
-      };
-
-      for (const config of alertConfigs) {
-        const actual = scoreMap[config.dimension];
-        if (actual !== undefined && actual < config.threshold) {
-          await supabaseAdmin.from("ag_alerts").insert({
-            workspace_id: workspaceId,
-            alert_type: "score_below_threshold",
-            title: `${config.dimension} score below threshold`,
-            description: `Conversation scored ${(actual * 100).toFixed(0)}% on ${config.dimension} (threshold: ${(config.threshold * 100).toFixed(0)}%)`,
-            threshold_value: config.threshold,
-            actual_value: actual,
-          });
-        }
-      }
-    }
-
-    console.log(`Scored conversation ${conversationId}: ${scoreResult.overall_score}`);
-  } catch (error) {
-    console.error(`Scoring failed for conversation ${conversationId}:`, error);
   }
 }
 

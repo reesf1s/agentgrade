@@ -31,9 +31,14 @@ export async function getWorkspaceForUser(clerkUserId: string): Promise<Workspac
     .from("ag_workspace_members")
     .select("*, workspaces:ag_workspaces(*)")
     .eq("clerk_user_id", clerkUserId)
-    .single();
+    .maybeSingle();
 
-  if (error || !member) {
+  if (error) {
+    console.error("[workspace] Failed to fetch workspace membership:", error);
+    return null;
+  }
+
+  if (!member) {
     // No workspace found — auto-create one for this user
     return autoCreateWorkspace(clerkUserId);
   }
@@ -86,7 +91,27 @@ async function autoCreateWorkspace(clerkUserId: string): Promise<WorkspaceContex
 
     if (memberError || !member) {
       console.error("[workspace] Failed to auto-create workspace member:", memberError);
-      // Clean up orphaned workspace
+
+      const { data: existingMember } = await supabaseAdmin
+        .from("ag_workspace_members")
+        .select("*, workspaces:ag_workspaces(*)")
+        .eq("clerk_user_id", clerkUserId)
+        .maybeSingle();
+
+      if (existingMember?.workspaces) {
+        await supabaseAdmin.from("ag_workspaces").delete().eq("id", workspace.id);
+        return {
+          workspace: existingMember.workspaces as unknown as Workspace,
+          member: {
+            id: existingMember.id,
+            workspace_id: existingMember.workspace_id,
+            clerk_user_id: existingMember.clerk_user_id,
+            role: existingMember.role,
+            created_at: existingMember.created_at,
+          },
+        };
+      }
+
       await supabaseAdmin.from("ag_workspaces").delete().eq("id", workspace.id);
       return null;
     }

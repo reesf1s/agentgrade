@@ -144,6 +144,16 @@ export async function GET() {
         hallucination: hall.length > 0 ? hall.reduce((s, v) => s + v, 0) / hall.length : undefined,
       }));
 
+    const averageFor = (dimension: "accuracy_score" | "hallucination_score" | "resolution_score") => {
+      const values = scored
+        .map((c) => (c.quality_scores as Record<string, number | undefined> | null)?.[dimension])
+        .filter((value): value is number => value !== undefined);
+
+      return values.length > 0
+        ? values.reduce((sum, value) => sum + value, 0) / values.length
+        : 0;
+    };
+
     const weekStart = new Date(sevenDaysAgo);
     const weekEnd = new Date();
 
@@ -154,9 +164,9 @@ export async function GET() {
         total_conversations: thisWeek.length,
         total_scored: scored.length,
         avg_overall_score: avgScore,
-        avg_accuracy: 0,
-        avg_hallucination: 0,
-        avg_resolution: 0,
+        avg_accuracy: averageFor("accuracy_score"),
+        avg_hallucination: averageFor("hallucination_score"),
+        avg_resolution: averageFor("resolution_score"),
         score_trend: avgScore - lastWeekAvg,
         hallucination_count: hallucinationCount,
         escalation_count: escalationCount,

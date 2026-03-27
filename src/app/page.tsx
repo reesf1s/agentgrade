@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
 import {
   Zap,
   Shield,
@@ -18,13 +16,7 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
   return <div className={`glass-static p-6 ${className}`}>{children}</div>;
 }
 
-export default async function LandingPage() {
-  const { userId } = await auth();
-  // With dev keys on Vercel, server-side auth() returns null even for signed-in users.
-  // Fall back to __client_uat cookie (non-zero = active Clerk session).
-  const cookieStore = await cookies();
-  const clientUat = cookieStore.get("__client_uat")?.value;
-  const isSignedIn = !!userId || (!!clientUat && clientUat !== "0");
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[var(--background)] light-page">
       {/* Nav */}
@@ -37,20 +29,12 @@ export default async function LandingPage() {
             <span className="text-lg font-semibold tracking-tight">AgentGrade</span>
           </Link>
           <div className="flex items-center gap-4">
-            {isSignedIn ? (
-              <Link href="/dashboard" className="glass-button glass-button-primary text-sm !py-2 !px-4">
-                Go to Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link href="/sign-in" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                  Sign in
-                </Link>
-                <Link href="/sign-up" className="glass-button glass-button-primary text-sm !py-2 !px-4">
-                  Get started free
-                </Link>
-              </>
-            )}
+            <Link href="/sign-in" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+              Sign in
+            </Link>
+            <Link href="/sign-up" className="glass-button glass-button-primary text-sm !py-2 !px-4">
+              Get started free
+            </Link>
           </div>
         </div>
       </nav>

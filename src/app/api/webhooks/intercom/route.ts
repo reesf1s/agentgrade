@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runScoringPipeline } from "@/lib/scoring";
+import { scoreConversation } from "@/lib/scoring";
 
 /**
  * Intercom webhook receiver.
@@ -164,60 +164,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Score asynchronously
-    scoreIntercomConversationAsync(conversationId, conversationParts, connection.workspace_id);
+    after(async () => {
+      try {
+        await scoreConversation(conversationId);
+      } catch (scoreError) {
+        console.error(`Scoring failed for Intercom conversation ${conversationId}:`, scoreError);
+      }
+    });
 
     return NextResponse.json({ received: true, topic, conversation_id: conversationId });
   } catch (error) {
     console.error("Intercom webhook error:", error);
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-}
-
-async function scoreIntercomConversationAsync(
-  conversationId: string,
-  messages: Array<{ role: string; content: string; timestamp?: string }>,
-  workspaceId: string
-) {
-  try {
-    // Don't re-score if already scored
-    const { data: existing } = await supabaseAdmin
-      .from("ag_quality_scores")
-      .select("id")
-      .eq("conversation_id", conversationId)
-      .single();
-
-    if (existing) return;
-
-    const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
-      .select("content")
-      .eq("workspace_id", workspaceId)
-      .limit(5);
-
-    const knowledgeBaseContext = kbChunks?.map((c) => c.content) || [];
-
-    const scoreResult = await runScoringPipeline({
-      messages: messages.map((m, i) => ({
-        id: `msg-${i}`,
-        conversation_id: conversationId,
-        role: m.role as "agent" | "customer" | "human_agent" | "system",
-        content: m.content,
-        timestamp: m.timestamp || new Date().toISOString(),
-        metadata: {},
-      })),
-      knowledgeBaseContext,
-    });
-
-    await supabaseAdmin.from("ag_quality_scores").insert({
-      conversation_id: conversationId,
-      ...scoreResult,
-      scored_at: new Date().toISOString(),
-    });
-
-    console.log(`Scored Intercom conversation ${conversationId}: ${scoreResult.overall_score}`);
-  } catch (error) {
-    console.error(`Scoring failed for Intercom conversation ${conversationId}:`, error);
   }
 }
 

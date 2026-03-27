@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAppUrl } from "@/lib/url";
 
 /**
  * GET /api/connections
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const webhookSecret = crypto.randomUUID().replace(/-/g, "");
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/ingest`;
+    const webhookUrl = `${resolveAppUrl(request)}/api/webhooks/ingest`;
 
     const { data, error } = await supabaseAdmin
       .from("ag_agent_connections")

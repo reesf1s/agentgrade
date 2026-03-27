@@ -17,6 +17,7 @@ import type {
   KnowledgeGap,
   StructuralMetrics,
 } from "@/lib/db/types";
+import { applyScoringGuardrails } from "./score-postprocessing";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -326,19 +327,7 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
       },
     };
 
-    // Recompute overall_score using the canonical weights in case Claude
-    // deviated from the formula. This guarantees consistency.
-    result.overall_score = clamp(
-      result.accuracy_score * 0.20 +
-      result.hallucination_score * 0.25 +
-      result.resolution_score * 0.25 +
-      result.tone_score * 0.15 +
-      result.sentiment_score * 0.10 +
-      result.edge_case_score * 0.03 +
-      result.escalation_score * 0.02
-    );
-
-    return result;
+    return applyScoringGuardrails(input, result);
   } catch (error) {
     console.error("[claude-scorer] Evaluation failed:", error);
 

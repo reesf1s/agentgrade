@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAppUrl } from "@/lib/url";
 
 /**
  * POST /api/onboarding
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Create agent connection if platform is provided
     if (platform) {
       const webhookSecret = crypto.randomUUID().replace(/-/g, "");
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/ingest`;
+      const webhookUrl = `${resolveAppUrl(request)}/api/webhooks/ingest`;
 
       const { data: connection, error: connError } = await supabaseAdmin
         .from("ag_agent_connections")
