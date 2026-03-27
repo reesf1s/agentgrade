@@ -4,9 +4,12 @@ import type {
   Alert,
   FailurePattern,
   KnowledgeGap,
+  OrgRecommendation,
   PromptImprovement,
+  QualityScore,
   WeeklyReportSummary,
 } from "@/lib/db/types";
+import { buildOrgRecommendations } from "@/lib/scoring/org-recommendations";
 
 export interface DashboardStats {
   avg_score: number;
@@ -47,6 +50,7 @@ export interface ReportData {
   summary: WeeklyReportSummary;
   alerts: Alert[];
   patterns: FailurePattern[];
+  organization_recommendations: OrgRecommendation[];
   trend_data: Array<{ date: string; overall: number; accuracy?: number; hallucination?: number }>;
 }
 
@@ -447,6 +451,18 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
     },
     alerts: (alertsRes.data || []) as Alert[],
     patterns: (patternsRes.data || []) as FailurePattern[],
+    organization_recommendations: buildOrgRecommendations(
+      scored.map((conversation) => ({
+        id: conversation.id as string,
+        quality_score: getJoinedRecord(
+          conversation.quality_scores as
+            | QualityScore
+            | QualityScore[]
+            | null
+        ) as QualityScore,
+      })),
+      (patternsRes.data || []) as FailurePattern[]
+    ),
     trend_data: Object.entries(trendByDay)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([date, values]) => ({

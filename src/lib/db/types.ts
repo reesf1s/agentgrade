@@ -213,6 +213,23 @@ export interface WeeklyReportSummary {
   knowledge_gaps: KnowledgeGap[];
 }
 
+export interface OrgRecommendation {
+  id: string;
+  title: string;
+  category:
+    | "prompt_policy"
+    | "tooling_policy"
+    | "knowledge_policy"
+    | "resolution_policy"
+    | "review_policy";
+  priority: "high" | "medium" | "low";
+  rationale: string;
+  recommended_change: string;
+  expected_impact: string;
+  occurrence_count: number;
+  affected_conversation_ids: string[];
+}
+
 export interface WeeklyReport {
   id: string;
   workspace_id: string;

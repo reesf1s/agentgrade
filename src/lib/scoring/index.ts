@@ -22,6 +22,7 @@ import { searchKnowledgeBase } from "@/lib/knowledge-base";
 import { checkThresholds } from "@/lib/alerts";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Message, QualityScore } from "@/lib/db/types";
+import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false;
@@ -49,12 +50,13 @@ export interface ScorePipelineInput {
 export async function runScoringPipeline(
   input: ScorePipelineInput
 ): Promise<Omit<QualityScore, "id" | "conversation_id" | "scored_at">> {
+  const compactMessages = compactReplayArtifacts(input.messages);
   // Pass 1: Structural Analysis (zero API calls)
-  const structuralMetrics = analyzeStructure(input.messages);
+  const structuralMetrics = analyzeStructure(compactMessages);
 
   // Pass 2: Claude Evaluation (1 API call)
   const claudeResult = await evaluateWithClaude({
-    messages: input.messages,
+    messages: compactMessages,
     structuralMetrics,
     knowledgeBaseContext: input.knowledgeBaseContext,
   });
@@ -118,7 +120,7 @@ export async function scoreConversation(conversationId: string): Promise<{
   }
 
   const conversation = convResult.data;
-  const messages = (msgResult.data || []) as Message[];
+  const messages = compactReplayArtifacts((msgResult.data || []) as Message[]);
   const workspaceId = conversation.workspace_id as string;
 
   if (messages.length === 0) {

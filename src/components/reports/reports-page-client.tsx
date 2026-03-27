@@ -214,6 +214,42 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       <div className="mb-6 grid grid-cols-2 gap-6">
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
+            <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Org-Wide Improvements</h2>
+          </div>
+          {report.organization_recommendations.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No repeated operating recommendations yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {report.organization_recommendations.map((recommendation) => (
+                <div key={recommendation.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{recommendation.title}</p>
+                    <SeverityBadge
+                      severity={
+                        recommendation.priority === "high"
+                          ? "high"
+                          : recommendation.priority === "medium"
+                            ? "medium"
+                            : "low"
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)]">{recommendation.rationale}</p>
+                  <p className="mt-2 text-xs italic text-[var(--text-muted)]">
+                    {recommendation.recommended_change}
+                  </p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    Seen across {recommendation.occurrence_count} conversations or patterns.
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
           </div>

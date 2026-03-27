@@ -1,4 +1,4 @@
-import type { Message } from "@/lib/db/types";
+import type { KnowledgeGap, Message, PromptImprovement } from "@/lib/db/types";
 import type { ScoringInput, ScoringResult } from "./claude-scorer";
 
 function clamp(value: number): number {
@@ -40,6 +40,77 @@ function hasToolingOrAccessLimitation(messages: Message[]): boolean {
         message.content
       )
   );
+}
+
+function hasTranscriptToolEvidence(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "tool" ||
+      message.role === "system" ||
+      Boolean(message.metadata?.tool_name) ||
+      Boolean(message.metadata?.tool_result) ||
+      Boolean(message.metadata?.source)
+  );
+}
+
+function hasOperationalRecordClaim(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      /(i can see|i found|i checked|it looks like|already exists|in your pipeline|on your account|your account shows|your order shows|your subscription is|record shows|crm|deal|contact|ticket|company|workspace)/i.test(
+        message.content
+      )
+  );
+}
+
+function customerRequestedAction(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "customer" &&
+      /\b(add|create|update|edit|change|delete|remove|cancel|refund|reset|book|schedule|send|apply|upgrade|downgrade|rename)\b/i.test(
+        message.content
+      )
+  );
+}
+
+function agentAskedClarifyingQuestion(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      /\?/.test(message.content)
+  );
+}
+
+function agentConfirmedAction(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      /\b(i've|i have|done|created|updated|changed|cancelled|canceled|reset|sent|scheduled|added|removed|completed|switched|processed)\b/i.test(
+        message.content
+      )
+  );
+}
+
+function pushPromptImprovement(
+  improvements: PromptImprovement[],
+  improvement: PromptImprovement
+) {
+  const issueKey = improvement.issue.toLowerCase().trim();
+  const exists = improvements.some((candidate) => candidate.issue.toLowerCase().trim() === issueKey);
+  if (!exists) {
+    improvements.push(improvement);
+  }
+}
+
+function pushKnowledgeGap(gaps: KnowledgeGap[], gap: KnowledgeGap) {
+  const topicKey = gap.topic.toLowerCase().trim();
+  const existing = gaps.find((candidate) => candidate.topic.toLowerCase().trim() === topicKey);
+  if (existing) {
+    existing.affected_conversations = Math.max(existing.affected_conversations, gap.affected_conversations);
+    return;
+  }
+
+  gaps.push(gap);
 }
 
 function endsWithUnresolvedCustomerIntent(messages: Message[]): boolean {
@@ -127,6 +198,8 @@ export function applyScoringGuardrails(
   const adjusted = {
     ...result,
     flags: [...result.flags],
+    prompt_improvements: [...result.prompt_improvements],
+    knowledge_gaps: [...result.knowledge_gaps],
   };
 
   const contradictedClaims = adjusted.claim_analysis.filter(
@@ -182,10 +255,55 @@ export function applyScoringGuardrails(
     pushUniqueFlag(adjusted.flags, "missing_tool_or_system_access");
   }
 
+  if (hasOperationalRecordClaim(input.messages) && !hasTranscriptToolEvidence(input.messages)) {
+    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, 0.72);
+    adjusted.hallucination_score = Math.min(adjusted.hallucination_score, 0.62);
+    pushUniqueFlag(adjusted.flags, "tool_backed_claim_without_evidence");
+    pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
+    pushPromptImprovement(adjusted.prompt_improvements, {
+      issue: "Agent makes record-specific claims without visible lookup evidence",
+      current_behavior:
+        "The agent referenced CRM or account state without showing a tool lookup or system result in the transcript.",
+      recommended_prompt_change:
+        "Add to the system prompt: 'Before making any claim about a deal, account, ticket, order, subscription, or internal record, perform the live lookup first. Only state record details after the lookup succeeds. If you cannot verify the record state with a live tool call, say explicitly that you cannot confirm it yet and ask permission to retry or escalate.'",
+      expected_impact:
+        "Reduces hallucinated operational claims and creates a reusable org-wide policy for tool-backed answers.",
+      priority: "high",
+    });
+    pushKnowledgeGap(adjusted.knowledge_gaps, {
+      topic: "Operational Tool Verification Policy",
+      description:
+        "The workspace needs a documented rule for how the agent should verify CRM or account state before making record-specific claims.",
+      affected_conversations: 1,
+      suggested_content:
+        "Document an agent policy that any CRM, account, ticket, order, or subscription claim must come from a live lookup. Include the exact tool name, what fields can be stated after lookup, and the fallback response when the tool is unavailable.",
+    });
+  }
+
   if (endsWithUnresolvedCustomerIntent(input.messages)) {
     adjusted.resolution_score = Math.min(adjusted.resolution_score, 0.4);
     adjusted.sentiment_score = Math.min(adjusted.sentiment_score, 0.4);
     pushUniqueFlag(adjusted.flags, "user_intent_left_unresolved");
+  }
+
+  if (
+    customerRequestedAction(input.messages) &&
+    agentAskedClarifyingQuestion(input.messages) &&
+    !agentConfirmedAction(input.messages)
+  ) {
+    adjusted.resolution_score = Math.min(adjusted.resolution_score, 0.52);
+    pushUniqueFlag(adjusted.flags, "action_request_stalled_after_clarification");
+    pushUniqueFlag(adjusted.flags, "org_policy_gap_action_progression");
+    pushPromptImprovement(adjusted.prompt_improvements, {
+      issue: "Action requests stall after clarification instead of moving to the next step",
+      current_behavior:
+        "The agent asked a clarifying question but did not clearly advance the requested action or explain what would happen next.",
+      recommended_prompt_change:
+        "Add to the system prompt: 'When a customer asks you to create, update, cancel, delete, or change something, ask at most one focused clarifying question when needed, then state the next action you will take once clarified. Keep the request moving toward execution instead of ending on clarification alone.'",
+      expected_impact:
+        "Improves resolution rate for operational requests and creates a consistent org-wide action-handling policy.",
+      priority: "medium",
+    });
   }
 
   adjusted.overall_score = clamp(

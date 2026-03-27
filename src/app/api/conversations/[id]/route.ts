@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 
 /**
  * GET /api/conversations/:id
@@ -53,9 +54,12 @@ export async function GET(
         }
       : null;
 
+    const compactedMessages = compactReplayArtifacts(messagesRes.data || []);
+
     return NextResponse.json({
       ...convRes.data,
-      messages: messagesRes.data || [],
+      message_count: compactedMessages.length,
+      messages: compactedMessages,
       quality_score: qualityScore,
     });
   } catch (error) {

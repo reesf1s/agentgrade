@@ -21,7 +21,12 @@ function buildSnippet(input: {
     customer_identifier: "user@example.com",
     messages: [
       { role: "customer", content: "How do I reset my password?" },
-      { role: "agent", content: "Use the Forgot password link on your login page." }
+      { role: "tool", content: "lookup_account({ user: 'user@example.com' }) => found" },
+      {
+        role: "agent",
+        content: "Use the Forgot password link on your login page.",
+        metadata: { grounded_by: "lookup_account" }
+      }
     ]
   })
 });`;
@@ -73,6 +78,7 @@ function buildInstallSteps(input: { platform: string; webhookUrl: string; secret
     "Add the AgentGrade env vars to your local .env.local and your Vercel project env vars.",
     "Restart your app so the new env vars load.",
     "Hook the send call into your chatbot flow where you already have the transcript or latest turn.",
+    "If your agent uses tools, include tool turns or message metadata so AgentGrade can distinguish grounded answers from hallucinations.",
     "Send one test conversation and confirm it appears in AgentGrade.",
   ];
 

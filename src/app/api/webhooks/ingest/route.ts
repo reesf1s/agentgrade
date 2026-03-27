@@ -16,7 +16,8 @@ const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as co
  *   "customer_identifier": "user@example.com",  // optional
  *   "messages": [
  *     { "role": "customer", "content": "...", "timestamp": "2024-01-01T00:00:00Z" },
- *     { "role": "agent",    "content": "...", "timestamp": "2024-01-01T00:01:00Z" }
+ *     { "role": "tool",     "content": "lookup_customer(...) => found", "metadata": { "tool_name": "lookup_customer" } },
+ *     { "role": "agent",    "content": "...", "timestamp": "2024-01-01T00:01:00Z", "metadata": { "grounded_by": "lookup_customer" } }
  *   ],
  *   "metadata": {}                     // optional
  * }
@@ -124,7 +125,7 @@ export async function GET() {
       method: "POST",
       content_type: "application/json",
       required_fields: {
-        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system'|'tool', content: string, timestamp?: string }",
+        messages: "Array of { role: 'agent'|'customer'|'human_agent'|'system'|'tool', content: string, timestamp?: string, metadata?: object }",
       },
       optional_fields: {
         conversation_id: "Your platform's conversation ID",

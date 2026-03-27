@@ -42,6 +42,9 @@ Your evaluation standard:
 - Judge whether the agent moved the user toward a real outcome, not whether it sounded polished.
 - Distinguish between knowledge problems, prompt problems, and missing tool/system access.
 - If the agent likely needed a missing integration, missing tool, or missing backend permission to succeed, call that out explicitly in flags, prompt improvements, or knowledge gaps.
+- For operational claims about CRM, tickets, accounts, deals, subscriptions, or internal records, treat live tool/system evidence as required grounding. If the transcript does not show that evidence, prefer "unverifiable" over "verified".
+- Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
+- If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
 
 ## Scoring Rubric (0.0 to 1.0 scale for all dimensions)
 
@@ -136,7 +139,7 @@ const SCORING_OUTPUT_SCHEMA = `{
     {
       "claim": "<the agent's exact factual claim>",
       "verdict": "verified|unverifiable|contradicted|fabricated",
-      "evidence": "<why this verdict — cite specific transcript text or KB>",
+      "evidence": "<why this verdict — cite specific transcript turn numbers, text, or KB>",
       "kb_source": "<which KB doc was used, or null>",
       "severity": "low|medium|high|critical"
     }
@@ -247,7 +250,7 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
 
   // ── Build transcript ────────────────────────────────────────────
   const transcript = messages
-    .map((m) => `[${m.role.toUpperCase()}]: ${m.content}`)
+    .map((m, index) => `[TURN ${index + 1}][${m.role.toUpperCase()}]: ${m.content}`)
     .join("\n\n");
 
   // ── Build user message ──────────────────────────────────────────
@@ -265,6 +268,7 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
   }\n`;
   userMessage += `- Agent repetitions detected: ${structuralMetrics.repetition_count}\n`;
   userMessage += `- Claims to verify: ${structuralMetrics.extracted_claims.length}\n\n`;
+  userMessage += `- Tool/system evidence turns: ${messages.filter((message) => message.role === "tool" || message.role === "system").length}\n\n`;
 
   if (structuralMetrics.extracted_claims.length > 0) {
     userMessage += `## Claims to Evaluate\n`;

@@ -1,9 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { prepareMessagesForInsert } from "@/lib/messages/transcript-normalizer";
 
 interface IngestMessage {
   role: "agent" | "customer" | "human_agent" | "system" | "tool";
   content: string;
   timestamp?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface IngestPayload {
@@ -19,17 +21,6 @@ interface ConnectionContext {
   workspace_id: string;
 }
 
-function toIsoTimestamp(timestamp?: string): string {
-  if (!timestamp) return new Date().toISOString();
-
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-}
-
-function messageKey(message: { role: string; content: string; timestamp: string }): string {
-  return `${message.role}::${message.timestamp}::${message.content.trim()}`;
-}
-
 export async function upsertConversationWithMessages(
   connection: ConnectionContext,
   payload: IngestPayload
@@ -40,19 +31,12 @@ export async function upsertConversationWithMessages(
 }> {
   const normalizedMessages = payload.messages.map((message) => ({
     role: message.role,
-    content: message.content,
-    timestamp: toIsoTimestamp(message.timestamp),
-    metadata: {},
+    content: message.content.trim(),
+    timestamp: message.timestamp,
+    metadata: message.metadata || {},
   }));
 
   const wasEscalated = normalizedMessages.some((message) => message.role === "human_agent");
-  const timestamps = normalizedMessages
-    .map((message) => new Date(message.timestamp).getTime())
-    .filter((value) => !Number.isNaN(value))
-    .sort((a, b) => a - b);
-
-  const startedAt = timestamps.length > 0 ? new Date(timestamps[0]).toISOString() : null;
-  const endedAt = timestamps.length > 0 ? new Date(timestamps[timestamps.length - 1]).toISOString() : null;
 
   if (payload.externalId) {
     const { data: existingConversation } = await supabaseAdmin
@@ -73,26 +57,7 @@ export async function upsertConversationWithMessages(
         throw new Error(`Failed to load existing messages: ${existingMessagesError.message}`);
       }
 
-      const existingKeys = new Set(
-        (existingMessages || []).map((message) =>
-          messageKey({
-            role: message.role,
-            content: message.content,
-            timestamp: message.timestamp,
-          })
-        )
-      );
-
-      const newMessages = normalizedMessages.filter(
-        (message) =>
-          !existingKeys.has(
-            messageKey({
-              role: message.role,
-              content: message.content,
-              timestamp: message.timestamp,
-            })
-          )
-      );
+      const newMessages = prepareMessagesForInsert(existingMessages || [], normalizedMessages);
 
       if (newMessages.length > 0) {
         const { error: insertMessagesError } = await supabaseAdmin.from("messages").insert(
@@ -113,6 +78,13 @@ export async function upsertConversationWithMessages(
       const previousEndedAt = existingConversation.ended_at
         ? new Date(existingConversation.ended_at).getTime()
         : null;
+      const effectiveMessages = [...(existingMessages || []), ...newMessages];
+      const timestamps = effectiveMessages
+        .map((message) => new Date(message.timestamp).getTime())
+        .filter((value) => !Number.isNaN(value))
+        .sort((a, b) => a - b);
+      const startedAt = timestamps.length > 0 ? new Date(timestamps[0]).toISOString() : null;
+      const endedAt = timestamps.length > 0 ? new Date(timestamps[timestamps.length - 1]).toISOString() : null;
 
       const mergedStartedAt =
         previousStartedAt !== null && startedAt
@@ -148,6 +120,14 @@ export async function upsertConversationWithMessages(
     }
   }
 
+  const preparedMessages = prepareMessagesForInsert([], normalizedMessages);
+  const timestamps = preparedMessages
+    .map((message) => new Date(message.timestamp).getTime())
+    .filter((value) => !Number.isNaN(value))
+    .sort((a, b) => a - b);
+  const startedAt = timestamps.length > 0 ? new Date(timestamps[0]).toISOString() : null;
+  const endedAt = timestamps.length > 0 ? new Date(timestamps[timestamps.length - 1]).toISOString() : null;
+
   const { data: conversation, error: conversationError } = await supabaseAdmin
     .from("conversations")
     .insert({
@@ -156,7 +136,7 @@ export async function upsertConversationWithMessages(
       external_id: payload.externalId || null,
       platform: payload.platform,
       customer_identifier: payload.customerIdentifier || null,
-      message_count: normalizedMessages.length,
+      message_count: preparedMessages.length,
       was_escalated: wasEscalated,
       started_at: startedAt,
       ended_at: endedAt,
@@ -170,7 +150,7 @@ export async function upsertConversationWithMessages(
   }
 
   const { error: insertMessagesError } = await supabaseAdmin.from("messages").insert(
-    normalizedMessages.map((message) => ({
+    preparedMessages.map((message) => ({
       conversation_id: conversation.id,
       ...message,
     }))
@@ -183,6 +163,6 @@ export async function upsertConversationWithMessages(
   return {
     conversationId: conversation.id,
     created: true,
-    insertedMessages: normalizedMessages.length,
+    insertedMessages: preparedMessages.length,
   };
 }
