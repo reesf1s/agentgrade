@@ -1,7 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
+import { scoreConversation } from "@/lib/scoring";
+import type { PromptImprovement, QualityScore } from "@/lib/db/types";
+
+function sanitizeReplayArtifactSignals(
+  qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
+  hadReplayArtifacts: boolean
+) {
+  if (!qualityScore || !hadReplayArtifacts) return qualityScore;
+
+  const replayFlagPatterns = [
+    /^duplicate_/i,
+    /^repetitive_agent_behavior$/i,
+  ];
+
+  const promptImprovements = Array.isArray(qualityScore.prompt_improvements)
+    ? qualityScore.prompt_improvements.filter((improvement: { issue?: string }) => {
+        const issue = (improvement.issue || "").toLowerCase();
+        return !issue.includes("duplicate") && !issue.includes("sent the same message twice");
+      })
+    : [];
+
+  return {
+    ...qualityScore,
+    flags: Array.isArray(qualityScore.flags)
+      ? qualityScore.flags.filter(
+          (flag: string) => !replayFlagPatterns.some((pattern) => pattern.test(flag))
+        )
+      : [],
+    prompt_improvements: promptImprovements,
+  };
+}
 
 /**
  * GET /api/conversations/:id
@@ -44,6 +75,10 @@ export async function GET(
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
+    const rawMessages = messagesRes.data || [];
+    const compactedMessages = compactReplayArtifacts(rawMessages);
+    const hadReplayArtifacts = compactedMessages.length < rawMessages.length;
+
     const qualityScore = scoreRes.data
       ? {
           ...scoreRes.data,
@@ -53,14 +88,23 @@ export async function GET(
             undefined,
         }
       : null;
+    const sanitizedQualityScore = sanitizeReplayArtifactSignals(qualityScore, hadReplayArtifacts);
 
-    const compactedMessages = compactReplayArtifacts(messagesRes.data || []);
+    if (hadReplayArtifacts) {
+      after(async () => {
+        try {
+          await scoreConversation(id);
+        } catch (error) {
+          console.error(`Replay-artifact rescore failed for conversation ${id}:`, error);
+        }
+      });
+    }
 
     return NextResponse.json({
       ...convRes.data,
       message_count: compactedMessages.length,
       messages: compactedMessages,
-      quality_score: qualityScore,
+      quality_score: sanitizedQualityScore,
     });
   } catch (error) {
     console.error("Conversation detail API error:", error);

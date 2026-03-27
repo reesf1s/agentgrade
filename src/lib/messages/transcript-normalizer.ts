@@ -1,6 +1,6 @@
 import type { Message } from "@/lib/db/types";
 
-type ComparableMessage = Pick<Message, "role" | "content" | "timestamp">;
+type ComparableMessage = Pick<Message, "role" | "content"> & { timestamp?: string };
 
 function normalizeContent(content: string): string {
   return content.replace(/\s+/g, " ").trim().toLowerCase();
@@ -8,6 +8,12 @@ function normalizeContent(content: string): string {
 
 export function getMessageFingerprint(message: Pick<ComparableMessage, "role" | "content">): string {
   return `${message.role}::${normalizeContent(message.content)}`;
+}
+
+function timestampMs(timestamp?: string): number | null {
+  if (!timestamp) return null;
+  const parsed = new Date(timestamp).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 function hasProvidedTimestamp(timestamp?: string): boolean {
@@ -88,31 +94,41 @@ export function prepareMessagesForInsert(
   timestamp: string;
   metadata: Record<string, unknown>;
 }> {
-  const existingFingerprints = existingMessages.map(getMessageFingerprint);
-  const incomingFingerprints = incomingMessages.map(getMessageFingerprint);
+  const compactExistingMessages = collapseConsecutiveDuplicateMessages(existingMessages);
+  const compactIncomingMessages = compactReplayArtifacts(
+    collapseConsecutiveDuplicateMessages(incomingMessages)
+  );
+
+  const existingFingerprints = compactExistingMessages.map(getMessageFingerprint);
+  const incomingFingerprints = compactIncomingMessages.map(getMessageFingerprint);
 
   const prefixMatchLength = findPrefixMatchLength(existingFingerprints, incomingFingerprints);
   let indicesToInsert: number[] = [];
 
-  if (prefixMatchLength === existingMessages.length && incomingMessages.length >= existingMessages.length) {
-    indicesToInsert = incomingMessages.map((_, index) => index).slice(existingMessages.length);
+  if (
+    prefixMatchLength === compactExistingMessages.length &&
+    compactIncomingMessages.length >= compactExistingMessages.length
+  ) {
+    indicesToInsert = compactIncomingMessages
+      .map((_, index) => index)
+      .slice(compactExistingMessages.length);
   } else {
     const overlapLength = findOverlapLength(existingFingerprints, incomingFingerprints);
     if (overlapLength > 0) {
-      indicesToInsert = incomingMessages.map((_, index) => index).slice(overlapLength);
+      indicesToInsert = compactIncomingMessages.map((_, index) => index).slice(overlapLength);
     } else {
-      indicesToInsert = diffByOccurrence(existingFingerprints, incomingMessages);
+      indicesToInsert = diffByOccurrence(existingFingerprints, compactIncomingMessages);
     }
   }
 
-  const lastExistingTimestamp = existingMessages.length
-    ? new Date(existingMessages[existingMessages.length - 1].timestamp).getTime()
+  const lastExistingTimestamp = compactExistingMessages.length
+    ? timestampMs(compactExistingMessages[compactExistingMessages.length - 1].timestamp) ?? Date.now()
     : Date.now();
 
   let syntheticCursor = Number.isNaN(lastExistingTimestamp) ? Date.now() : lastExistingTimestamp + 1000;
 
   return indicesToInsert.map((index) => {
-    const message = incomingMessages[index];
+    const message = compactIncomingMessages[index];
     const fallbackTimestamp = syntheticCursor;
     syntheticCursor += 1000;
     const timestamp = hasProvidedTimestamp(message.timestamp)
@@ -128,12 +144,48 @@ export function prepareMessagesForInsert(
   });
 }
 
+export function collapseConsecutiveDuplicateMessages<T extends ComparableMessage>(messages: T[]): T[] {
+  const collapsed: T[] = [];
+
+  for (const message of messages) {
+    const previous = collapsed[collapsed.length - 1];
+    if (!previous) {
+      collapsed.push(message);
+      continue;
+    }
+
+    const sameFingerprint = getMessageFingerprint(previous) === getMessageFingerprint(message);
+    if (!sameFingerprint) {
+      collapsed.push(message);
+      continue;
+    }
+
+    const previousTimestamp = timestampMs(previous.timestamp);
+    const currentTimestamp = timestampMs(message.timestamp);
+    const deltaSeconds =
+      previousTimestamp !== null && currentTimestamp !== null
+        ? Math.abs(currentTimestamp - previousTimestamp) / 1000
+        : 0;
+
+    // Collapse immediate retransmissions while preserving genuinely repeated
+    // customer follow-ups that happen much later in the conversation.
+    if (deltaSeconds <= 30) {
+      continue;
+    }
+
+    collapsed.push(message);
+  }
+
+  return collapsed;
+}
+
 export function compactReplayArtifacts<T extends ComparableMessage>(messages: T[]): T[] {
   const compacted: T[] = [];
+  const sourceMessages = collapseConsecutiveDuplicateMessages(messages);
   let index = 0;
 
-  while (index < messages.length) {
-    const currentFingerprint = getMessageFingerprint(messages[index]);
+  while (index < sourceMessages.length) {
+    const currentFingerprint = getMessageFingerprint(sourceMessages[index]);
     let bestMatchLength = 0;
 
     for (let start = 0; start < compacted.length; start += 1) {
@@ -141,9 +193,9 @@ export function compactReplayArtifacts<T extends ComparableMessage>(messages: T[
 
       let matched = 0;
       while (
-        index + matched < messages.length &&
+        index + matched < sourceMessages.length &&
         start + matched < compacted.length &&
-        getMessageFingerprint(messages[index + matched]) ===
+        getMessageFingerprint(sourceMessages[index + matched]) ===
           getMessageFingerprint(compacted[start + matched])
       ) {
         matched += 1;
@@ -161,7 +213,7 @@ export function compactReplayArtifacts<T extends ComparableMessage>(messages: T[
       continue;
     }
 
-    compacted.push(messages[index]);
+    compacted.push(sourceMessages[index]);
     index += 1;
   }
 
