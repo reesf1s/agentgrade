@@ -109,27 +109,22 @@ export async function POST(request: Request) {
     for (const article of articles) {
       const sourceFile = `intercom_article_${article.id}.txt`;
 
-      // Skip if this article has already been imported
-      const { data: existing } = await supabaseAdmin
-        .from("knowledge_base")
-        .select("id")
-        .eq("workspace_id", workspaceId)
-        .eq("source_file", sourceFile)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
+      // Strip HTML from article body
+      const plainText = stripHtml(article.body || "");
+      if (!plainText.trim()) {
         skipped++;
         continue;
       }
-
-      // Strip HTML from article body
-      const plainText = stripHtml(article.body || "");
-      if (!plainText.trim()) continue;
 
       await uploadAndProcess(workspaceId, plainText, sourceFile);
 
       synced++;
     }
+
+    await supabaseAdmin
+      .from("agent_connections")
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq("id", connection.id);
 
     return NextResponse.json({
       success: true,

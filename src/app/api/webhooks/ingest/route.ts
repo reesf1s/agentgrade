@@ -100,8 +100,7 @@ export async function POST(request: NextRequest) {
       metadata: stampCompletionMetadata(body.metadata || {}, completion),
     });
 
-    const shouldScore =
-      hasScorableAgentTurn(messages) && (!completion.hasExplicitSignal || completion.isFinal);
+    const shouldScore = hasScorableAgentTurn(messages) && completion.isFinal;
 
     if (shouldScore) {
       after(async () => {
@@ -122,13 +121,13 @@ export async function POST(request: NextRequest) {
           ? `Conversation ingested with ${messages.length} messages. Scoring in progress.`
           : completion.hasExplicitSignal && !completion.isFinal
             ? `Conversation ingested with ${messages.length} messages. Waiting for the conversation to be marked complete before scoring.`
-            : `Conversation ingested with ${messages.length} messages. Waiting for the first agent response before scoring.`
+            : `Conversation ingested with ${messages.length} messages. Waiting for the 10-minute quiet period before scoring.`
         : ingestionResult.insertedMessages > 0
           ? shouldScore
             ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`
             : completion.hasExplicitSignal && !completion.isFinal
               ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the conversation to be marked complete before scoring.`
-              : `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the first agent response before scoring.`
+              : `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the 10-minute quiet period before scoring.`
           : "Conversation already up to date.",
     });
   } catch (error) {

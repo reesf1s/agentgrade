@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassInput } from "@/components/ui/glass-input";
@@ -522,10 +522,12 @@ function TeamTab() {
 function KnowledgeTab() {
   const [sources, setSources] = useState<KBSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [sourceUrl, setSourceUrl] = useState("");
   const [syncingUrl, setSyncingUrl] = useState(false);
   const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetch("/api/knowledge-base")
@@ -567,6 +569,35 @@ function KnowledgeTab() {
     }
   }
 
+  async function uploadKnowledgeFile(file: File) {
+    setUploadingFile(true);
+    setUrlError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/knowledge-base/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setUrlError(data.error || "Failed to upload knowledge file");
+        return;
+      }
+
+      const refreshed = await fetch("/api/knowledge-base");
+      const refreshedData = await refreshed.json();
+      setSources(refreshedData.sources || []);
+    } catch {
+      setUrlError("Network error");
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
   async function syncHelpCenter(platform: "intercom" | "zendesk") {
     setSyncingPlatform(platform);
     setUrlError(null);
@@ -597,11 +628,30 @@ function KnowledgeTab() {
       <p className="text-xs text-[var(--text-muted)] mb-6">
         Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
       </p>
-      <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.txt,.md,.json"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            void uploadKnowledgeFile(file);
+          }
+          event.currentTarget.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="mb-4 w-full border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors"
+      >
         <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-        <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files here</p>
+        <p className="text-sm text-[var(--text-secondary)]">
+          {uploadingFile ? "Uploading knowledge file..." : "Upload PDF, DOCX, TXT, Markdown, or JSON"}
+        </p>
         <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
-      </div>
+      </button>
       <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
         <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Or import a help center URL</p>
         <div className="flex gap-2">

@@ -164,6 +164,10 @@ function pushUniqueFlag(flags: string[], flag: string) {
   }
 }
 
+function removeMatchingFlags(flags: string[], pattern: RegExp): string[] {
+  return flags.filter((flag) => !pattern.test(flag));
+}
+
 function deriveConfidenceLevel(
   input: ScoringInput,
   result: ScoringResult
@@ -270,8 +274,12 @@ export function applyScoringGuardrails(
     }
   }
 
+  if (fabricatedClaims.length === 0 && contradictedClaims.length === 0 && unverifiableClaims.length > 0) {
+    adjusted.flags = removeMatchingFlags(adjusted.flags, /fabricat|hallucinat/i);
+    pushUniqueFlag(adjusted.flags, "ungrounded_claims_require_review");
+  }
+
   if (!input.knowledgeBaseContext?.length && unverifiableClaims.length >= 3) {
-    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, 0.72);
     pushUniqueFlag(adjusted.flags, "limited_grounding_context");
   }
 
@@ -300,11 +308,6 @@ export function applyScoringGuardrails(
   if (hasOperationalRecordClaim(input.messages) && !hasTranscriptToolEvidence(input.messages)) {
     const unsupportedButHelpful = hasMissingToolEvidenceButHelpfulResponse(input.messages);
 
-    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, unsupportedButHelpful ? 0.82 : 0.72);
-    adjusted.hallucination_score = Math.min(
-      adjusted.hallucination_score,
-      unsupportedButHelpful ? 0.74 : 0.62
-    );
     pushUniqueFlag(adjusted.flags, "tool_backed_claim_without_evidence");
     pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
     if (unsupportedButHelpful) {

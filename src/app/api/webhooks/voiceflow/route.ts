@@ -66,9 +66,7 @@ export async function POST(request: NextRequest) {
       metadata: stampCompletionMetadata(normalized.metadata, completion),
     });
 
-    const shouldScore =
-      hasScorableAgentTurn(normalized.messages) &&
-      (!completion.hasExplicitSignal || completion.isFinal);
+    const shouldScore = hasScorableAgentTurn(normalized.messages) && completion.isFinal;
 
     if (shouldScore) {
       after(async () => {
@@ -89,13 +87,13 @@ export async function POST(request: NextRequest) {
           ? "Voiceflow conversation ingested. Scoring in progress."
           : completion.hasExplicitSignal && !completion.isFinal
             ? "Voiceflow conversation ingested. Waiting for the conversation to be marked complete before scoring."
-            : "Voiceflow conversation ingested. Waiting for the first agent response before scoring."
+            : "Voiceflow conversation ingested. Waiting for the 10-minute quiet period before scoring."
         : ingestionResult.insertedMessages > 0
           ? shouldScore
             ? "Voiceflow conversation updated and queued for re-scoring."
             : completion.hasExplicitSignal && !completion.isFinal
               ? "Voiceflow conversation updated. Waiting for the conversation to be marked complete before scoring."
-              : "Voiceflow conversation updated. Waiting for the first agent response before scoring."
+              : "Voiceflow conversation updated. Waiting for the 10-minute quiet period before scoring."
           : "Voiceflow conversation already up to date.",
     });
   } catch (error) {

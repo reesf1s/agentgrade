@@ -46,6 +46,7 @@ Your evaluation standard:
 - If the transcript contains a substantive agent answer, never describe the conversation as having "no response" or "no answer". Score the answer that is actually present.
 - Separate helpfulness from grounding. A response can be useful and directionally strong while still having weak evidence. Reflect that by keeping resolution distinct from accuracy and hallucination.
 - When tool-backed claims look plausible but the transcript does not include the lookup result, reduce confidence and mark the claims as unsupported or unverifiable before escalating to "fabricated", unless the details are clearly invented, contradicted, or implausibly specific.
+- Do not lower accuracy_score or hallucination_score solely because a claim is unverifiable in the transcript. Lack of evidence should primarily lower confidence and raise a grounding risk unless there is contradiction, fabrication, or a strong internal inconsistency.
 - Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
 - If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
 
@@ -55,14 +56,15 @@ Your evaluation standard:
 - 1.0: Every factual claim is correct and verifiable
 - 0.7–0.9: Mostly correct, minor inaccuracies that don't mislead
 - 0.4–0.6: Mix of correct and incorrect information
-- 0.0–0.3: Majority of claims are wrong or unverifiable
+- 0.0–0.3: Majority of claims are wrong, contradicted, or clearly fabricated
+- Unverifiable claims alone should not force a low accuracy score. Use them to reduce confidence unless there is stronger evidence of error.
 
 ### hallucination_score (1.0 = ZERO hallucinations — higher is better)
 - 1.0: Zero fabricated information, everything is grounded
 - 0.7–0.9: Minor embellishments but nothing dangerous or consequential
 - 0.4–0.6: Some fabricated claims, policies, or procedures
 - 0.0–0.3: Significant fabrication — invented products, prices, policies, or links
-- If the answer appears operationally useful but visible grounding is missing, prefer a mid-range score with lower confidence over treating it as proven severe fabrication.
+- If the answer appears operationally useful but visible grounding is missing, prefer a mid/high score with lower confidence and a grounding-risk flag over treating it as proven fabrication.
 
 ### resolution_score
 - 1.0: Customer's problem fully solved with correct action taken
