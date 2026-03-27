@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getWorkspaceContext } from "@/lib/workspace";
+import { resolveAppUrl } from "@/lib/url";
 
 /**
  * POST /api/billing/portal
  * Creates a Stripe Customer Portal session for managing subscription.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const ctx = await getWorkspaceContext();
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,7 +24,7 @@ export async function POST() {
       apiVersion: "2026-03-25.dahlia" as const,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl = resolveAppUrl(request);
 
     const session = await stripe.billingPortal.sessions.create({
       customer: ctx.workspace.stripe_customer_id,

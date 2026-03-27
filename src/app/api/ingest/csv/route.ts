@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runScoringPipeline } from "@/lib/scoring";
+import { scoreConversation } from "@/lib/scoring";
 
 /**
  * POST /api/ingest/csv
@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
     // Ingest each conversation
     const results = {
       conversations_ingested: 0,
-      conversations_scored: 0,
       errors: [] as string[],
     };
+    const scheduledConversationIds: string[] = [];
 
     for (const conv of conversations) {
       if (!conv.messages || conv.messages.length === 0) {
@@ -153,23 +153,28 @@ export async function POST(request: NextRequest) {
         );
 
         results.conversations_ingested++;
-
-        // Score asynchronously (fire-and-forget per conversation)
-        void scoreCsvConversationAsync(
-          conversation.id,
-          conv.messages,
-          connection.workspace_id
-        ).then(() => { results.conversations_scored++; });
+        scheduledConversationIds.push(conversation.id);
 
       } catch (err) {
         results.errors.push(`Conversation ${conv.conversation_id || "unknown"}: ${String(err)}`);
       }
     }
 
+    after(async () => {
+      for (const conversationId of scheduledConversationIds) {
+        try {
+          await scoreConversation(conversationId);
+        } catch (scoreError) {
+          console.error(`CSV scoring failed for ${conversationId}:`, scoreError);
+        }
+      }
+    });
+
     return NextResponse.json({
       success: true,
       ...results,
-      message: `Ingested ${results.conversations_ingested} of ${conversations.length} conversations. Scoring in progress.`,
+      conversations_scheduled_for_scoring: scheduledConversationIds.length,
+      message: `Ingested ${results.conversations_ingested} of ${conversations.length} conversations. Scoring scheduled.`,
     });
   } catch (error) {
     console.error("CSV ingest error:", error);
@@ -266,34 +271,4 @@ function parseCsvRow(line: string): string[] {
   }
   cells.push(current.trim());
   return cells;
-}
-
-async function scoreCsvConversationAsync(
-  conversationId: string,
-  messages: Array<{ role: string; content: string; timestamp?: string }>,
-  workspaceId: string
-) {
-  const { data: kbChunks } = await supabaseAdmin
-    .from("ag_knowledge_base_items")
-    .select("content")
-    .eq("workspace_id", workspaceId)
-    .limit(5);
-
-  const scoreResult = await runScoringPipeline({
-    messages: messages.map((m, i) => ({
-      id: `msg-${i}`,
-      conversation_id: conversationId,
-      role: m.role as "agent" | "customer" | "human_agent" | "system",
-      content: m.content,
-      timestamp: m.timestamp || new Date().toISOString(),
-      metadata: {},
-    })),
-    knowledgeBaseContext: kbChunks?.map((c) => c.content) || [],
-  });
-
-  await supabaseAdmin.from("ag_quality_scores").insert({
-    conversation_id: conversationId,
-    ...scoreResult,
-    scored_at: new Date().toISOString(),
-  });
 }

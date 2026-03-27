@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { STRIPE_PRICES } from "@/lib/db/types";
+import { resolveAppUrl } from "@/lib/url";
 
-// Stripe price IDs for each plan
-const PRICE_IDS = {
-  starter: "price_1TFNL98v5Z7lw9xvEZtaAnuJ",
-  growth: "price_1TFNLB8v5Z7lw9xvHUV1bd5y",
-  enterprise: "price_1TFNLB8v5Z7lw9xvazyojuVr",
-};
+const PRICE_IDS = Object.fromEntries(
+  Object.entries(STRIPE_PRICES).map(([plan, details]) => [plan, details.priceId])
+) as Record<keyof typeof STRIPE_PRICES, string>;
 
 /**
  * POST /api/billing/checkout
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest) {
       apiVersion: "2026-03-25.dahlia" as const,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl = resolveAppUrl(request);
 
     // Create or retrieve Stripe customer
     let customerId = ctx.workspace.stripe_customer_id;

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runScoringPipeline } from "@/lib/scoring";
+import { scoreConversation } from "@/lib/scoring";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
 type MessageRole = typeof VALID_ROLES[number];
@@ -138,43 +138,26 @@ export async function POST(request: NextRequest) {
     const scoreMode = new URL(request.url).searchParams.get("score");
 
     if (scoreMode === "sync") {
-      // Synchronous scoring — wait for result before returning
-      const { data: kbChunks } = await supabaseAdmin
-        .from("ag_knowledge_base_items")
-        .select("content")
-        .eq("workspace_id", connection.workspace_id)
-        .limit(5);
-
-      const knowledgeBaseContext = kbChunks?.map((c) => c.content) || [];
-
-      const scoreResult = await runScoringPipeline({
-        messages: messages.map((m, i) => ({
-          id: `msg-${i}`,
-          conversation_id: conversation.id,
-          role: m.role,
-          content: m.content,
-          timestamp: m.timestamp || new Date().toISOString(),
-          metadata: {},
-        })),
-        knowledgeBaseContext,
-      });
-
-      await supabaseAdmin.from("ag_quality_scores").insert({
-        conversation_id: conversation.id,
-        ...scoreResult,
-        scored_at: new Date().toISOString(),
-      });
+      const { score, isPartial } = await scoreConversation(conversation.id);
 
       return NextResponse.json({
         success: true,
         conversation_id: conversation.id,
-        score: scoreResult,
-        message: "Conversation ingested and scored.",
+        score,
+        is_partial: isPartial,
+        message: isPartial
+          ? "Conversation ingested. Scoring completed with fallback safeguards."
+          : "Conversation ingested and scored.",
       });
     }
 
-    // Default: async scoring
-    scoreAsync(conversation.id, messages, connection.workspace_id);
+    after(async () => {
+      try {
+        await scoreConversation(conversation.id);
+      } catch (scoreError) {
+        console.error(`Async scoring failed for ${conversation.id}:`, scoreError);
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -184,39 +167,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Ingest REST API error:", error);
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-}
-
-async function scoreAsync(
-  conversationId: string,
-  messages: Array<{ role: string; content: string; timestamp?: string }>,
-  workspaceId: string
-) {
-  try {
-    const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
-      .select("content")
-      .eq("workspace_id", workspaceId)
-      .limit(5);
-
-    const scoreResult = await runScoringPipeline({
-      messages: messages.map((m, i) => ({
-        id: `msg-${i}`,
-        conversation_id: conversationId,
-        role: m.role as MessageRole,
-        content: m.content,
-        timestamp: m.timestamp || new Date().toISOString(),
-        metadata: {},
-      })),
-      knowledgeBaseContext: kbChunks?.map((c) => c.content) || [],
-    });
-
-    await supabaseAdmin.from("ag_quality_scores").insert({
-      conversation_id: conversationId,
-      ...scoreResult,
-      scored_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    console.error(`Async scoring failed for ${conversationId}:`, err);
   }
 }

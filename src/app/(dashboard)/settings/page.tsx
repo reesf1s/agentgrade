@@ -17,13 +17,6 @@ interface Connection {
   created_at: string;
 }
 
-interface AlertConfig {
-  id: string;
-  dimension: string;
-  threshold: number;
-  enabled: boolean;
-}
-
 interface TeamMember {
   id: string;
   clerk_user_id: string;

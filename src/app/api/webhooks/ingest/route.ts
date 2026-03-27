@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runScoringPipeline } from "@/lib/scoring";
+import { scoreConversation } from "@/lib/scoring";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system"] as const;
 
@@ -128,8 +128,13 @@ export async function POST(request: NextRequest) {
       // Don't fail the request - conversation was stored
     }
 
-    // Trigger scoring pipeline asynchronously (fire and forget)
-    scoreConversationAsync(conversation.id, messages, connection.workspace_id);
+    after(async () => {
+      try {
+        await scoreConversation(conversation.id);
+      } catch (scoreError) {
+        console.error(`Scoring failed for conversation ${conversation.id}:`, scoreError);
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -139,83 +144,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Ingest webhook error:", error);
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-}
-
-async function scoreConversationAsync(
-  conversationId: string,
-  messages: Array<{ role: string; content: string; timestamp?: string }>,
-  workspaceId: string
-) {
-  try {
-    // Fetch knowledge base context for this workspace (top 5 relevant chunks)
-    const { data: kbChunks } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
-      .select("content")
-      .eq("workspace_id", workspaceId)
-      .limit(5);
-
-    const knowledgeBaseContext = kbChunks?.map((c) => c.content) || [];
-
-    // Run full scoring pipeline (1 Claude API call)
-    const scoreResult = await runScoringPipeline({
-      messages: messages.map((m, i) => ({
-        id: `msg-${i}`,
-        conversation_id: conversationId,
-        role: m.role as "agent" | "customer" | "human_agent" | "system",
-        content: m.content,
-        timestamp: m.timestamp || new Date().toISOString(),
-        metadata: {},
-      })),
-      knowledgeBaseContext,
-    });
-
-    // Store quality score
-    const { error: scoreError } = await supabaseAdmin.from("ag_quality_scores").insert({
-      conversation_id: conversationId,
-      ...scoreResult,
-      scored_at: new Date().toISOString(),
-    });
-
-    if (scoreError) {
-      console.error("Failed to store quality score:", scoreError);
-      return;
-    }
-
-    // Check alert thresholds
-    const { data: alertConfigs } = await supabaseAdmin
-      .from("ag_alert_configs")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("enabled", true);
-
-    if (alertConfigs) {
-      const scoreMap: Record<string, number | undefined> = {
-        overall: scoreResult.overall_score,
-        accuracy: scoreResult.accuracy_score ?? undefined,
-        hallucination: scoreResult.hallucination_score ?? undefined,
-        resolution: scoreResult.resolution_score ?? undefined,
-        tone: scoreResult.tone_score ?? undefined,
-      };
-
-      for (const config of alertConfigs) {
-        const actual = scoreMap[config.dimension];
-        if (actual !== undefined && actual < config.threshold) {
-          await supabaseAdmin.from("ag_alerts").insert({
-            workspace_id: workspaceId,
-            alert_type: "score_below_threshold",
-            title: `${config.dimension} score below threshold`,
-            description: `Conversation scored ${(actual * 100).toFixed(0)}% on ${config.dimension} (threshold: ${(config.threshold * 100).toFixed(0)}%)`,
-            threshold_value: config.threshold,
-            actual_value: actual,
-          });
-        }
-      }
-    }
-
-    console.log(`Scored conversation ${conversationId}: ${scoreResult.overall_score}`);
-  } catch (error) {
-    console.error(`Scoring failed for conversation ${conversationId}:`, error);
   }
 }
 

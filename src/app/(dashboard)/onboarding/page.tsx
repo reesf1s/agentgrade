@@ -1,10 +1,20 @@
 "use client";
-import { useState, useRef } from "react";
-import { GlassCard } from "@/components/ui/glass-card";
-import { GlassButton } from "@/components/ui/glass-button";
-import { GlassInput } from "@/components/ui/glass-input";
+
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plug, BookOpen, Bell, Check, ArrowRight, Upload, AlertCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Bell,
+  BookOpen,
+  Check,
+  FileText,
+  Plug,
+  Upload,
+} from "lucide-react";
+import { GlassButton } from "@/components/ui/glass-button";
+import { GlassCard } from "@/components/ui/glass-card";
+import { GlassInput } from "@/components/ui/glass-input";
 
 const steps = [
   { id: 1, title: "Connect your agent", icon: Plug },
@@ -13,58 +23,167 @@ const steps = [
 ];
 
 const DEFAULT_THRESHOLDS = [
-  { label: "Overall Quality", dimension: "overall", default: 70, desc: "Alert when overall score drops below" },
-  { label: "Hallucination Score", dimension: "hallucination", default: 70, desc: "Alert when hallucinations exceed" },
-  { label: "Escalation Rate", dimension: "resolution", default: 70, desc: "Alert when resolution score drops below" },
+  {
+    label: "Overall Quality",
+    dimension: "overall",
+    default: 70,
+    desc: "Alert when the weighted overall quality score drops below",
+  },
+  {
+    label: "Hallucination Prevention",
+    dimension: "hallucination",
+    default: 75,
+    desc: "Alert when grounding and factual reliability drop below",
+  },
+  {
+    label: "Resolution Quality",
+    dimension: "resolution",
+    default: 70,
+    desc: "Alert when the agent stops resolving issues effectively",
+  },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const conversationFileInputRef = useRef<HTMLInputElement>(null);
+  const kbFileInputRef = useRef<HTMLInputElement>(null);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [platform, setPlatform] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [thresholds, setThresholds] = useState<Record<string, number>>(
-    Object.fromEntries(DEFAULT_THRESHOLDS.map((t) => [t.dimension, t.default]))
+    Object.fromEntries(DEFAULT_THRESHOLDS.map((threshold) => [threshold.dimension, threshold.default]))
   );
   const [saving, setSaving] = useState(false);
+  const [uploadingKnowledgeBase, setUploadingKnowledgeBase] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
+  const [conversationUploadSummary, setConversationUploadSummary] = useState<string | null>(null);
+  const [knowledgeBaseSummary, setKnowledgeBaseSummary] = useState<string | null>(null);
+  const browserOrigin = typeof window !== "undefined" ? window.location.origin : "";
+
+  async function createConnection() {
+    const res = await fetch("/api/connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platform,
+        name: agentName || `${platform} Connection`,
+        api_key: apiKey || undefined,
+        config: platform === "zendesk" ? { subdomain } : {},
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to save connection");
+    }
+
+    setWebhookSecret(data.connection?.webhook_secret || null);
+    setWebhookUrl(data.connection?.webhook_url || null);
+
+    return data.connection as {
+      webhook_secret?: string;
+      webhook_url?: string;
+    };
+  }
 
   async function handleStep1Continue() {
     if (!platform) return;
+
+    if (platform === "intercom" && !apiKey.trim()) {
+      setError("Enter your Intercom API key to continue.");
+      return;
+    }
+
+    if (platform === "zendesk" && (!subdomain.trim() || !apiKey.trim())) {
+      setError("Enter your Zendesk subdomain and API token to continue.");
+      return;
+    }
+
+    if (platform === "csv" && !conversationFileInputRef.current?.files?.[0]) {
+      setError("Choose a CSV or JSON export so we can run your first audit.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/connections", {
+      const connection = await createConnection();
+
+      if (platform === "csv") {
+        const file = conversationFileInputRef.current?.files?.[0];
+        if (!file || !connection.webhook_secret) {
+          throw new Error("Could not prepare the upload connection.");
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("platform", "csv");
+
+        const res = await fetch("/api/ingest/csv", {
+          method: "POST",
+          headers: {
+            "x-agentgrade-api-key": connection.webhook_secret,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to upload conversation file");
+        }
+
+        setConversationUploadSummary(
+          `${data.conversations_ingested ?? 0} conversations ingested and queued for scoring.`
+        );
+      }
+
+      setCurrentStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error — please try again");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleKnowledgeBaseContinue(skipUpload = false) {
+    const file = kbFileInputRef.current?.files?.[0];
+
+    if (skipUpload || !file) {
+      setCurrentStep(3);
+      return;
+    }
+
+    setUploadingKnowledgeBase(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/knowledge-base/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platform,
-          name: agentName || `${platform} Connection`,
-          api_key: apiKey || undefined,
-          config: platform === "zendesk" ? { subdomain } : {},
-        }),
+        body: formData,
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to save connection");
-        return;
+        throw new Error(data.error || "Failed to upload knowledge base");
       }
 
-      if (data.connection?.webhook_secret) {
-        setWebhookSecret(data.connection.webhook_secret);
-      }
-
-      setCurrentStep(2);
-    } catch {
-      setError("Network error — please try again");
+      setKnowledgeBaseSummary(
+        `${data.chunks_created ?? 0} knowledge chunks indexed from ${data.source || file.name}.`
+      );
+      setCurrentStep(3);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Knowledge base upload failed");
     } finally {
-      setSaving(false);
+      setUploadingKnowledgeBase(false);
     }
   }
 
@@ -77,22 +196,21 @@ export default function OnboardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          alert_thresholds: DEFAULT_THRESHOLDS.map((t) => ({
-            dimension: t.dimension,
-            value: thresholds[t.dimension] ?? t.default,
+          alert_thresholds: DEFAULT_THRESHOLDS.map((threshold) => ({
+            dimension: threshold.dimension,
+            value: thresholds[threshold.dimension] ?? threshold.default,
           })),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to save thresholds");
-        return;
+        throw new Error(data.error || "Failed to save thresholds");
       }
 
       router.push("/dashboard");
-    } catch {
-      setError("Network error — please try again");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error — please try again");
     } finally {
       setSaving(false);
     }
@@ -100,23 +218,33 @@ export default function OnboardingPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-12">
-      {/* Step indicator */}
       <div className="flex items-center justify-center gap-3 mb-12">
-        {steps.map((step, i) => {
+        {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = currentStep === step.id;
           const isDone = currentStep > step.id;
+
           return (
             <div key={step.id} className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                isDone ? "bg-[var(--text-primary)] text-white" : isActive ? "bg-[rgba(0,0,0,0.08)] text-[var(--text-primary)]" : "bg-[rgba(0,0,0,0.03)] text-[var(--text-muted)]"
-              }`}>
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  isDone
+                    ? "bg-[var(--text-primary)] text-white"
+                    : isActive
+                      ? "bg-[rgba(0,0,0,0.08)] text-[var(--text-primary)]"
+                      : "bg-[rgba(0,0,0,0.03)] text-[var(--text-muted)]"
+                }`}
+              >
                 {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
               </div>
-              <span className={`text-sm ${isActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"}`}>
+              <span
+                className={`text-sm ${
+                  isActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"
+                }`}
+              >
                 {step.title}
               </span>
-              {i < steps.length - 1 && <div className="w-12 h-px bg-[rgba(0,0,0,0.08)]" />}
+              {index < steps.length - 1 && <div className="w-12 h-px bg-[rgba(0,0,0,0.08)]" />}
             </div>
           );
         })}
@@ -129,32 +257,31 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 1: Connect */}
       {currentStep === 1 && (
         <GlassCard className="p-8">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Connect your AI agent</h2>
           <p className="text-sm text-[var(--text-secondary)] mb-8">
-            Choose how to get your conversations into AgentGrade.
+            Choose how conversations should flow into AgentGrade. We&apos;ll create the connection and give you the exact credentials you need.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
-              { id: "intercom", name: "Intercom", desc: "Connect via API key" },
-              { id: "zendesk", name: "Zendesk", desc: "Connect via API key" },
-              { id: "custom", name: "Custom Webhook", desc: "Send from any platform" },
-              { id: "csv", name: "Upload CSV/JSON", desc: "Instant quality audit" },
-            ].map((p) => (
+              { id: "intercom", name: "Intercom", desc: "API key + webhook-based scoring" },
+              { id: "zendesk", name: "Zendesk", desc: "API token connection" },
+              { id: "custom", name: "Custom Webhook", desc: "Any chatbot or internal agent" },
+              { id: "csv", name: "Upload CSV/JSON", desc: "Run an instant historical audit" },
+            ].map((option) => (
               <button
-                key={p.id}
-                onClick={() => setPlatform(p.id)}
+                key={option.id}
+                onClick={() => setPlatform(option.id)}
                 className={`p-4 rounded-xl text-left transition-all ${
-                  platform === p.id
+                  platform === option.id
                     ? "bg-[rgba(0,0,0,0.06)] border border-[rgba(0,0,0,0.12)]"
                     : "bg-[rgba(0,0,0,0.02)] border border-transparent hover:bg-[rgba(0,0,0,0.04)]"
                 }`}
               >
-                <p className="text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{p.desc}</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{option.name}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{option.desc}</p>
               </button>
             ))}
           </div>
@@ -180,7 +307,7 @@ export default function OnboardingPage() {
                 onChange={(e) => setApiKey(e.target.value)}
               />
               <p className="text-xs text-[var(--text-muted)]">
-                Find this in Intercom → Settings → Integrations → Developer Hub
+                Find this in Intercom → Settings → Integrations → Developer Hub.
               </p>
             </div>
           )}
@@ -203,35 +330,38 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {platform === "custom" && webhookSecret && (
-            <div className="space-y-3 mb-6">
-              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL:</p>
-                <code className="text-xs font-mono text-[var(--text-primary)]">
-                  {typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/ingest
-                </code>
-              </div>
-              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                <p className="text-xs text-[var(--text-secondary)] mb-1">Authorization header:</p>
-                <code className="text-xs font-mono text-[var(--text-primary)]">
-                  Bearer {webhookSecret}
-                </code>
-              </div>
+          {platform === "custom" && (
+            <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] text-sm text-[var(--text-secondary)] mb-6">
+              We&apos;ll generate a secure webhook URL and bearer secret on the next step so you can wire any chatbot directly into scoring.
             </div>
           )}
 
           {platform === "csv" && (
             <div className="mb-6">
-              <input ref={fileInputRef} type="file" accept=".csv,.json" className="hidden" />
+              <input
+                ref={conversationFileInputRef}
+                type="file"
+                accept=".csv,.json"
+                className="hidden"
+                onChange={() => {
+                  setConversationUploadSummary(null);
+                  setError(null);
+                }}
+              />
               <div
                 className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => conversationFileInputRef.current?.click()}
               >
                 <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-                <p className="text-sm text-[var(--text-secondary)]">Drop your CSV or JSON file here</p>
+                <p className="text-sm text-[var(--text-secondary)]">Choose your CSV or JSON export</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Expected format: each row is a message with role, content, timestamp
+                  Expected format: each row is a message with `conversation_id`, `role`, `content`, and optional `timestamp`.
                 </p>
+                {conversationFileInputRef.current?.files?.[0] && (
+                  <p className="text-xs text-[var(--text-primary)] mt-3">
+                    Selected: {conversationFileInputRef.current.files[0].name}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -242,52 +372,101 @@ export default function OnboardingPage() {
             disabled={!platform || saving}
             className="w-full flex items-center justify-center gap-2 !py-3"
           >
-            {saving ? "Saving..." : "Continue"} <ArrowRight className="w-4 h-4" />
+            {saving ? "Setting up..." : "Continue"} <ArrowRight className="w-4 h-4" />
           </GlassButton>
         </GlassCard>
       )}
 
-      {/* Step 2: Knowledge Base */}
       {currentStep === 2 && (
         <GlassCard className="p-8">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
             Upload your knowledge base
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mb-8">
-            We use this to verify your agent&apos;s accuracy and detect hallucinations. Optional but recommended.
+            We use this content to verify factual claims, catch hallucinations, and improve how precisely your bot is assessed.
           </p>
 
-          <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-6">
+          {platform === "custom" && webhookSecret && (
+            <div className="space-y-3 mb-6">
+              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL</p>
+                <code className="text-xs font-mono text-[var(--text-primary)] break-all">
+                  {webhookUrl || `${browserOrigin}/api/webhooks/ingest`}
+                </code>
+              </div>
+              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                <p className="text-xs text-[var(--text-secondary)] mb-1">Authorization header</p>
+                <code className="text-xs font-mono text-[var(--text-primary)] break-all">
+                  Bearer {webhookSecret}
+                </code>
+              </div>
+            </div>
+          )}
+
+          {conversationUploadSummary && (
+            <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-[rgba(34,197,94,0.08)] text-[#15803D] text-sm">
+              <FileText className="w-4 h-4 flex-shrink-0" />
+              {conversationUploadSummary}
+            </div>
+          )}
+
+          <input
+            ref={kbFileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,.json"
+            className="hidden"
+            onChange={() => {
+              setKnowledgeBaseSummary(null);
+              setError(null);
+            }}
+          />
+
+          <div
+            className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-6"
+            onClick={() => kbFileInputRef.current?.click()}
+          >
             <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--text-secondary)]">Drop PDF, DOCX, or TXT files</p>
+            <p className="text-sm text-[var(--text-secondary)]">Choose PDF, DOCX, TXT, Markdown, or JSON files</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Help articles, FAQs, policy docs, product documentation
+              Help articles, FAQs, policy docs, product documentation, and support playbooks all improve scoring fidelity.
             </p>
+            {kbFileInputRef.current?.files?.[0] && (
+              <p className="text-xs text-[var(--text-primary)] mt-3">
+                Selected: {kbFileInputRef.current.files[0].name}
+              </p>
+            )}
           </div>
+
+          {knowledgeBaseSummary && (
+            <div className="flex items-center gap-2 p-3 mb-6 rounded-xl bg-[rgba(34,197,94,0.08)] text-[#15803D] text-sm">
+              <Check className="w-4 h-4 flex-shrink-0" />
+              {knowledgeBaseSummary}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <GlassButton
               variant="primary"
-              onClick={() => setCurrentStep(3)}
+              onClick={() => handleKnowledgeBaseContinue(false)}
+              disabled={uploadingKnowledgeBase}
               className="flex-1 flex items-center justify-center gap-2 !py-3"
             >
-              Continue <ArrowRight className="w-4 h-4" />
+              {uploadingKnowledgeBase ? "Uploading..." : "Continue"} <ArrowRight className="w-4 h-4" />
             </GlassButton>
-            <GlassButton onClick={() => setCurrentStep(3)} className="!py-3">
+            <GlassButton onClick={() => handleKnowledgeBaseContinue(true)} className="!py-3">
               Skip for now
             </GlassButton>
           </div>
         </GlassCard>
       )}
 
-      {/* Step 3: Alert Thresholds */}
       {currentStep === 3 && (
         <GlassCard className="p-8">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
             Set alert thresholds
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mb-8">
-            Get notified when your agent&apos;s quality drops below these levels.
+            These thresholds control when AgentGrade warns you that conversation quality is slipping.
           </p>
 
           <div className="space-y-5 mb-8">
@@ -307,7 +486,7 @@ export default function OnboardingPage() {
                       onChange={(e) =>
                         setThresholds((prev) => ({
                           ...prev,
-                          [threshold.dimension]: parseInt(e.target.value) || 0,
+                          [threshold.dimension]: parseInt(e.target.value, 10) || 0,
                         }))
                       }
                       className="glass-input w-16 px-2 py-1.5 text-sm text-center font-mono"

@@ -17,7 +17,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "@/lib/supabase";
-import type { FailurePattern, QualityScore } from "@/lib/db/types";
+import type { FailurePattern } from "@/lib/db/types";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,

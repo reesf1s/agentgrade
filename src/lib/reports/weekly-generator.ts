@@ -214,7 +214,7 @@ export async function generateWeeklyReport(
     }));
 
   // ── Top failure patterns this week ────────────────────────────
-  const { data: activePatterns } = await supabaseAdmin
+  await supabaseAdmin
     .from("ag_failure_patterns")
     .select("title, severity, description")
     .eq("workspace_id", workspaceId)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAppUrl } from "@/lib/url";
 
 /**
  * GET /api/connections/[id]/sdk-snippet
@@ -26,8 +27,7 @@ export async function GET(
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://agentgrade.com";
-    const webhookUrl = `${appUrl}/api/webhooks/ingest`;
+    const webhookUrl = `${resolveAppUrl(_request)}/api/webhooks/ingest`;
 
     // Generate a JavaScript SDK snippet
     const snippet = `// AgentGrade SDK — auto-log conversations

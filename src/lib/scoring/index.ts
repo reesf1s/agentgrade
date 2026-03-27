@@ -6,7 +6,7 @@
  * Orchestrates the 3-pass evaluation pipeline:
  *   Pass 1: Structural Analysis  — local, zero API calls
  *   Pass 2: Claude Evaluation    — 1 Claude API call, all dimensions at once
- *   Pass 3: Pattern Detection    — local, runs async after scoring
+ *   Pass 3: Pattern Detection    — local, runs after scoring is persisted
  *
  * Also handles:
  *   - KB context retrieval via pgvector semantic search
@@ -77,8 +77,8 @@ export async function runScoringPipeline(
  * Main entry point for scoring a stored conversation.
  *
  * Loads the conversation from DB, runs all 3 passes, persists the score,
- * updates escalation status, checks alert thresholds, and triggers async
- * pattern detection.
+ * updates escalation status, checks alert thresholds, and refreshes
+ * failure patterns.
  *
  * Returns the full score result and a flag indicating if scoring was partial
  * (i.e., Claude API failed and defaults were used).
@@ -225,12 +225,12 @@ export async function scoreConversation(conversationId: string): Promise<{
     console.warn("[scoring] Alert threshold check failed:", e);
   }
 
-  // ── Pass 3: Pattern Detection (async, non-blocking) ─────────────
-  // Runs after we return to avoid blocking the scoring response.
-  // Pattern detection needs a minimum of 3 conversations to be meaningful.
-  runPatternDetectionAsync(workspaceId).catch((e) =>
-    console.warn("[scoring] Async pattern detection failed:", e)
-  );
+  // ── Pass 3: Pattern Detection ───────────────────────────────────
+  try {
+    await runPatternDetectionAsync(workspaceId);
+  } catch (e) {
+    console.warn("[scoring] Pattern detection failed:", e);
+  }
 
   console.log(
     `[scoring] Scored ${conversationId}: overall=${scoreData.overall_score.toFixed(2)} ` +
