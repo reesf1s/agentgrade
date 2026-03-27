@@ -1,5 +1,6 @@
-import { verifyToken } from "@clerk/nextjs/server";
 import { cookies, headers } from "next/headers";
+
+const DEFAULT_CLERK_ISSUER = "https://on-pug-27.clerk.accounts.dev";
 
 const DEFAULT_CLERK_JWT_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscEBbmeStwgFwVIuLOFM
@@ -11,11 +12,71 @@ APMFxviyGrGt75936wh1AxWRx1MP0p8BIZeQg5HDRctLpxlTl6N6QJ38BewIbcHp
 wwIDAQAB
 -----END PUBLIC KEY-----`;
 
+interface ClerkSessionPayload {
+  azp?: string;
+  exp?: number;
+  iat?: number;
+  iss?: string;
+  nbf?: number;
+  sid?: string;
+  sts?: string;
+  sub?: string;
+  v?: number;
+}
+
+function base64UrlToUint8Array(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function decodeJson<T>(value: string): T | null {
+  try {
+    const json = new TextDecoder().decode(base64UrlToUint8Array(value));
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const base64 = pem.replace(/-----(BEGIN|END) PUBLIC KEY-----/g, "").replace(/\s+/g, "");
+  const bytes = base64UrlToUint8Array(base64.replace(/\+/g, "-").replace(/\//g, "_"));
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+async function importClerkPublicKey() {
+  const pem = (process.env.CLERK_JWT_KEY || DEFAULT_CLERK_JWT_KEY).trim();
+  return crypto.subtle.importKey(
+    "spki",
+    pemToArrayBuffer(pem),
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
+    },
+    false,
+    ["verify"]
+  );
+}
+
 function getAuthorizedParties(origin?: string) {
   const parties = new Set<string>();
 
   if (origin) {
-    parties.add(origin);
+    parties.add(origin.trim());
   }
 
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -30,7 +91,23 @@ function getAuthorizedParties(origin?: string) {
     parties.add(`https://${process.env.VERCEL_URL.trim()}`);
   }
 
-  return parties.size > 0 ? [...parties] : undefined;
+  parties.add("https://agentgrade.vercel.app");
+
+  return parties;
+}
+
+function getExpectedIssuers() {
+  const issuers = new Set<string>([DEFAULT_CLERK_ISSUER]);
+
+  if (process.env.NEXT_PUBLIC_CLERK_FRONTEND_API_URL) {
+    issuers.add(process.env.NEXT_PUBLIC_CLERK_FRONTEND_API_URL.trim());
+  }
+
+  if (process.env.CLERK_FRONTEND_API_URL) {
+    issuers.add(process.env.CLERK_FRONTEND_API_URL.trim());
+  }
+
+  return issuers;
 }
 
 export async function verifyClerkSessionToken(
@@ -42,13 +119,43 @@ export async function verifyClerkSessionToken(
   }
 
   try {
-    const verified = await verifyToken(token, {
-      secretKey: process.env.CLERK_SECRET_KEY,
-      jwtKey: process.env.CLERK_JWT_KEY ?? DEFAULT_CLERK_JWT_KEY,
-      authorizedParties: getAuthorizedParties(origin),
-    });
+    const [encodedHeader, encodedPayload, encodedSignature] = token.split(".");
+    if (!encodedHeader || !encodedPayload || !encodedSignature) {
+      return null;
+    }
 
-    return typeof verified.sub === "string" ? verified.sub : null;
+    const header = decodeJson<{ alg?: string; typ?: string }>(encodedHeader);
+    const payload = decodeJson<ClerkSessionPayload>(encodedPayload);
+
+    if (!header || !payload || header.alg !== "RS256" || payload.sts !== "active" || !payload.sub) {
+      return null;
+    }
+
+    const signature = toArrayBuffer(base64UrlToUint8Array(encodedSignature));
+    const signedData = toArrayBuffer(new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`));
+    const key = await importClerkPublicKey();
+    const verified = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, signature, signedData);
+
+    if (!verified) {
+      return null;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if ((payload.nbf && now < payload.nbf) || (payload.exp && now >= payload.exp)) {
+      return null;
+    }
+
+    const expectedIssuers = getExpectedIssuers();
+    if (payload.iss && !expectedIssuers.has(payload.iss.trim())) {
+      return null;
+    }
+
+    const authorizedParties = getAuthorizedParties(origin);
+    if (payload.azp && !authorizedParties.has(payload.azp.trim())) {
+      return null;
+    }
+
+    return payload.sub;
   } catch {
     return null;
   }
