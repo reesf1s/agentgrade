@@ -39,18 +39,20 @@ interface StatCardProps {
 
 export function StatCard({ label, value, subtitle, scoreColor }: StatCardProps) {
   return (
-    <GlassCard className="p-6">
-      <p className="text-sm text-[var(--text-muted)] mb-1">{label}</p>
+    <GlassCard className="glass-highlight p-6">
+      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
+        {label}
+      </p>
       <p
         className={cn(
-          "text-3xl font-bold font-mono tracking-tight",
+          "text-3xl font-semibold tracking-tight",
           scoreColor || "text-[var(--text-primary)]"
         )}
       >
         {value}
       </p>
       {subtitle && (
-        <p className="text-xs text-[var(--text-secondary)] mt-1">{subtitle}</p>
+        <p className="mt-2 text-sm leading-5 text-[var(--text-secondary)]">{subtitle}</p>
       )}
     </GlassCard>
   );

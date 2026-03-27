@@ -22,13 +22,33 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
   const escalationRate = data.stats.escalation_rate ?? 0;
 
   return (
-    <div className="max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Quality overview for the last 30 days</p>
+    <div className="max-w-6xl pb-10">
+      <div className="mb-10 flex items-end justify-between gap-6">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[var(--text-muted)]">
+            Quality cockpit
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+            Dashboard
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            A floating command surface for the last 30 days of agent quality, customer risk, and system drift.
+          </p>
+        </div>
+        <div className="glass-static hidden min-w-[260px] rounded-[1.75rem] p-5 lg:block">
+          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
+            Live posture
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_20px_rgba(74,222,128,0.6)]" />
+            <p className="text-sm text-[var(--text-primary)]">
+              Monitoring is active across your connected agents
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-4 gap-4">
+      <div className="mb-8 grid gap-4 xl:grid-cols-4 md:grid-cols-2">
         <StatCard
           label="Overall Quality"
           value={`${(avgScore * 100).toFixed(0)}%`}
@@ -66,10 +86,22 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
-          <GlassCard className="p-6">
-            <h2 className="mb-4 text-sm font-medium text-[var(--text-primary)]">Quality Trend (30 days)</h2>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+        <div>
+          <GlassCard className="glass-highlight rounded-[2rem] p-7">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                  Trajectory
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                  Quality Trend
+                </h2>
+              </div>
+              <div className="rounded-full border border-white/50 bg-white/45 px-3 py-1 text-xs text-[var(--text-secondary)]">
+                30 day horizon
+              </div>
+            </div>
             {data.trend_data.length === 0 ? (
               <div className="flex h-64 items-center justify-center text-sm text-[var(--text-muted)]">
                 No data yet. Ingest some conversations to see trends.
@@ -95,15 +127,16 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "rgba(255,255,255,0.9)",
-                        backdropFilter: "blur(12px)",
-                        border: "1px solid rgba(0,0,0,0.06)",
-                        borderRadius: "12px",
+                        background: "rgba(255,255,255,0.72)",
+                        backdropFilter: "blur(18px)",
+                        border: "1px solid rgba(255,255,255,0.6)",
+                        borderRadius: "18px",
                         fontSize: 12,
+                        boxShadow: "0 18px 44px rgba(148,163,184,0.2)",
                       }}
                       formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]}
                     />
-                    <Line type="monotone" dataKey="overall" stroke="#111827" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="overall" stroke="#0f172a" strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -112,7 +145,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
 
         <div className="space-y-4">
-          <GlassCard className="p-5">
+          <GlassCard className="glass-highlight rounded-[2rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Active Alerts</h2>
@@ -122,7 +155,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             ) : (
               <div className="space-y-3">
                 {data.alerts.map((alert) => (
-                  <div key={alert.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+                  <div key={alert.id} className="rounded-[1.25rem] bg-white/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                     <p className="mb-1 text-sm font-medium text-[var(--text-primary)]">{alert.title}</p>
                     <p className="text-xs text-[var(--text-muted)]">{alert.description}</p>
                   </div>
@@ -131,7 +164,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             )}
           </GlassCard>
 
-          <GlassCard className="p-5">
+          <GlassCard className="glass-highlight rounded-[2rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Fix</h2>
@@ -139,7 +172,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             {data.conversations.length === 0 ? (
               <p className="text-xs text-[var(--text-muted)]">Score some conversations to see recommendations.</p>
             ) : (
-              <div className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+              <div className="rounded-[1.25rem] bg-white/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                 <p className="mb-2 text-sm text-[var(--text-primary)]">
                   Ingest conversations to generate prompt improvement recommendations.
                 </p>
@@ -150,7 +183,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <GlassCard className="mt-6 p-6">
+      <GlassCard className="glass-highlight mt-6 rounded-[2rem] p-7">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
