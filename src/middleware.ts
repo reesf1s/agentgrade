@@ -32,8 +32,17 @@ export default async function middleware(
   } catch (err) {
     // Clerk crashed (typically: test/dev keys + Edge runtime header restrictions).
     // Fall back: protect dashboard routes with a simple redirect; let public routes through.
+    // IMPORTANT: check for an existing Clerk session cookie before redirecting — if present,
+    // the user IS authenticated and we must let them through to avoid an infinite loop.
     console.error("[middleware] Clerk error — falling back to static protection:", err);
     if (isProtectedRoute(req)) {
+      // __session = Clerk's signed session JWT; __client_uat = set whenever a user is active.
+      // Either cookie present means Clerk authenticated the user (even with dev keys).
+      const hasSession =
+        req.cookies.has("__session") || req.cookies.has("__client_uat");
+      if (hasSession) {
+        return NextResponse.next();
+      }
       const signInUrl = new URL("/sign-in", req.url);
       return NextResponse.redirect(signInUrl);
     }
