@@ -52,7 +52,7 @@ export async function GET(
     // Get scores for conversations created after the fix was pushed
     const { data: afterScores } = await supabaseAdmin
       .from("ag_conversations")
-      .select("ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+      .select("quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
       .eq("workspace_id", ctx.workspace.id)
       .gte("created_at", pushedAt.toISOString())
       .not("ag_quality_scores", "is", null)
@@ -74,7 +74,7 @@ export async function GET(
     };
 
     const afterQs = afterScoredConvs.map(
-      (c) => c.ag_quality_scores as { overall_score?: number; accuracy_score?: number; hallucination_score?: number } | null
+      (c) => c.quality_scores as { overall_score?: number; accuracy_score?: number; hallucination_score?: number } | null
     );
 
     const afterStats = {

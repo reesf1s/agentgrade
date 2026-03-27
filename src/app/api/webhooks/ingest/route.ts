@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("agent_connections")
+      .from("ag_agent_connections")
       .select("id, workspace_id, platform, is_active")
       .eq("webhook_secret", webhookSecret)
       .limit(1);
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Insert conversation
     const { data: conversation, error: convError } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .insert({
         workspace_id: connection.workspace_id,
         agent_connection_id: connection.id,
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       metadata: {},
     }));
 
-    const { error: msgError } = await supabaseAdmin.from("messages").insert(messageRows);
+    const { error: msgError } = await supabaseAdmin.from("ag_messages").insert(messageRows);
 
     if (msgError) {
       console.error("Failed to insert messages:", msgError);
@@ -171,7 +171,7 @@ async function scoreConversationAsync(
     });
 
     // Store quality score
-    const { error: scoreError } = await supabaseAdmin.from("quality_scores").insert({
+    const { error: scoreError } = await supabaseAdmin.from("ag_quality_scores").insert({
       conversation_id: conversationId,
       ...scoreResult,
       scored_at: new Date().toISOString(),
@@ -184,7 +184,7 @@ async function scoreConversationAsync(
 
     // Check alert thresholds
     const { data: alertConfigs } = await supabaseAdmin
-      .from("alert_configs")
+      .from("ag_alert_configs")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("enabled", true);
@@ -201,7 +201,7 @@ async function scoreConversationAsync(
       for (const config of alertConfigs) {
         const actual = scoreMap[config.dimension];
         if (actual !== undefined && actual < config.threshold) {
-          await supabaseAdmin.from("alerts").insert({
+          await supabaseAdmin.from("ag_alerts").insert({
             workspace_id: workspaceId,
             alert_type: "score_below_threshold",
             title: `${config.dimension} score below threshold`,

@@ -238,7 +238,7 @@ export async function syncIntercomArticles(connectionId: string): Promise<{
 }> {
   // Fetch the connection to get the API key and workspace
   const { data: connection, error: connError } = await supabaseAdmin
-    .from("agent_connections")
+    .from("ag_agent_connections")
     .select("workspace_id, api_key_encrypted, config")
     .eq("id", connectionId)
     .single();
@@ -315,7 +315,7 @@ export async function syncIntercomArticles(connectionId: string): Promise<{
 
   // Update last_sync_at on the connection
   await supabaseAdmin
-    .from("agent_connections")
+    .from("ag_agent_connections")
     .update({ last_sync_at: new Date().toISOString() })
     .eq("id", connectionId);
 

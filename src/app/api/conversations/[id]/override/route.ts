@@ -28,7 +28,7 @@ export async function POST(
 
     // Verify conversation belongs to this workspace
     const { data: conversation, error: convError } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .select("id")
       .eq("id", conversationId)
       .eq("workspace_id", ctx.workspace.id)
@@ -40,7 +40,7 @@ export async function POST(
 
     // Get the quality score
     const { data: qualityScore, error: qsError } = await supabaseAdmin
-      .from("quality_scores")
+      .from("ag_quality_scores")
       .select("id, overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score")
       .eq("conversation_id", conversationId)
       .single();
@@ -67,7 +67,7 @@ export async function POST(
     }
 
     const { error: overrideError } = await supabaseAdmin
-      .from("quality_overrides")
+      .from("ag_quality_overrides")
       .insert({
         quality_score_id: qualityScore.id,
         dimension: body.dimension,

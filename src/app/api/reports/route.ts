@@ -24,21 +24,21 @@ export async function GET() {
 
     const [thisWeekRes, lastWeekRes, trendRes] = await Promise.all([
       supabaseAdmin
-        .from("conversations")
-        .select("*, quality_scores(*)")
+        .from("ag_conversations")
+        .select("*, quality_scores:ag_quality_scores(*)")
         .eq("workspace_id", workspaceId)
         .gte("created_at", sevenDaysAgo.toISOString()),
 
       supabaseAdmin
-        .from("conversations")
-        .select("quality_scores(overall_score)")
+        .from("ag_conversations")
+        .select("quality_scores:ag_quality_scores(overall_score)")
         .eq("workspace_id", workspaceId)
         .gte("created_at", fourteenDaysAgo.toISOString())
         .lt("created_at", sevenDaysAgo.toISOString()),
 
       supabaseAdmin
-        .from("conversations")
-        .select("created_at, quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+        .from("ag_conversations")
+        .select("created_at, quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
         .eq("workspace_id", workspaceId)
         .gte("created_at", thirtyDaysAgo.toISOString())
         .order("created_at", { ascending: true }),

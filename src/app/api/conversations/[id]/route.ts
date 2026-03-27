@@ -20,20 +20,20 @@ export async function GET(
 
     const [convRes, messagesRes, scoreRes] = await Promise.all([
       supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .select("*")
         .eq("id", id)
         .eq("workspace_id", ctx.workspace.id)
         .single(),
 
       supabaseAdmin
-        .from("messages")
+        .from("ag_messages")
         .select("*")
         .eq("conversation_id", id)
         .order("timestamp", { ascending: true }),
 
       supabaseAdmin
-        .from("quality_scores")
+        .from("ag_quality_scores")
         .select("*")
         .eq("conversation_id", id)
         .single(),

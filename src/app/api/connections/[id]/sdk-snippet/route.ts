@@ -16,7 +16,7 @@ export async function GET(
     if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: connection, error } = await supabaseAdmin
-      .from("agent_connections")
+      .from("ag_agent_connections")
       .select("id, webhook_url, webhook_secret, name")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)

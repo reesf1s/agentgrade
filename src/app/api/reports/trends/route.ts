@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const { data: convs, error } = await supabaseAdmin
       .from("ag_conversations")
-      .select("created_at, ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score)")
+      .select("created_at, quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", since.toISOString())
       .not("ag_quality_scores", "is", null)
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         key = conv.created_at.slice(0, 10);
       }
 
-      const qs = conv.ag_quality_scores as {
+      const qs = conv.quality_scores as {
         overall_score?: number;
         accuracy_score?: number;
         hallucination_score?: number;
@@ -115,14 +115,14 @@ export async function GET(request: NextRequest) {
 
     const { data: priorConvs } = await supabaseAdmin
       .from("ag_conversations")
-      .select("ag_quality_scores(overall_score)")
+      .select("quality_scores:ag_quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorSince.toISOString())
       .lt("created_at", since.toISOString())
       .not("ag_quality_scores", "is", null);
 
     const priorScores = (priorConvs || [])
-      .map((c) => (c.ag_quality_scores as { overall_score?: number } | null)?.overall_score)
+      .map((c) => (c.quality_scores as { overall_score?: number } | null)?.overall_score)
       .filter((s): s is number => s !== undefined);
     const priorAvg = avg(priorScores);
 
