@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { queueEligibleConversationScores } from "@/lib/scoring/pending";
 
 /**
  * GET /api/conversations
@@ -22,6 +23,10 @@ export async function GET(request: NextRequest) {
     if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    after(async () => {
+      await queueEligibleConversationScores(ctx.workspace.id);
+    });
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";

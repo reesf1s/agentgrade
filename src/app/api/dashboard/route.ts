@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { loadDashboardData } from "@/lib/dashboard-data";
+import { queueEligibleConversationScores } from "@/lib/scoring/pending";
 
 /**
  * GET /api/dashboard
@@ -14,6 +15,9 @@ export async function GET() {
     }
 
     const workspaceId = ctx.workspace.id;
+    after(async () => {
+      await queueEligibleConversationScores(workspaceId);
+    });
     const dashboard = await loadDashboardData(workspaceId);
     return NextResponse.json(dashboard);
   } catch (error) {

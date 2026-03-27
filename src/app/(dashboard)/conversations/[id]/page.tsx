@@ -18,7 +18,7 @@ interface ConversationDetail {
   created_at: string;
   messages: Message[];
   quality_score: QualityScore | null;
-  score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion";
+  score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion" | "waiting_for_quiet_period";
 }
 
 export default function ConversationDetailPage() {
@@ -350,6 +350,8 @@ export default function ConversationDetailPage() {
               <p className="text-sm text-[var(--text-muted)]">
                 {conv.score_status === "waiting_for_completion"
                   ? "Waiting for the conversation to finish before scoring..."
+                  : conv.score_status === "waiting_for_quiet_period"
+                    ? "Waiting for 10 minutes of inactivity before scoring..."
                   : conv.score_status === "refreshing"
                     ? "Refreshing assessment..."
                     : "Scoring in progress..."}
