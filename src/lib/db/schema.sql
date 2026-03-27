@@ -100,6 +100,10 @@ create table if not exists ag_quality_scores (
   resolution_score float,
   tone_score float,
   sentiment_score float,              -- 1.0 = customer satisfied
+  -- How well the agent handled unusual/unexpected queries (1.0 = excellent, 0.8 = N/A)
+  edge_case_score float,
+  -- How appropriately the agent managed escalation (1.0 = perfect, 0.85 = N/A)
+  escalation_score float,
   -- Structural metrics computed locally (no API call)
   structural_metrics jsonb default '{}',
   -- Array of { claim, verdict, evidence, kb_source }
