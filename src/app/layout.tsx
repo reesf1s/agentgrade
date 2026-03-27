@@ -4,6 +4,16 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
+function cleanClerkPath(value: string | undefined, fallback: string) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return fallback;
+  }
+
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -26,8 +36,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const signInUrl = cleanClerkPath(
+    process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
+    "/sign-in",
+  );
+  const signUpUrl = cleanClerkPath(
+    process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
+    "/sign-up",
+  );
+
   return (
-    <ClerkProvider>
+    <ClerkProvider signInUrl={signInUrl} signUpUrl={signUpUrl}>
       <html lang="en" suppressHydrationWarning>
         <head>
           <script
