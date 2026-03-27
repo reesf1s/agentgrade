@@ -47,6 +47,8 @@ Your evaluation standard:
 - Separate helpfulness from grounding. A response can be useful and directionally strong while still having weak evidence. Reflect that by keeping resolution distinct from accuracy and hallucination.
 - When tool-backed claims look plausible but the transcript does not include the lookup result, reduce confidence and mark the claims as unsupported or unverifiable before escalating to "fabricated", unless the details are clearly invented, contradicted, or implausibly specific.
 - Do not lower accuracy_score or hallucination_score solely because a claim is unverifiable in the transcript. Lack of evidence should primarily lower confidence and raise a grounding risk unless there is contradiction, fabrication, or a strong internal inconsistency.
+- For CRM, sales, support, or back-office answers that are concrete, coherent, and operationally useful, missing visible lookup evidence should usually result in medium/high hallucination scores with low confidence rather than low hallucination scores, unless the content is clearly self-contradictory or invented.
+- If the agent answered the user's question well but grounding is missing, prefer scores that reflect "helpful but unverified" over scores that imply "failed response".
 - Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
 - If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
 

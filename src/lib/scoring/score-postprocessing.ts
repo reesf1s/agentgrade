@@ -67,7 +67,7 @@ function customerRequestedGuidance(messages: Message[]): boolean {
   return messages.some(
     (message) =>
       message.role === "customer" &&
-      /\b(what shall i do|what should i do|what do i do|what next|next steps|priority|prioritise|prioritize|how do i convert|how can i convert|how do i win|how can i win)\b/i.test(
+      /\b(what shall i do|what should i do|what do i do|what next|next steps|priority|prioritise|prioritize|how do i convert|how can i convert|how do i win|how can i win|show me|walk me through|explain|health trend|score history|improving or declining|what changed and when|closest deal|which deal|why)\b/i.test(
         message.content
       )
   );
@@ -87,6 +87,26 @@ function hasSubstantiveAgentResponse(messages: Message[]): boolean {
       )
     );
   });
+}
+
+function hasNegativeAgentTone(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      /(can't help|not my problem|figure it out|obviously|as i said|i already told you|you should know)/i.test(
+        message.content
+      )
+  );
+}
+
+function customerAskedForAnalysis(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "customer" &&
+      /\b(show me|explain|score history|trend|health|why|what changed|closest deal|which deal|summary|briefing|leadership)\b/i.test(
+        message.content
+      )
+  );
 }
 
 function customerRequestedAction(messages: Message[]): boolean {
@@ -332,6 +352,11 @@ export function applyScoringGuardrails(
       suggested_content:
         "Document an agent policy that any CRM, account, ticket, order, or subscription claim must come from a live lookup. Include the exact tool name, what fields can be stated after lookup, and the fallback response when the tool is unavailable.",
     });
+
+    if (unsupportedButHelpful && fabricatedClaims.length === 0 && contradictedClaims.length === 0) {
+      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.82);
+      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.68);
+    }
   }
 
   if (
@@ -339,7 +364,33 @@ export function applyScoringGuardrails(
     hasSubstantiveAgentResponse(input.messages) &&
     !hasCustomerDissatisfaction(input.messages)
   ) {
-    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.72);
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.8);
+    adjusted.tone_score = Math.max(adjusted.tone_score, 0.82);
+    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.62);
+  }
+
+  if (
+    customerAskedForAnalysis(input.messages) &&
+    hasSubstantiveAgentResponse(input.messages) &&
+    !hasCustomerDissatisfaction(input.messages)
+  ) {
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.76);
+    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.58);
+  }
+
+  if (
+    unverifiableClaims.length > 0 &&
+    fabricatedClaims.length === 0 &&
+    contradictedClaims.length === 0 &&
+    hasSubstantiveAgentResponse(input.messages)
+  ) {
+    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.78);
+    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.64);
+    if (!hasNegativeAgentTone(input.messages)) {
+      adjusted.tone_score = Math.max(adjusted.tone_score, 0.8);
+    }
+    adjusted.summary =
+      "The agent gave a substantive and potentially useful answer, but the transcript does not include enough grounding evidence to fully verify the operational claims. Treat this as a confidence and traceability risk, not proof of hallucination.";
   }
 
   if (endsWithUnresolvedCustomerIntent(input.messages)) {

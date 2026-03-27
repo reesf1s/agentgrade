@@ -23,6 +23,7 @@ import { checkThresholds } from "@/lib/alerts";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Message, QualityScore } from "@/lib/db/types";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
+import { SCORING_MODEL_VERSION } from "./version";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false;
@@ -80,7 +81,7 @@ export async function runScoringPipeline(
     confidence_level: claudeResult.confidence_level,
     prompt_improvements: claudeResult.prompt_improvements,
     knowledge_gaps: claudeResult.knowledge_gaps,
-    scoring_model_version: "v1",
+    scoring_model_version: SCORING_MODEL_VERSION,
   };
 }
 
@@ -206,7 +207,7 @@ export async function scoreConversation(conversationId: string): Promise<{
     confidence_level: claudeResult.confidence_level,
     prompt_improvements: claudeResult.prompt_improvements,
     knowledge_gaps: claudeResult.knowledge_gaps,
-    scoring_model_version: "v1",
+    scoring_model_version: SCORING_MODEL_VERSION,
   };
 
   // ── Persist score to DB ─────────────────────────────────────────
@@ -232,7 +233,7 @@ export async function scoreConversation(conversationId: string): Promise<{
     summary: claudeResult.summary,
     prompt_improvements: claudeResult.prompt_improvements,
     knowledge_gaps: claudeResult.knowledge_gaps,
-    scoring_model_version: "v1",
+    scoring_model_version: SCORING_MODEL_VERSION,
     scored_at: scoredAt,
   };
 
