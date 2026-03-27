@@ -18,6 +18,7 @@ interface ConversationDetail {
   created_at: string;
   messages: Message[];
   quality_score: QualityScore | null;
+  score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion";
 }
 
 export default function ConversationDetailPage() {
@@ -32,14 +33,45 @@ export default function ConversationDetailPage() {
   const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
-    fetch(`/api/conversations/${params.id}`)
-      .then((r) => {
-        if (r.status === 404) { setNotFound(true); return null; }
-        return r.json();
-      })
-      .then((data) => { if (data) setConv(data); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const loadConversation = async (isInitialLoad = false) => {
+      try {
+        const response = await fetch(`/api/conversations/${params.id}`, {
+          cache: "no-store",
+        });
+
+        if (response.status === 404) {
+          if (!cancelled) setNotFound(true);
+          return;
+        }
+
+        const data = (await response.json()) as ConversationDetail;
+        if (cancelled) return;
+
+        setConv(data);
+
+        if (data.score_status === "pending" || data.score_status === "refreshing") {
+          pollTimer = setTimeout(() => {
+            void loadConversation(false);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled && isInitialLoad) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadConversation(true);
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [params.id]);
 
   if (loading) {
@@ -315,7 +347,13 @@ export default function ConversationDetailPage() {
             </>
           ) : (
             <GlassCard className="p-5">
-              <p className="text-sm text-[var(--text-muted)]">Scoring in progress...</p>
+              <p className="text-sm text-[var(--text-muted)]">
+                {conv.score_status === "waiting_for_completion"
+                  ? "Waiting for the conversation to finish before scoring..."
+                  : conv.score_status === "refreshing"
+                    ? "Refreshing assessment..."
+                    : "Scoring in progress..."}
+              </p>
             </GlassCard>
           )}
 

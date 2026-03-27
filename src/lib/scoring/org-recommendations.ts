@@ -85,6 +85,23 @@ export function buildOrgRecommendations(
     }
 
     if (
+      flags.includes("integration_missing_tool_trace") ||
+      /tool trace|tool result|lookup evidence|grounding|transcript omitted/.test(combinedSignals)
+    ) {
+      addRecommendation("integration-instrumentation-policy", conversation.id, {
+        title: "Send tool traces into AgentGrade for trustworthy evaluations",
+        category: "tooling_policy",
+        priority: "high",
+        rationale:
+          "Several conversations appear helpful but cannot be verified properly because the ingest payload includes the final answer without the underlying tool or retrieval evidence.",
+        recommended_change:
+          "Update every client integration to send tool messages or lookup metadata alongside assistant responses. Include the tool name, high-level result, and any record identifiers needed to explain how the answer was grounded.",
+        expected_impact:
+          "Improves scoring accuracy, reduces false hallucination alarms, and gives the org clearer evidence for recurring workflow issues.",
+      });
+    }
+
+    if (
       flags.includes("action_request_stalled_after_clarification") ||
       /clarifying question|keep the request moving|next action|unresolved/.test(combinedSignals)
     ) {

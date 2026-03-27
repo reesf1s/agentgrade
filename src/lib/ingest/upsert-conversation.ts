@@ -41,7 +41,7 @@ export async function upsertConversationWithMessages(
   if (payload.externalId) {
     const { data: existingConversation } = await supabaseAdmin
       .from("conversations")
-      .select("id, started_at, ended_at")
+      .select("id, started_at, ended_at, metadata")
       .eq("workspace_id", connection.workspace_id)
       .eq("external_id", payload.externalId)
       .maybeSingle();
@@ -104,7 +104,10 @@ export async function upsertConversationWithMessages(
           was_escalated: wasEscalated,
           started_at: mergedStartedAt,
           ended_at: mergedEndedAt,
-          metadata: payload.metadata || {},
+          metadata: {
+            ...((existingConversation.metadata as Record<string, unknown> | null) || {}),
+            ...(payload.metadata || {}),
+          },
         })
         .eq("id", existingConversation.id);
 

@@ -2,7 +2,12 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
+import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
 import { normalizeVoiceflowPayload } from "@/lib/integrations/voiceflow";
+
+function hasScorableAgentTurn(messages: Array<{ role: "agent" | "customer" | "system" | "tool" }>) {
+  return messages.some((message) => message.role === "agent");
+}
 
 /**
  * Voiceflow-specific webhook ingest.
@@ -41,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const completion = deriveCompletionState(body);
     const normalized = normalizeVoiceflowPayload(body);
 
     if (!normalized) {
@@ -57,25 +63,39 @@ export async function POST(request: NextRequest) {
       externalId: normalized.conversationId,
       platform: "voiceflow",
       customerIdentifier: normalized.customerIdentifier,
-      metadata: normalized.metadata,
+      metadata: stampCompletionMetadata(normalized.metadata, completion),
     });
 
-    after(async () => {
-      try {
-        await scoreConversation(ingestionResult.conversationId);
-      } catch (scoreError) {
-        console.error(`Scoring failed for Voiceflow conversation ${ingestionResult.conversationId}:`, scoreError);
-      }
-    });
+    const shouldScore =
+      hasScorableAgentTurn(normalized.messages) &&
+      (!completion.hasExplicitSignal || completion.isFinal);
+
+    if (shouldScore) {
+      after(async () => {
+        try {
+          await scoreConversation(ingestionResult.conversationId);
+        } catch (scoreError) {
+          console.error(`Scoring failed for Voiceflow conversation ${ingestionResult.conversationId}:`, scoreError);
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,
       conversation_id: ingestionResult.conversationId,
       inserted_messages: ingestionResult.insertedMessages,
       message: ingestionResult.created
-        ? "Voiceflow conversation ingested. Scoring in progress."
+        ? shouldScore
+          ? "Voiceflow conversation ingested. Scoring in progress."
+          : completion.hasExplicitSignal && !completion.isFinal
+            ? "Voiceflow conversation ingested. Waiting for the conversation to be marked complete before scoring."
+            : "Voiceflow conversation ingested. Waiting for the first agent response before scoring."
         : ingestionResult.insertedMessages > 0
-          ? "Voiceflow conversation updated and queued for re-scoring."
+          ? shouldScore
+            ? "Voiceflow conversation updated and queued for re-scoring."
+            : completion.hasExplicitSignal && !completion.isFinal
+              ? "Voiceflow conversation updated. Waiting for the conversation to be marked complete before scoring."
+              : "Voiceflow conversation updated. Waiting for the first agent response before scoring."
           : "Voiceflow conversation already up to date.",
     });
   } catch (error) {
@@ -91,6 +111,7 @@ export async function GET() {
     notes: [
       "Use this endpoint for Voiceflow custom actions or transcript webhooks.",
       "Send the running transcript after each assistant reply or when the session closes.",
+      "To score the whole conversation only after it ends, include completed=true or status='completed' on the final send.",
       "AgentGrade will append new turns for the same conversation_id and re-score automatically.",
     ],
     accepted_payload_shapes: [

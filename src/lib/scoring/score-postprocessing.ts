@@ -63,6 +63,32 @@ function hasOperationalRecordClaim(messages: Message[]): boolean {
   );
 }
 
+function customerRequestedGuidance(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "customer" &&
+      /\b(what shall i do|what should i do|what do i do|what next|next steps|priority|prioritise|prioritize|how do i convert|how can i convert|how do i win|how can i win)\b/i.test(
+        message.content
+      )
+  );
+}
+
+function hasSubstantiveAgentResponse(messages: Message[]): boolean {
+  const agentMessages = messages.filter((message) => message.role === "agent");
+  if (agentMessages.length === 0) return false;
+
+  return agentMessages.some((message) => {
+    const normalized = message.content.trim();
+    const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+    return (
+      wordCount >= 25 ||
+      /priority|next step|today|first|second|follow up|action|recommend|should|start with|watch point/i.test(
+        normalized
+      )
+    );
+  });
+}
+
 function customerRequestedAction(messages: Message[]): boolean {
   return messages.some(
     (message) =>
@@ -88,6 +114,14 @@ function agentConfirmedAction(messages: Message[]): boolean {
       /\b(i've|i have|done|created|updated|changed|cancelled|canceled|reset|sent|scheduled|added|removed|completed|switched|processed)\b/i.test(
         message.content
       )
+  );
+}
+
+function hasMissingToolEvidenceButHelpfulResponse(messages: Message[]): boolean {
+  return (
+    hasOperationalRecordClaim(messages) &&
+    !hasTranscriptToolEvidence(messages) &&
+    hasSubstantiveAgentResponse(messages)
   );
 }
 
@@ -176,6 +210,14 @@ function deriveConfidenceLevel(
     reasons.push("Grounding context was limited for factual verification.");
   }
 
+  if (
+    result.flags.includes("integration_missing_tool_trace") ||
+    result.flags.includes("limited_transcript_grounding")
+  ) {
+    penalty += 1;
+    reasons.push("The transcript omitted some lookup or tool evidence, which limits verification confidence.");
+  }
+
   if (penalty >= 4) {
     return { level: "low", reasons };
   }
@@ -256,10 +298,19 @@ export function applyScoringGuardrails(
   }
 
   if (hasOperationalRecordClaim(input.messages) && !hasTranscriptToolEvidence(input.messages)) {
-    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, 0.72);
-    adjusted.hallucination_score = Math.min(adjusted.hallucination_score, 0.62);
+    const unsupportedButHelpful = hasMissingToolEvidenceButHelpfulResponse(input.messages);
+
+    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, unsupportedButHelpful ? 0.82 : 0.72);
+    adjusted.hallucination_score = Math.min(
+      adjusted.hallucination_score,
+      unsupportedButHelpful ? 0.74 : 0.62
+    );
     pushUniqueFlag(adjusted.flags, "tool_backed_claim_without_evidence");
     pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
+    if (unsupportedButHelpful) {
+      pushUniqueFlag(adjusted.flags, "integration_missing_tool_trace");
+      pushUniqueFlag(adjusted.flags, "limited_transcript_grounding");
+    }
     pushPromptImprovement(adjusted.prompt_improvements, {
       issue: "Agent makes record-specific claims without visible lookup evidence",
       current_behavior:
@@ -278,6 +329,14 @@ export function applyScoringGuardrails(
       suggested_content:
         "Document an agent policy that any CRM, account, ticket, order, or subscription claim must come from a live lookup. Include the exact tool name, what fields can be stated after lookup, and the fallback response when the tool is unavailable.",
     });
+  }
+
+  if (
+    customerRequestedGuidance(input.messages) &&
+    hasSubstantiveAgentResponse(input.messages) &&
+    !hasCustomerDissatisfaction(input.messages)
+  ) {
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.72);
   }
 
   if (endsWithUnresolvedCustomerIntent(input.messages)) {

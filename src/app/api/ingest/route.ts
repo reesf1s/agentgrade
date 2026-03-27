@@ -2,9 +2,14 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
+import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
 type MessageRole = typeof VALID_ROLES[number];
+
+function hasScorableAgentTurn(messages: Array<{ role: MessageRole }>) {
+  return messages.some((message) => message.role === "agent" || message.role === "human_agent");
+}
 
 /**
  * POST /api/ingest
@@ -50,6 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const completion = deriveCompletionState(body);
 
     // Validate messages
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
@@ -76,19 +82,21 @@ export async function POST(request: NextRequest) {
 
     const messages = body.messages as Array<{ role: MessageRole; content: string; timestamp?: string }>;
     const externalId: string | null = body.conversation_id || null;
+    const shouldScore =
+      hasScorableAgentTurn(messages) && (!completion.hasExplicitSignal || completion.isFinal);
 
     const ingestionResult = await upsertConversationWithMessages(connection, {
       messages,
       externalId,
       platform: body.platform || connection.platform || "custom",
       customerIdentifier: body.customer_identifier || null,
-      metadata: body.metadata || {},
+      metadata: stampCompletionMetadata(body.metadata || {}, completion),
     });
 
     // Optionally score synchronously if ?score=sync is set
     const scoreMode = new URL(request.url).searchParams.get("score");
 
-    if (scoreMode === "sync") {
+    if (scoreMode === "sync" && shouldScore) {
       const { score, isPartial } = await scoreConversation(ingestionResult.conversationId);
 
       return NextResponse.json({
@@ -104,13 +112,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    after(async () => {
-      try {
-        await scoreConversation(ingestionResult.conversationId);
-      } catch (scoreError) {
-        console.error(`Async scoring failed for ${ingestionResult.conversationId}:`, scoreError);
-      }
-    });
+    if (shouldScore) {
+      after(async () => {
+        try {
+          await scoreConversation(ingestionResult.conversationId);
+        } catch (scoreError) {
+          console.error(`Async scoring failed for ${ingestionResult.conversationId}:`, scoreError);
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -118,9 +128,17 @@ export async function POST(request: NextRequest) {
       inserted_messages: ingestionResult.insertedMessages,
       message:
         ingestionResult.created
-          ? "Conversation ingested. Scoring in progress."
+          ? shouldScore
+            ? "Conversation ingested. Scoring in progress."
+            : completion.hasExplicitSignal && !completion.isFinal
+              ? "Conversation ingested. Waiting for the conversation to be marked complete before scoring."
+              : "Conversation ingested. Waiting for the first agent response before scoring."
           : ingestionResult.insertedMessages > 0
-            ? "Conversation updated with new messages. Re-scoring in progress."
+            ? shouldScore
+              ? "Conversation updated with new messages. Re-scoring in progress."
+              : completion.hasExplicitSignal && !completion.isFinal
+                ? "Conversation updated with new messages. Waiting for the conversation to be marked complete before scoring."
+                : "Conversation updated with new messages. Waiting for the first agent response before scoring."
             : "Conversation already up to date.",
     });
   } catch (error) {

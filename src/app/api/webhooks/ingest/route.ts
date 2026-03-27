@@ -2,8 +2,15 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
+import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
+
+function hasScorableAgentTurn(
+  messages: Array<{ role: typeof VALID_ROLES[number] }>
+) {
+  return messages.some((message) => message.role === "agent" || message.role === "human_agent");
+}
 
 /**
  * Generic webhook endpoint for ingesting conversations from any platform.
@@ -54,6 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const completion = deriveCompletionState(body);
 
     // Validate messages
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
@@ -89,25 +97,38 @@ export async function POST(request: NextRequest) {
       externalId: body.conversation_id || null,
       platform: body.platform || connection.platform || "custom",
       customerIdentifier: body.customer_identifier || null,
-      metadata: body.metadata || {},
+      metadata: stampCompletionMetadata(body.metadata || {}, completion),
     });
 
-    after(async () => {
-      try {
-        await scoreConversation(ingestionResult.conversationId);
-      } catch (scoreError) {
-        console.error(`Scoring failed for conversation ${ingestionResult.conversationId}:`, scoreError);
-      }
-    });
+    const shouldScore =
+      hasScorableAgentTurn(messages) && (!completion.hasExplicitSignal || completion.isFinal);
+
+    if (shouldScore) {
+      after(async () => {
+        try {
+          await scoreConversation(ingestionResult.conversationId);
+        } catch (scoreError) {
+          console.error(`Scoring failed for conversation ${ingestionResult.conversationId}:`, scoreError);
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,
       conversation_id: ingestionResult.conversationId,
       inserted_messages: ingestionResult.insertedMessages,
       message: ingestionResult.created
-        ? `Conversation ingested with ${messages.length} messages. Scoring in progress.`
+        ? shouldScore
+          ? `Conversation ingested with ${messages.length} messages. Scoring in progress.`
+          : completion.hasExplicitSignal && !completion.isFinal
+            ? `Conversation ingested with ${messages.length} messages. Waiting for the conversation to be marked complete before scoring.`
+            : `Conversation ingested with ${messages.length} messages. Waiting for the first agent response before scoring.`
         : ingestionResult.insertedMessages > 0
-          ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`
+          ? shouldScore
+            ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`
+            : completion.hasExplicitSignal && !completion.isFinal
+              ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the conversation to be marked complete before scoring.`
+              : `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the first agent response before scoring.`
           : "Conversation already up to date.",
     });
   } catch (error) {
@@ -132,6 +153,9 @@ export async function GET() {
         platform: "Platform name (defaults to 'custom')",
         customer_identifier: "Customer email or ID",
         metadata: "Additional metadata object",
+        completed: "Boolean. Set true on the final transcript send to score the whole conversation at the end.",
+        is_final: "Boolean alias for completed",
+        status: "String such as 'completed' or 'closed' to mark the conversation complete",
       },
     },
   });

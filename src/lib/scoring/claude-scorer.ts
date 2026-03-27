@@ -43,6 +43,9 @@ Your evaluation standard:
 - Distinguish between knowledge problems, prompt problems, and missing tool/system access.
 - If the agent likely needed a missing integration, missing tool, or missing backend permission to succeed, call that out explicitly in flags, prompt improvements, or knowledge gaps.
 - For operational claims about CRM, tickets, accounts, deals, subscriptions, or internal records, treat live tool/system evidence as required grounding. If the transcript does not show that evidence, prefer "unverifiable" over "verified".
+- If the transcript contains a substantive agent answer, never describe the conversation as having "no response" or "no answer". Score the answer that is actually present.
+- Separate helpfulness from grounding. A response can be useful and directionally strong while still having weak evidence. Reflect that by keeping resolution distinct from accuracy and hallucination.
+- When tool-backed claims look plausible but the transcript does not include the lookup result, reduce confidence and mark the claims as unsupported or unverifiable before escalating to "fabricated", unless the details are clearly invented, contradicted, or implausibly specific.
 - Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
 - If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
 
@@ -59,12 +62,14 @@ Your evaluation standard:
 - 0.7–0.9: Minor embellishments but nothing dangerous or consequential
 - 0.4–0.6: Some fabricated claims, policies, or procedures
 - 0.0–0.3: Significant fabrication — invented products, prices, policies, or links
+- If the answer appears operationally useful but visible grounding is missing, prefer a mid-range score with lower confidence over treating it as proven severe fabrication.
 
 ### resolution_score
 - 1.0: Customer's problem fully solved with correct action taken
 - 0.7–0.9: Problem mostly resolved, minor gaps remain
 - 0.4–0.6: Problem acknowledged but not properly resolved
 - 0.0–0.3: Problem ignored, wrong solution given, or customer left worse off
+- If the user asked for advice, prioritization, or recommended next steps and the agent provided a concrete, relevant action plan, resolution should not be near zero solely because the answer lacks visible tool evidence.
 
 ### tone_score
 - 1.0: Professional, empathetic, perfectly brand-appropriate throughout

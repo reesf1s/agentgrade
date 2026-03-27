@@ -3,6 +3,7 @@ import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { scoreConversation } from "@/lib/scoring";
+import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import type { PromptImprovement, QualityScore } from "@/lib/db/types";
 
 function sanitizeReplayArtifactSignals(
@@ -32,6 +33,36 @@ function sanitizeReplayArtifactSignals(
       : [],
     prompt_improvements: promptImprovements,
   };
+}
+
+function getLatestMessageTimestamp(messages: Array<{ timestamp?: string }>): number | null {
+  const timestamps = messages
+    .map((message) => (message.timestamp ? new Date(message.timestamp).getTime() : NaN))
+    .filter((value) => !Number.isNaN(value));
+
+  if (timestamps.length === 0) return null;
+  return Math.max(...timestamps);
+}
+
+function isStaleQualityScore(
+  qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
+  messageCount: number,
+  latestMessageTimestamp: number | null
+): boolean {
+  if (!qualityScore) return true;
+
+  const scoredAt = qualityScore.scored_at ? new Date(qualityScore.scored_at).getTime() : NaN;
+  const scoredTurnCount = qualityScore.structural_metrics?.turn_count;
+
+  if (typeof scoredTurnCount === "number" && scoredTurnCount !== messageCount) {
+    return true;
+  }
+
+  if (latestMessageTimestamp !== null && !Number.isNaN(scoredAt) && scoredAt + 500 < latestMessageTimestamp) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -78,6 +109,9 @@ export async function GET(
     const rawMessages = messagesRes.data || [];
     const compactedMessages = compactReplayArtifacts(rawMessages);
     const hadReplayArtifacts = compactedMessages.length < rawMessages.length;
+    const conversationIncomplete = isConversationExplicitlyIncomplete(
+      (convRes.data.metadata as Record<string, unknown> | null) || null
+    );
 
     const qualityScore = scoreRes.data
       ? {
@@ -89,8 +123,12 @@ export async function GET(
         }
       : null;
     const sanitizedQualityScore = sanitizeReplayArtifactSignals(qualityScore, hadReplayArtifacts);
+    const latestMessageTimestamp = getLatestMessageTimestamp(compactedMessages);
+    const scoreIsStale = conversationIncomplete
+      ? false
+      : isStaleQualityScore(sanitizedQualityScore, compactedMessages.length, latestMessageTimestamp);
 
-    if (hadReplayArtifacts) {
+    if (hadReplayArtifacts || scoreIsStale) {
       after(async () => {
         try {
           await scoreConversation(id);
@@ -100,12 +138,26 @@ export async function GET(
       });
     }
 
-    return NextResponse.json({
-      ...convRes.data,
-      message_count: compactedMessages.length,
-      messages: compactedMessages,
-      quality_score: sanitizedQualityScore,
-    });
+    return NextResponse.json(
+      {
+        ...convRes.data,
+        message_count: compactedMessages.length,
+        messages: compactedMessages,
+        quality_score: conversationIncomplete || scoreIsStale ? null : sanitizedQualityScore,
+        score_status: conversationIncomplete
+          ? "waiting_for_completion"
+          : scoreIsStale
+            ? "refreshing"
+            : sanitizedQualityScore
+              ? "ready"
+              : "pending",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Conversation detail API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
