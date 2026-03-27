@@ -17,6 +17,12 @@ interface Connection {
   created_at: string;
 }
 
+interface ConnectionSetupDetails {
+  webhook_url: string;
+  api_key: string;
+  snippet: string;
+}
+
 interface TeamMember {
   id: string;
   clerk_user_id: string;
@@ -47,6 +53,9 @@ function ConnectionsTab() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [setupLoading, setSetupLoading] = useState<string | null>(null);
+  const [expandedConnectionId, setExpandedConnectionId] = useState<string | null>(null);
+  const [setupByConnection, setSetupByConnection] = useState<Record<string, ConnectionSetupDetails>>({});
   const webhookUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/webhooks/ingest`
     : "/api/webhooks/ingest";
@@ -86,6 +95,39 @@ function ConnectionsTab() {
     });
   }
 
+  async function loadSetup(connectionId: string) {
+    if (setupByConnection[connectionId]) {
+      setExpandedConnectionId((current) => (current === connectionId ? null : connectionId));
+      return;
+    }
+
+    setSetupLoading(connectionId);
+    try {
+      const response = await fetch(`/api/connections/${connectionId}/sdk-snippet`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setSetupByConnection((current) => ({
+          ...current,
+          [connectionId]: {
+            webhook_url: data.webhook_url,
+            api_key: data.api_key,
+            snippet: data.snippet,
+          },
+        }));
+        setExpandedConnectionId(connectionId);
+      }
+    } catch (error) {
+      console.error("Failed to load connection setup:", error);
+    } finally {
+      setSetupLoading(null);
+    }
+  }
+
+  function copyText(value: string) {
+    navigator.clipboard.writeText(value).catch(console.error);
+  }
+
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
@@ -111,6 +153,13 @@ function ConnectionsTab() {
                   </div>
                   <div className="flex items-center gap-2">
                     {conn.is_active && <span className="w-2 h-2 rounded-full bg-score-good" />}
+                    <GlassButton size="sm" onClick={() => loadSetup(conn.id)}>
+                      {setupLoading === conn.id
+                        ? "Loading..."
+                        : expandedConnectionId === conn.id
+                          ? "Hide setup"
+                          : "Setup"}
+                    </GlassButton>
                     <GlassButton
                       size="sm"
                       onClick={() => syncConnection(conn.id)}
@@ -130,6 +179,71 @@ function ConnectionsTab() {
                     </button>
                   </div>
                 </div>
+
+                {expandedConnectionId === conn.id && setupByConnection[conn.id] && (
+                  <div className="mt-4 space-y-3 rounded-xl border border-[rgba(0,0,0,0.06)] bg-white/40 p-4">
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Webhook endpoint</p>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={setupByConnection[conn.id].webhook_url}
+                          className="glass-input flex-1 px-3 py-2 text-xs font-mono"
+                        />
+                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].webhook_url)}>
+                          <Copy className="w-4 h-4" />
+                        </GlassButton>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Bearer secret</p>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={setupByConnection[conn.id].api_key}
+                          className="glass-input flex-1 px-3 py-2 text-xs font-mono"
+                        />
+                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].api_key)}>
+                          <Copy className="w-4 h-4" />
+                        </GlassButton>
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--text-muted)]">
+                        Send every transcript update with `Authorization: Bearer &lt;secret&gt;`. Re-sending the same `conversation_id` now appends new messages and re-scores instead of being ignored.
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Quick test</p>
+                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+{`curl -X POST ${setupByConnection[conn.id].webhook_url} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${setupByConnection[conn.id].api_key}" \\
+  -d '{
+    "conversation_id": "demo-123",
+    "platform": "custom",
+    "customer_identifier": "demo-user",
+    "messages": [
+      { "role": "customer", "content": "How do I reset my password?" },
+      { "role": "agent", "content": "Use the Forgot password link on your login page." }
+    ]
+  }'`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <p className="text-xs font-medium text-[var(--text-primary)]">JavaScript snippet</p>
+                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].snippet)}>
+                          Copy snippet
+                        </GlassButton>
+                      </div>
+                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+                        {setupByConnection[conn.id].snippet}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -153,10 +267,16 @@ function ConnectionsTab() {
 
         <div className="mt-6">
           <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Or upload conversations</h3>
-          <div className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer">
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = "/onboarding";
+            }}
+            className="w-full border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors"
+          >
             <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
-          </div>
+          </button>
         </div>
       </GlassCard>
 

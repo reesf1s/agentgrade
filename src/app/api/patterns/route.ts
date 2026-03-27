@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { detectPatterns } from "@/lib/scoring";
 
 /**
  * GET /api/patterns
- * Returns failure patterns. Re-runs detection on recent unresolved conversations if needed.
+ * Returns failure patterns. If none exist yet, schedule a refresh without blocking the response.
  */
 export async function GET() {
   try {
@@ -28,19 +28,17 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch patterns" }, { status: 500 });
     }
 
-    // If no patterns, try to detect from recent scored conversations
     if (!patterns || patterns.length === 0) {
-      await detectAndStorePatterns(workspaceId);
-      const { data: freshPatterns } = await supabaseAdmin
-        .from("ag_failure_patterns")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("is_resolved", false)
-        .order("detected_at", { ascending: false });
-      return NextResponse.json({ patterns: freshPatterns || [] });
+      after(async () => {
+        try {
+          await detectAndStorePatterns(workspaceId);
+        } catch (refreshError) {
+          console.error("Background pattern refresh failed:", refreshError);
+        }
+      });
     }
 
-    return NextResponse.json({ patterns });
+    return NextResponse.json({ patterns: patterns || [] });
   } catch (error) {
     console.error("Patterns API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
