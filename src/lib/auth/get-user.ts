@@ -24,6 +24,14 @@ interface ClerkSessionPayload {
   v?: number;
 }
 
+function getPayloadWithoutVerification(token: string): ClerkSessionPayload | null {
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  return decodeJson<ClerkSessionPayload>(parts[1]);
+}
+
 function base64UrlToUint8Array(value: string): Uint8Array {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
@@ -168,6 +176,23 @@ export async function getUserId(): Promise<string | null> {
     headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? undefined;
   const protocol = headerStore.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${protocol}://${host}` : undefined;
+  const candidateTokens = cookieStore
+    .getAll()
+    .filter((cookie) => cookie.name === "__session" || cookie.name.startsWith("__session_"))
+    .map((cookie) => cookie.value)
+    .filter(Boolean)
+    .sort((left, right) => {
+      const leftExp = getPayloadWithoutVerification(left)?.exp ?? 0;
+      const rightExp = getPayloadWithoutVerification(right)?.exp ?? 0;
+      return rightExp - leftExp;
+    });
 
-  return verifyClerkSessionToken(cookieStore.get("__session")?.value, origin);
+  for (const token of candidateTokens) {
+    const userId = await verifyClerkSessionToken(token, origin);
+    if (userId) {
+      return userId;
+    }
+  }
+
+  return null;
 }
