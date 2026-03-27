@@ -32,6 +32,27 @@ function hasCustomerDissatisfaction(messages: Message[]): boolean {
   );
 }
 
+function hasToolingOrAccessLimitation(messages: Message[]): boolean {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      /(i can't|i cannot|i do not|i don't|unable to|can't access|cannot access|don't have access|cannot verify|can't verify|can't check|cannot check|can't reset|cannot reset|can't update|cannot update|need a human|need to escalate|someone on our team)/i.test(
+        message.content
+      )
+  );
+}
+
+function endsWithUnresolvedCustomerIntent(messages: Message[]): boolean {
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage || lastMessage.role !== "customer") {
+    return false;
+  }
+
+  return /(still|again|not working|doesn't work|didn't work|that's wrong|this is wrong|how do i actually|what should i do|can you fix|can someone|human|manager|\?)/i.test(
+    lastMessage.content
+  );
+}
+
 function pushUniqueFlag(flags: string[], flag: string) {
   if (!flags.includes(flag)) {
     flags.push(flag);
@@ -93,6 +114,17 @@ export function applyScoringGuardrails(
   if (hasCustomerDissatisfaction(input.messages)) {
     adjusted.sentiment_score = Math.min(adjusted.sentiment_score, 0.45);
     pushUniqueFlag(adjusted.flags, "customer_left_dissatisfied");
+  }
+
+  if (hasToolingOrAccessLimitation(input.messages)) {
+    adjusted.resolution_score = Math.min(adjusted.resolution_score, 0.58);
+    pushUniqueFlag(adjusted.flags, "missing_tool_or_system_access");
+  }
+
+  if (endsWithUnresolvedCustomerIntent(input.messages)) {
+    adjusted.resolution_score = Math.min(adjusted.resolution_score, 0.4);
+    adjusted.sentiment_score = Math.min(adjusted.sentiment_score, 0.4);
+    pushUniqueFlag(adjusted.flags, "user_intent_left_unresolved");
   }
 
   adjusted.overall_score = clamp(

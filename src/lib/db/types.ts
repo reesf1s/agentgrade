@@ -26,7 +26,7 @@ export interface WorkspaceMember {
 export interface AgentConnection {
   id: string;
   workspace_id: string;
-  platform: "intercom" | "zendesk" | "custom" | "csv";
+  platform: "intercom" | "zendesk" | "custom" | "csv" | "voiceflow";
   name: string;
   api_key_encrypted?: string;
   webhook_url?: string;

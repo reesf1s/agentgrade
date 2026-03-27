@@ -47,32 +47,6 @@ ${baseExample.replace(
 `;
   }
 
-  if (input.platform === "dealkit") {
-    return `// AgentGrade recipe for DealKit Ask AI
-// Connection: ${input.connectionName}
-// Recommended trigger: send the full transcript whenever Ask AI
-// completes a turn or when a conversation is handed to a human.
-
-const transcript = messages.map((message) => ({
-  role: message.role === "assistant" ? "agent" : "customer",
-  content: message.content,
-  timestamp: message.timestamp
-}));
-
-${baseExample.replace(
-  /conversation_id: "conv_123",\n    platform: "dealkit",\n    customer_identifier: "user@example.com",\n    messages: \[\n      \{ role: "customer", content: "How do I reset my password\\?" \},\n      \{ role: "agent", content: "Use the Forgot password link on your login page\\." \}\n    \]/,
-  `conversation_id: dealId,
-    platform: "dealkit",
-    customer_identifier: contactEmail ?? contactId,
-    messages: transcript,
-    metadata: {
-      source: "ask-ai",
-      stage: dealStage
-    }`
-)}
-`;
-  }
-
   return `// AgentGrade SDK — auto-log conversations
 // Connection: ${input.connectionName}
 // Install: npm install agentgrade  (or paste this inline)

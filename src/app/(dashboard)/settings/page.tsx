@@ -133,6 +133,9 @@ function ConnectionsTab() {
     <div className="space-y-4">
       <GlassCard className="p-6">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Agent Connections</h2>
+        <p className="mb-4 text-xs text-[var(--text-muted)]">
+          Connect as many bots as you need. Each connection gets its own bearer secret, webhook, and audit trail.
+        </p>
 
         {loading ? (
           <p className="text-sm text-[var(--text-muted)]">Loading connections...</p>
@@ -251,16 +254,21 @@ function ConnectionsTab() {
         )}
 
         <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3 mt-2">Add new connection</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {["Intercom", "Zendesk", "Custom Webhook"].map((platform) => (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            { label: "Intercom", platform: "intercom" },
+            { label: "Zendesk", platform: "zendesk" },
+            { label: "Voiceflow", platform: "voiceflow" },
+            { label: "Custom Webhook", platform: "custom" },
+          ].map((option) => (
             <button
-              key={platform}
+              key={option.platform}
               className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-center"
               onClick={() => {
-                window.location.href = "/onboarding";
+                window.location.href = `/onboarding?platform=${option.platform}`;
               }}
             >
-              <p className="text-sm font-medium text-[var(--text-primary)]">{platform}</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{option.label}</p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">Connect</p>
             </button>
           ))}
@@ -271,7 +279,7 @@ function ConnectionsTab() {
           <button
             type="button"
             onClick={() => {
-              window.location.href = "/onboarding";
+              window.location.href = "/onboarding?platform=csv";
             }}
             className="w-full border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors"
           >

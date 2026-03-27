@@ -9,7 +9,6 @@ const SUPPORTED_PLATFORMS = [
   "custom",
   "csv",
   "voiceflow",
-  "dealkit",
 ] as const;
 
 /**

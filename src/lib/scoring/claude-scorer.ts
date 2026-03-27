@@ -37,6 +37,12 @@ You will receive:
 
 Evaluate the conversation across ALL dimensions in a SINGLE response. Be rigorous but fair. Base verdicts on evidence from the transcript, not assumptions.
 
+Your evaluation standard:
+- Infer the user's actual intent, not just the literal last question.
+- Judge whether the agent moved the user toward a real outcome, not whether it sounded polished.
+- Distinguish between knowledge problems, prompt problems, and missing tool/system access.
+- If the agent likely needed a missing integration, missing tool, or missing backend permission to succeed, call that out explicitly in flags, prompt improvements, or knowledge gaps.
+
 ## Scoring Rubric (0.0 to 1.0 scale for all dimensions)
 
 ### accuracy_score
@@ -102,9 +108,17 @@ For each claim, also estimate severity if wrong:
 ## Prompt Improvements
 For every quality issue identified, recommend a SPECIFIC change to the agent's system prompt.
 Be concrete — give the actual text they should add or modify. Do not give vague advice.
+When relevant, recommendations may also include:
+- better intent clarification
+- stricter anti-hallucination rules
+- clearer escalation triggers
+- tool usage rules
+- missing system access / integration requirements
+- when to admit lack of access instead of bluffing
 
 ## Knowledge Gaps
 Identify topics where the agent clearly lacked information that should be in the knowledge base.
+If the issue is not knowledge but missing operational capability, use "suggested_content" to describe the missing workflow, integration, or tool requirement that the team should add.
 
 Return ONLY valid JSON. No markdown fences, no explanation text outside the JSON.`;
 

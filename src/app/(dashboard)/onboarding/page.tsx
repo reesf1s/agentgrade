@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -64,6 +64,17 @@ export default function OnboardingPage() {
   const [conversationUploadSummary, setConversationUploadSummary] = useState<string | null>(null);
   const [knowledgeBaseSummary, setKnowledgeBaseSummary] = useState<string | null>(null);
   const browserOrigin = typeof window !== "undefined" ? window.location.origin : "";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const preset = new URLSearchParams(window.location.search).get("platform");
+    if (preset && ["intercom", "zendesk", "voiceflow", "custom", "csv"].includes(preset)) {
+      setPlatform(preset);
+    }
+  }, []);
 
   async function createConnection() {
     const res = await fetch("/api/connections", {
@@ -261,7 +272,7 @@ export default function OnboardingPage() {
         <GlassCard className="p-8">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Connect your AI agent</h2>
           <p className="text-sm text-[var(--text-secondary)] mb-8">
-            Choose how conversations should flow into AgentGrade. We&apos;ll create the connection and give you the exact credentials you need.
+            Choose how conversations should flow into AgentGrade. You can add multiple bots per workspace, and each connection gets its own secure webhook and scoring history.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
@@ -269,7 +280,6 @@ export default function OnboardingPage() {
               { id: "intercom", name: "Intercom", desc: "API key + manual sync for support conversations" },
               { id: "zendesk", name: "Zendesk", desc: "API token connection for ticket conversations" },
               { id: "voiceflow", name: "Voiceflow", desc: "Send transcript turns from a custom action" },
-              { id: "dealkit", name: "DealKit Ask AI", desc: "Push Ask AI transcripts with the secure webhook" },
               { id: "custom", name: "Custom Webhook", desc: "Any internal copilot, chatbot, or agent runtime" },
               { id: "csv", name: "Upload CSV/JSON", desc: "Run an instant historical audit" },
             ].map((option) => (
@@ -332,14 +342,12 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {(platform === "custom" || platform === "voiceflow" || platform === "dealkit") && (
+          {(platform === "custom" || platform === "voiceflow") && (
             <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] text-sm text-[var(--text-secondary)] mb-6">
               We&apos;ll generate a secure webhook URL and bearer secret on the next step. Recommended trigger:
               {platform === "voiceflow"
                 ? " call AgentGrade from a Voiceflow custom action after each assistant turn or when the session closes."
-                : platform === "dealkit"
-                  ? " post the Ask AI transcript after each completed reply or when a deal conversation escalates."
-                  : " send transcript updates after each agent reply or when the conversation closes."}
+                : " send transcript updates after each agent reply or when the conversation closes."}
             </div>
           )}
 
@@ -393,7 +401,7 @@ export default function OnboardingPage() {
             We use this content to verify factual claims, catch hallucinations, and improve how precisely your bot is assessed.
           </p>
 
-          {(platform === "custom" || platform === "voiceflow" || platform === "dealkit") && webhookSecret && (
+          {(platform === "custom" || platform === "voiceflow") && webhookSecret && (
             <div className="space-y-3 mb-6">
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
                 <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL</p>
@@ -409,7 +417,6 @@ export default function OnboardingPage() {
               </div>
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)] text-xs text-[var(--text-secondary)]">
                 {platform === "voiceflow" && "Voiceflow recipe: add a custom action that POSTs the current session transcript and variables to AgentGrade after each assistant reply."}
-                {platform === "dealkit" && "DealKit recipe: send DealKit Ask AI conversation turns, contact/deal identifiers, and any escalation metadata to AgentGrade using the secure webhook."}
                 {platform === "custom" && "Custom recipe: send the conversation transcript from your runtime, server, or workflow tool using the secure webhook."}
               </div>
             </div>
