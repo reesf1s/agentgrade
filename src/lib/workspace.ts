@@ -28,8 +28,8 @@ export async function getWorkspaceContext(): Promise<WorkspaceContext | null> {
  */
 export async function getWorkspaceForUser(clerkUserId: string): Promise<WorkspaceContext | null> {
   const { data: member, error } = await supabaseAdmin
-    .from("ag_workspace_members")
-    .select("*, workspaces:ag_workspaces(*)")
+    .from("workspace_members")
+    .select("*, workspaces:workspaces(*)")
     .eq("clerk_user_id", clerkUserId)
     .maybeSingle();
 
@@ -64,7 +64,7 @@ async function autoCreateWorkspace(clerkUserId: string): Promise<WorkspaceContex
     const slug = "workspace-" + Math.random().toString(36).substring(2, 8);
 
     const { data: workspace, error: wsError } = await supabaseAdmin
-      .from("ag_workspaces")
+      .from("workspaces")
       .insert({
         name: "My Workspace",
         slug,
@@ -80,7 +80,7 @@ async function autoCreateWorkspace(clerkUserId: string): Promise<WorkspaceContex
     }
 
     const { data: member, error: memberError } = await supabaseAdmin
-      .from("ag_workspace_members")
+      .from("workspace_members")
       .insert({
         workspace_id: workspace.id,
         clerk_user_id: clerkUserId,
@@ -93,13 +93,13 @@ async function autoCreateWorkspace(clerkUserId: string): Promise<WorkspaceContex
       console.error("[workspace] Failed to auto-create workspace member:", memberError);
 
       const { data: existingMember } = await supabaseAdmin
-        .from("ag_workspace_members")
-        .select("*, workspaces:ag_workspaces(*)")
+        .from("workspace_members")
+        .select("*, workspaces:workspaces(*)")
         .eq("clerk_user_id", clerkUserId)
         .maybeSingle();
 
       if (existingMember?.workspaces) {
-        await supabaseAdmin.from("ag_workspaces").delete().eq("id", workspace.id);
+        await supabaseAdmin.from("workspaces").delete().eq("id", workspace.id);
         return {
           workspace: existingMember.workspaces as unknown as Workspace,
           member: {
@@ -112,7 +112,7 @@ async function autoCreateWorkspace(clerkUserId: string): Promise<WorkspaceContex
         };
       }
 
-      await supabaseAdmin.from("ag_workspaces").delete().eq("id", workspace.id);
+      await supabaseAdmin.from("workspaces").delete().eq("id", workspace.id);
       return null;
     }
 

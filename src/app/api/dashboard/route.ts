@@ -21,15 +21,15 @@ export async function GET() {
 
     const [conversationsRes, alertsRes, trendRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_conversations")
-        .select("*, quality_scores:ag_quality_scores(*)")
+        .from("conversations")
+        .select("*, quality_scores:quality_scores(*)")
         .eq("workspace_id", workspaceId)
         .gte("created_at", thirtyDaysAgo.toISOString())
         .order("created_at", { ascending: false })
         .limit(20),
 
       supabaseAdmin
-        .from("ag_alerts")
+        .from("alerts")
         .select("*")
         .eq("workspace_id", workspaceId)
         .is("acknowledged_at", null)
@@ -38,8 +38,8 @@ export async function GET() {
 
       // Aggregate daily scores for the trend chart
       supabaseAdmin
-        .from("ag_conversations")
-        .select("created_at, quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+        .from("conversations")
+        .select("created_at, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
         .eq("workspace_id", workspaceId)
         .gte("created_at", thirtyDaysAgo.toISOString())
         .order("created_at", { ascending: true }),

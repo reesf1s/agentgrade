@@ -55,7 +55,7 @@ async function fetchAffectedSamples(
   const sampleIds = affectedConversationIds.slice(0, 3);
 
   const { data } = await supabaseAdmin
-    .from("ag_quality_scores")
+    .from("quality_scores")
     .select("overall_score, summary, knowledge_gaps")
     .in("conversation_id", sampleIds);
 
@@ -289,7 +289,7 @@ Return JSON:
 export async function generateFixForPattern(patternId: string): Promise<GeneratedFix> {
   // Fetch the pattern
   const { data: pattern, error } = await supabaseAdmin
-    .from("ag_failure_patterns")
+    .from("failure_patterns")
     .select("*")
     .eq("id", patternId)
     .single();
@@ -357,7 +357,7 @@ export async function generateFixForPattern(patternId: string): Promise<Generate
 
   if (Object.keys(updateData).length > 0) {
     const { error: updateError } = await supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .update(updateData)
       .eq("id", patternId);
 
@@ -394,7 +394,7 @@ export async function generateFixesForWorkspace(
 ): Promise<GeneratedFix[]> {
   // Find patterns without generated fix content
   const { data: patterns } = await supabaseAdmin
-    .from("ag_failure_patterns")
+    .from("failure_patterns")
     .select("id, pattern_type")
     .eq("workspace_id", workspaceId)
     .eq("is_resolved", false)

@@ -31,7 +31,7 @@ export async function GET() {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     const { count: usedThisMonth, error: countError } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
       .gte("created_at", monthStart.toISOString())
@@ -50,12 +50,12 @@ export async function GET() {
 
     // Count all-time scored conversations
     const { count: totalScored } = await supabaseAdmin
-      .from("ag_quality_scores")
+      .from("quality_scores")
       .select("id", { count: "exact", head: true })
       .in(
         "conversation_id",
         (await supabaseAdmin
-          .from("ag_conversations")
+          .from("conversations")
           .select("id")
           .eq("workspace_id", workspaceId)
           .then((r) => (r.data || []).map((c) => c.id)))

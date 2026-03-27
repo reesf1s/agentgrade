@@ -19,7 +19,7 @@ export async function GET(
     const { id } = await params;
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("*")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -68,7 +68,7 @@ export async function PATCH(
     }
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .update(updates)
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -109,7 +109,7 @@ export async function DELETE(
 
     // Verify connection belongs to workspace before deleting
     const { data: connection, error: fetchError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -120,7 +120,7 @@ export async function DELETE(
     }
 
     const { error: deleteError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .delete()
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id);

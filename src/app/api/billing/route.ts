@@ -31,7 +31,7 @@ export async function GET() {
     monthStart.setHours(0, 0, 0, 0);
 
     const { count } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspace.id)
       .gte("created_at", monthStart.toISOString());

@@ -56,7 +56,7 @@ export async function upsertConversationWithMessages(
 
   if (payload.externalId) {
     const { data: existingConversation } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id, started_at, ended_at")
       .eq("workspace_id", connection.workspace_id)
       .eq("external_id", payload.externalId)
@@ -64,7 +64,7 @@ export async function upsertConversationWithMessages(
 
     if (existingConversation) {
       const { data: existingMessages, error: existingMessagesError } = await supabaseAdmin
-        .from("ag_messages")
+        .from("messages")
         .select("role, content, timestamp")
         .eq("conversation_id", existingConversation.id)
         .order("timestamp", { ascending: true });
@@ -95,7 +95,7 @@ export async function upsertConversationWithMessages(
       );
 
       if (newMessages.length > 0) {
-        const { error: insertMessagesError } = await supabaseAdmin.from("ag_messages").insert(
+        const { error: insertMessagesError } = await supabaseAdmin.from("messages").insert(
           newMessages.map((message) => ({
             conversation_id: existingConversation.id,
             ...message,
@@ -124,7 +124,7 @@ export async function upsertConversationWithMessages(
           : existingConversation.ended_at || endedAt;
 
       const { error: updateConversationError } = await supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .update({
           platform: payload.platform,
           customer_identifier: payload.customerIdentifier || null,
@@ -149,7 +149,7 @@ export async function upsertConversationWithMessages(
   }
 
   const { data: conversation, error: conversationError } = await supabaseAdmin
-    .from("ag_conversations")
+    .from("conversations")
     .insert({
       workspace_id: connection.workspace_id,
       agent_connection_id: connection.id,
@@ -169,7 +169,7 @@ export async function upsertConversationWithMessages(
     throw new Error(`Failed to create conversation: ${conversationError?.message}`);
   }
 
-  const { error: insertMessagesError } = await supabaseAdmin.from("ag_messages").insert(
+  const { error: insertMessagesError } = await supabaseAdmin.from("messages").insert(
     normalizedMessages.map((message) => ({
       conversation_id: conversation.id,
       ...message,

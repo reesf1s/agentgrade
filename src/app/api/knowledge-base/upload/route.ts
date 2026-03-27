@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
             source_type: "upload" as const,
           })));
 
-          const { error } = await supabaseAdmin.from("ag_knowledge_base_items").insert(rows);
+          const { error } = await supabaseAdmin.from("knowledge_base").insert(rows);
           if (error) {
             return NextResponse.json({ error: "Failed to store knowledge base items" }, { status: 500 });
           }
@@ -110,12 +110,12 @@ export async function POST(request: NextRequest) {
 
     // Delete any existing chunks from this file before inserting new ones
     await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .delete()
       .eq("workspace_id", ctx.workspace.id)
       .eq("source_file", fileName);
 
-    const { error } = await supabaseAdmin.from("ag_knowledge_base_items").insert(rows);
+    const { error } = await supabaseAdmin.from("knowledge_base").insert(rows);
 
     if (error) {
       console.error("Failed to store KB items:", error);

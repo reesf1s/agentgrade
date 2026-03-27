@@ -8,7 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase";
  * Requires an active Intercom connection with API key.
  *
  * Fetches published articles from the Intercom Articles API,
- * chunks them, and stores in ag_knowledge_base_items.
+ * chunks them, and stores in knowledge_base.
  */
 export async function POST() {
   try {
@@ -21,7 +21,7 @@ export async function POST() {
 
     // Find active Intercom connection with API key
     const { data: connections } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, api_key_encrypted")
       .eq("workspace_id", workspaceId)
       .eq("platform", "intercom")
@@ -84,7 +84,7 @@ export async function POST() {
 
       // Skip if this article URL is already in the KB
       const { data: existing } = await supabaseAdmin
-        .from("ag_knowledge_base_items")
+        .from("knowledge_base")
         .select("id")
         .eq("workspace_id", workspaceId)
         .eq("source_url", sourceUrl)
@@ -104,13 +104,13 @@ export async function POST() {
 
       // Delete old versions of this article (by URL)
       await supabaseAdmin
-        .from("ag_knowledge_base_items")
+        .from("knowledge_base")
         .delete()
         .eq("workspace_id", workspaceId)
         .eq("source_url", sourceUrl);
 
       // Insert chunks
-      await supabaseAdmin.from("ag_knowledge_base_items").insert(
+      await supabaseAdmin.from("knowledge_base").insert(
         chunks.map((chunk, i) => ({
           workspace_id: workspaceId,
           title: article.title,

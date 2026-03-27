@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Authenticate via secret header to find workspace
     const secret = request.headers.get("x-agentgrade-secret") || "";
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, is_active")
       .eq("webhook_secret", secret)
       .eq("platform", "intercom")
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert conversation (idempotent by external_id + workspace)
     const { data: existing } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id")
       .eq("workspace_id", connection.workspace_id)
       .eq("external_id", externalId)
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       conversationId = existing.id;
     } else {
       const { data: conversation, error: convError } = await supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .insert({
           workspace_id: connection.workspace_id,
           agent_connection_id: connection.id,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       conversationId = conversation.id;
 
       // Insert messages
-      await supabaseAdmin.from("ag_messages").insert(
+      await supabaseAdmin.from("messages").insert(
         conversationParts.map((msg) => ({
           conversation_id: conversationId,
           role: msg.role,

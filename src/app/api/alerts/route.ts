@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("ag_alerts")
+      .from("alerts")
       .select("*")
       .eq("workspace_id", ctx.workspace.id)
       .is("acknowledged_at", null)
@@ -46,7 +46,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { error } = await supabaseAdmin
-      .from("ag_alerts")
+      .from("alerts")
       .update({
         acknowledged_at: new Date().toISOString(),
         acknowledged_by: ctx.member.clerk_user_id,

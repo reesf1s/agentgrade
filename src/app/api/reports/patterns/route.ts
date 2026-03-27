@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 /**
  * GET /api/reports/patterns
  * Returns detected failure patterns with aggregated fix suggestions.
- * Combines ag_failure_patterns with associated ag_suggested_fixes.
+ * Combines failure_patterns with associated ag_suggested_fixes.
  */
 export async function GET() {
   try {
@@ -18,7 +18,7 @@ export async function GET() {
 
     const [patternsRes, fixesRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_failure_patterns")
+        .from("failure_patterns")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("is_resolved", false)

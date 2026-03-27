@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       const webhookUrl = `${resolveAppUrl(request)}/api/webhooks/ingest`;
 
       const { data: connection, error: connError } = await supabaseAdmin
-        .from("ag_agent_connections")
+        .from("agent_connections")
         .insert({
           workspace_id: workspaceId,
           platform,
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         for (const threshold of alert_thresholds) {
           if (!threshold.dimension || threshold.value === undefined) continue;
           await supabaseAdmin
-            .from("ag_alert_configs")
+            .from("alert_configs")
             .upsert(
               {
                 workspace_id: workspaceId,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       for (const threshold of alert_thresholds) {
         if (!threshold.dimension || threshold.value === undefined) continue;
         await supabaseAdmin
-          .from("ag_alert_configs")
+          .from("alert_configs")
           .upsert(
             {
               workspace_id: workspaceId,

@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .select("id, title, chunk_index, source_file, source_url, source_type, created_at")
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false });

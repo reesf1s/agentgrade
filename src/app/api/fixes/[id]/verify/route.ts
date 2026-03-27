@@ -45,17 +45,17 @@ export async function GET(
 
     // Get scores for source conversations (before fix)
     const { data: sourceScores } = await supabaseAdmin
-      .from("ag_quality_scores")
+      .from("quality_scores")
       .select("overall_score, accuracy_score, hallucination_score, resolution_score, scored_at")
       .in("conversation_id", sourceConvIds.slice(0, 50)); // limit for performance
 
     // Get scores for conversations created after the fix was pushed
     const { data: afterScores } = await supabaseAdmin
-      .from("ag_conversations")
-      .select("quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+      .from("conversations")
+      .select("quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
       .eq("workspace_id", ctx.workspace.id)
       .gte("created_at", pushedAt.toISOString())
-      .not("ag_quality_scores", "is", null)
+      .not("quality_scores", "is", null)
       .limit(50);
 
     const avg = (arr: (number | null | undefined)[]) => {

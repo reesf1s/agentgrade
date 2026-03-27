@@ -79,11 +79,11 @@ async function ensureFixesSynthesized(workspaceId: string) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: conversations } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("id, quality_scores:ag_quality_scores(prompt_improvements, knowledge_gaps)")
+    .from("conversations")
+    .select("id, quality_scores:quality_scores(prompt_improvements, knowledge_gaps)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
-    .not("ag_quality_scores", "is", null);
+    .not("quality_scores", "is", null);
 
   if (!conversations || conversations.length === 0) return;
 

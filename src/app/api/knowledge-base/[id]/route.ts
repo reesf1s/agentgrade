@@ -19,7 +19,7 @@ export async function GET(
     const { id } = await params;
 
     const { data, error } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .select("id, title, content, chunk_index, source_file, source_url, source_type, created_at")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -55,7 +55,7 @@ export async function DELETE(
 
     // Get the item to check for source_file
     const { data: item, error: fetchError } = await supabaseAdmin
-      .from("ag_knowledge_base_items")
+      .from("knowledge_base")
       .select("id, source_file, source_url")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -70,21 +70,21 @@ export async function DELETE(
     // Delete all chunks from the same source file/URL
     if (item.source_file) {
       const { count } = await supabaseAdmin
-        .from("ag_knowledge_base_items")
+        .from("knowledge_base")
         .delete({ count: "exact" })
         .eq("workspace_id", ctx.workspace.id)
         .eq("source_file", item.source_file);
       deletedCount = count || 1;
     } else if (item.source_url) {
       const { count } = await supabaseAdmin
-        .from("ag_knowledge_base_items")
+        .from("knowledge_base")
         .delete({ count: "exact" })
         .eq("workspace_id", ctx.workspace.id)
         .eq("source_url", item.source_url);
       deletedCount = count || 1;
     } else {
       await supabaseAdmin
-        .from("ag_knowledge_base_items")
+        .from("knowledge_base")
         .delete()
         .eq("id", id)
         .eq("workspace_id", ctx.workspace.id);

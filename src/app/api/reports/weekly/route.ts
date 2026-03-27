@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
       // Try cached first
       const { data: cached } = await supabaseAdmin
-        .from("ag_weekly_reports")
+        .from("weekly_reports")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("week_start", weekStartParam)
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Return the last N weeks of reports
     const { data: existingReports } = await supabaseAdmin
-      .from("ag_weekly_reports")
+      .from("weekly_reports")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("week_start", { ascending: false })
@@ -106,15 +106,15 @@ async function generateWeeklyReport(
 
   const [thisWeekRes, priorWeekRes] = await Promise.all([
     supabaseAdmin
-      .from("ag_conversations")
-      .select("*, quality_scores:ag_quality_scores(*)")
+      .from("conversations")
+      .select("*, quality_scores:quality_scores(*)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", weekStart.toISOString())
       .lt("created_at", weekEnd.toISOString()),
 
     supabaseAdmin
-      .from("ag_conversations")
-      .select("quality_scores:ag_quality_scores(overall_score)")
+      .from("conversations")
+      .select("quality_scores:quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorWeekStart.toISOString())
       .lt("created_at", weekStart.toISOString()),
@@ -174,8 +174,8 @@ async function generateWeeklyReport(
     escalation_count: escalationCount,
     top_failures: scored
       .sort((a, b) => {
-        const aS = (a.ag_quality_scores as { overall_score: number }).overall_score;
-        const bS = (b.ag_quality_scores as { overall_score: number }).overall_score;
+        const aS = (a.quality_scores as { overall_score: number }).overall_score;
+        const bS = (b.quality_scores as { overall_score: number }).overall_score;
         return aS - bS;
       })
       .slice(0, 5)
@@ -189,9 +189,9 @@ async function generateWeeklyReport(
     knowledge_gaps: [...gapMap.values()].sort((a, b) => b.count - a.count).slice(0, 5).map(({ count: _c, ...gap }) => gap),
   };
 
-  // Cache in ag_weekly_reports (upsert)
+  // Cache in weekly_reports (upsert)
   const { data: saved } = await supabaseAdmin
-    .from("ag_weekly_reports")
+    .from("weekly_reports")
     .upsert(
       {
         workspace_id: workspaceId,

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: connections } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, is_active")
       .eq("webhook_secret", apiKey)
       .limit(1);
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         // Idempotency check
         if (conv.conversation_id) {
           const { data: existing } = await supabaseAdmin
-            .from("ag_conversations")
+            .from("conversations")
             .select("id")
             .eq("workspace_id", connection.workspace_id)
             .eq("external_id", conv.conversation_id)
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           .sort((a, b) => a - b);
 
         const { data: conversation, error: convError } = await supabaseAdmin
-          .from("ag_conversations")
+          .from("conversations")
           .insert({
             workspace_id: connection.workspace_id,
             agent_connection_id: connection.id,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        await supabaseAdmin.from("ag_messages").insert(
+        await supabaseAdmin.from("messages").insert(
           conv.messages.map((msg) => ({
             conversation_id: conversation.id,
             role: msg.role,

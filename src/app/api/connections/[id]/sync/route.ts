@@ -22,7 +22,7 @@ export async function POST(
     const { id } = await params;
 
     const { data: connection, error: fetchError } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, platform, is_active, api_key_encrypted, config, last_sync_at")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -53,7 +53,7 @@ export async function POST(
 
     // Update last_sync_at
     await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .update({ last_sync_at: new Date().toISOString() })
       .eq("id", id);
 
@@ -107,7 +107,7 @@ async function syncIntercomConversations(
   for (const conv of conversations) {
     // Check if already ingested
     const { data: existing } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("external_id", String(conv.id))
@@ -132,7 +132,7 @@ async function syncIntercomConversations(
       // Use the Intercom webhook handler logic via internal fetch
       // Get the connection's webhook_secret for internal call
       const { data: connData } = await supabaseAdmin
-        .from("ag_agent_connections")
+        .from("agent_connections")
         .select("webhook_secret")
         .eq("id", connectionId)
         .single();

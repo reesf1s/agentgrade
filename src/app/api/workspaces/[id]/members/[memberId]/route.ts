@@ -27,7 +27,7 @@ export async function DELETE(
 
     // Fetch the target member
     const { data: targetMember, error: fetchError } = await supabaseAdmin
-      .from("ag_workspace_members")
+      .from("workspace_members")
       .select("id, clerk_user_id, role")
       .eq("id", memberId)
       .eq("workspace_id", workspaceId)
@@ -60,7 +60,7 @@ export async function DELETE(
     }
 
     const { error: deleteError } = await supabaseAdmin
-      .from("ag_workspace_members")
+      .from("workspace_members")
       .delete()
       .eq("id", memberId)
       .eq("workspace_id", workspaceId);

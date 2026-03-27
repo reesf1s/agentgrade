@@ -104,7 +104,7 @@ async function pushKnowledgeGapToIntercom(
 ): Promise<Record<string, unknown>> {
   // Find the Intercom connection for this workspace
   const { data: connections } = await supabaseAdmin
-    .from("ag_agent_connections")
+    .from("agent_connections")
     .select("api_key_encrypted, config")
     .eq("workspace_id", workspaceId)
     .eq("platform", "intercom")

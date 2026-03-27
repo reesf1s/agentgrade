@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Look up the connection by webhook_secret (the API key IS the webhook secret)
     const { data: connections } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, platform, is_active")
       .eq("webhook_secret", apiKey)
       .limit(1);
