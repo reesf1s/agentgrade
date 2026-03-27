@@ -44,6 +44,7 @@ export async function GET() {
       price: PLAN_PRICES[plan as keyof typeof PLAN_PRICES] ?? "£199/mo",
       usage: count ?? 0,
       limit: limit === Infinity ? null : limit,
+      configured: !!process.env.STRIPE_SECRET_KEY,
       stripe_customer_id: workspace.stripe_customer_id,
       stripe_subscription_id: workspace.stripe_subscription_id,
     });

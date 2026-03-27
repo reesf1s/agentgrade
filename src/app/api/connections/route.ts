@@ -3,6 +3,15 @@ import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { resolveAppUrl } from "@/lib/url";
 
+const SUPPORTED_PLATFORMS = [
+  "intercom",
+  "zendesk",
+  "custom",
+  "csv",
+  "voiceflow",
+  "dealkit",
+] as const;
+
 /**
  * GET /api/connections
  * Returns all agent connections for the workspace.
@@ -45,7 +54,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { platform, name, api_key, config } = body;
 
-    if (!platform || !["intercom", "zendesk", "custom", "csv"].includes(platform)) {
+    if (
+      !platform ||
+      !SUPPORTED_PLATFORMS.includes(platform as (typeof SUPPORTED_PLATFORMS)[number])
+    ) {
       return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
     }
 

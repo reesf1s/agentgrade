@@ -1,16 +1,20 @@
 import { redirect } from "next/navigation";
 import { PatternsPageClient } from "@/components/dashboard/patterns-page-client";
-import { getCurrentWorkspaceId, loadPatternsData } from "@/lib/dashboard-data";
+import { loadPatternsData } from "@/lib/dashboard-data";
+import { getUserId } from "@/lib/auth/get-user";
+import { getWorkspaceContext } from "@/lib/workspace";
 
 export default async function PatternsPage() {
-  try {
-    const workspaceId = await getCurrentWorkspaceId();
-    const patterns = await loadPatternsData(workspaceId);
-    return <PatternsPageClient initialPatterns={patterns} />;
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      redirect("/sign-in");
-    }
-    throw error;
+  const userId = await getUserId();
+  if (!userId) {
+    redirect("/sign-in");
   }
+
+  const workspaceContext = await getWorkspaceContext();
+  if (!workspaceContext?.workspace.id) {
+    redirect("/onboarding");
+  }
+
+  const patterns = await loadPatternsData(workspaceContext.workspace.id);
+  return <PatternsPageClient initialPatterns={patterns} />;
 }

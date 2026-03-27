@@ -44,6 +44,7 @@ interface BillingData {
   price: string;
   usage: number;
   limit: number | null;
+  configured?: boolean;
 }
 
 // ─── Tab: Connections ─────────────────────────────────────────────────────────
@@ -534,6 +535,7 @@ function BillingTab() {
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/billing")
@@ -545,18 +547,25 @@ function BillingTab() {
 
   async function openPortal() {
     setPortalLoading(true);
+    setBillingError(null);
     try {
       const r = await fetch("/api/billing/portal", { method: "POST" });
       const d = await r.json();
+      if (!r.ok) {
+        setBillingError(d.error || "Unable to open the Stripe portal right now.");
+        return;
+      }
       if (d.url) window.location.href = d.url;
     } catch (e) {
       console.error(e);
+      setBillingError("Unable to open the Stripe portal right now.");
     } finally {
       setPortalLoading(false);
     }
   }
 
   async function openCheckout() {
+    setBillingError(null);
     try {
       const r = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -564,9 +573,14 @@ function BillingTab() {
         body: JSON.stringify({ plan: "growth" }),
       });
       const d = await r.json();
+      if (!r.ok) {
+        setBillingError(d.error || "Unable to start checkout.");
+        return;
+      }
       if (d.url) window.location.href = d.url;
     } catch (e) {
       console.error(e);
+      setBillingError("Unable to start checkout.");
     }
   }
 
@@ -587,6 +601,18 @@ function BillingTab() {
       <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
       {billing ? (
         <>
+          {!billing.configured && (
+            <div className="mb-4 rounded-[1.25rem] border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-900">
+              Stripe is not configured in production yet. Billing screens are wired, but checkout and the portal will stay unavailable until `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set in Vercel.
+            </div>
+          )}
+
+          {billingError && (
+            <div className="mb-4 rounded-[1.25rem] border border-red-200/70 bg-red-50/70 p-4 text-sm text-red-700">
+              {billingError}
+            </div>
+          )}
+
           <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -596,7 +622,7 @@ function BillingTab() {
                 </p>
               </div>
               {billing.plan !== "enterprise" && (
-                <GlassButton size="sm" onClick={openCheckout}>Upgrade</GlassButton>
+                <GlassButton size="sm" onClick={openCheckout} disabled={!billing.configured}>Upgrade</GlassButton>
               )}
             </div>
             {billing.limit && (
@@ -616,7 +642,7 @@ function BillingTab() {
               </div>
             )}
           </div>
-          <GlassButton onClick={openPortal} disabled={portalLoading}>
+          <GlassButton onClick={openPortal} disabled={portalLoading || !billing.configured}>
             {portalLoading ? "Opening..." : "Manage billing"}
           </GlassButton>
         </>

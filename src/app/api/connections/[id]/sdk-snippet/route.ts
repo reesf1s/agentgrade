@@ -3,6 +3,83 @@ import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { resolveAppUrl } from "@/lib/url";
 
+function buildSnippet(input: {
+  webhookUrl: string;
+  secret: string;
+  platform: string;
+  connectionName: string;
+}) {
+  const baseExample = `fetch("${input.webhookUrl}", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer ${input.secret}"
+  },
+  body: JSON.stringify({
+    conversation_id: "conv_123",
+    platform: "${input.platform}",
+    customer_identifier: "user@example.com",
+    messages: [
+      { role: "customer", content: "How do I reset my password?" },
+      { role: "agent", content: "Use the Forgot password link on your login page." }
+    ]
+  })
+});`;
+
+  if (input.platform === "voiceflow") {
+    return `// AgentGrade recipe for Voiceflow
+// Connection: ${input.connectionName}
+// Recommended trigger: call this from your Voiceflow custom action
+// after each agent response, or when the conversation closes.
+
+const transcript = [
+  { role: "customer", content: lastUserMessage },
+  { role: "agent", content: lastAssistantMessage }
+];
+
+${baseExample.replace(
+  /conversation_id: "conv_123",\n    platform: "voiceflow",\n    customer_identifier: "user@example.com",\n    messages: \[\n      \{ role: "customer", content: "How do I reset my password\\?" \},\n      \{ role: "agent", content: "Use the Forgot password link on your login page\\." \}\n    \]/,
+  `conversation_id: sessionId,
+    platform: "voiceflow",
+    customer_identifier: userId ?? "voiceflow-user",
+    messages: transcript`
+)}
+`;
+  }
+
+  if (input.platform === "dealkit") {
+    return `// AgentGrade recipe for DealKit Ask AI
+// Connection: ${input.connectionName}
+// Recommended trigger: send the full transcript whenever Ask AI
+// completes a turn or when a conversation is handed to a human.
+
+const transcript = messages.map((message) => ({
+  role: message.role === "assistant" ? "agent" : "customer",
+  content: message.content,
+  timestamp: message.timestamp
+}));
+
+${baseExample.replace(
+  /conversation_id: "conv_123",\n    platform: "dealkit",\n    customer_identifier: "user@example.com",\n    messages: \[\n      \{ role: "customer", content: "How do I reset my password\\?" \},\n      \{ role: "agent", content: "Use the Forgot password link on your login page\\." \}\n    \]/,
+  `conversation_id: dealId,
+    platform: "dealkit",
+    customer_identifier: contactEmail ?? contactId,
+    messages: transcript,
+    metadata: {
+      source: "ask-ai",
+      stage: dealStage
+    }`
+)}
+`;
+  }
+
+  return `// AgentGrade SDK — auto-log conversations
+// Connection: ${input.connectionName}
+// Install: npm install agentgrade  (or paste this inline)
+
+${baseExample}`;
+}
+
 /**
  * GET /api/connections/[id]/sdk-snippet
  * Returns a JavaScript SDK code snippet pre-configured for this connection.
@@ -18,7 +95,7 @@ export async function GET(
 
     const { data: connection, error } = await supabaseAdmin
       .from("ag_agent_connections")
-      .select("id, webhook_url, webhook_secret, name")
+      .select("id, platform, webhook_url, webhook_secret, name")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
       .single();
@@ -29,45 +106,12 @@ export async function GET(
 
     const webhookUrl = `${resolveAppUrl(_request)}/api/webhooks/ingest`;
 
-    // Generate a JavaScript SDK snippet
-    const snippet = `// AgentGrade SDK — auto-log conversations
-// Connection: ${connection.name}
-// Install: npm install agentgrade  (or paste this inline)
-
-const AgentGrade = {
-  webhookUrl: "${webhookUrl}",
-  apiKey: "${connection.webhook_secret}",
-
-  async log(conversation) {
-    await fetch(this.webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + this.apiKey
-      },
-      body: JSON.stringify({
-        messages: conversation.messages.map(msg => ({
-          role: msg.role,            // "agent" | "customer"
-          content: msg.content,
-          timestamp: msg.timestamp ?? new Date().toISOString()
-        })),
-        customer_identifier: conversation.customerId,
-        platform: "custom",
-        was_escalated: conversation.wasEscalated ?? false
-      })
+    const snippet = buildSnippet({
+      webhookUrl,
+      secret: connection.webhook_secret,
+      platform: connection.platform || "custom",
+      connectionName: connection.name,
     });
-  }
-};
-
-// Usage example:
-await AgentGrade.log({
-  customerId: "user@example.com",
-  wasEscalated: false,
-  messages: [
-    { role: "customer", content: "How do I reset my password?" },
-    { role: "agent",    content: "Click 'Forgot password' on the login page." }
-  ]
-});`;
 
     return NextResponse.json({ snippet, webhook_url: webhookUrl, api_key: connection.webhook_secret });
   } catch (err) {
