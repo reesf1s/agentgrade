@@ -5,15 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 /**
  * GET /api/conversations
  * Returns paginated conversations with quality scores.
- * Query params:
- *   search        — filter by customer_identifier (partial match)
- *   score_filter  — all | critical (<0.4) | warning (0.4–0.7) | good (≥0.7)
- *   platform      — filter by platform name
- *   escalated     — true | false
- *   from          — ISO date string (created_at ≥)
- *   to            — ISO date string (created_at ≤)
- *   page          — 1-based page number (default 1)
- *   limit         — page size (default 50, max 100)
+ * Query params: ?search=&score_filter=all|critical|warning|good&page=1&limit=50
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,19 +15,23 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const scoreFilter = searchParams.get("score_filter") || "all";
-    const platform = searchParams.get("platform") || "";
-    const escalated = searchParams.get("escalated");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const offset = (page - 1) * limit;
+    const search        = searchParams.get("search") || "";
+    const scoreFilter   = searchParams.get("score_filter") || "all";
+    const platform      = searchParams.get("platform") || "all";
+    const escalated     = searchParams.get("escalated") || "all";
+    const dateFrom      = searchParams.get("from") || "";
+    const dateTo        = searchParams.get("to") || "";
+    const limit         = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    // Support both offset-based (new) and page-based (legacy) pagination
+    const offsetParam   = searchParams.get("offset");
+    const pageParam     = searchParams.get("page");
+    const offset = offsetParam !== null
+      ? parseInt(offsetParam)
+      : (parseInt(pageParam || "1") - 1) * limit;
 
     let query = supabaseAdmin
-      .from("ag_conversations")
-      .select("*, ag_quality_scores(*)", { count: "exact" })
+      .from("conversations")
+      .select("*, quality_scores(*)", { count: "exact" })
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -43,19 +39,21 @@ export async function GET(request: NextRequest) {
     if (search) {
       query = query.ilike("customer_identifier", `%${search}%`);
     }
-    if (platform) {
+    if (platform !== "all") {
       query = query.eq("platform", platform);
     }
-    if (escalated === "true") {
+    if (escalated === "yes") {
       query = query.eq("was_escalated", true);
-    } else if (escalated === "false") {
+    } else if (escalated === "no") {
       query = query.eq("was_escalated", false);
     }
-    if (from) {
-      query = query.gte("created_at", from);
+    if (dateFrom) {
+      query = query.gte("created_at", new Date(dateFrom).toISOString());
     }
-    if (to) {
-      query = query.lte("created_at", to);
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setDate(to.getDate() + 1); // include the full to-day
+      query = query.lt("created_at", to.toISOString());
     }
 
     const { data, count, error } = await query;
@@ -65,15 +63,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
     }
 
-    // Apply score filter in memory (quality_score is a joined row)
-    let conversations = (data || []).map((c) => ({
-      ...c,
-      quality_score: c.ag_quality_scores || null,
-    }));
-
+    // Apply score filter in memory (needs joining quality_scores)
+    let conversations = data || [];
     if (scoreFilter !== "all") {
       conversations = conversations.filter((c) => {
-        const score = (c.quality_score as { overall_score?: number } | null)?.overall_score ?? null;
+        const qs = c.quality_scores as { overall_score?: number } | null;
+        const score = qs?.overall_score ?? null;
         if (score === null) return false;
         if (scoreFilter === "critical") return score < 0.4;
         if (scoreFilter === "warning") return score >= 0.4 && score < 0.7;
@@ -85,8 +80,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       conversations,
       total: count || 0,
-      page,
       limit,
+      offset,
     });
   } catch (error) {
     console.error("Conversations API error:", error);
