@@ -80,7 +80,7 @@ async function ensureFixesSynthesized(workspaceId: string) {
 
   const { data: conversations } = await supabaseAdmin
     .from("ag_conversations")
-    .select("id, ag_quality_scores(prompt_improvements, knowledge_gaps)")
+    .select("id, quality_scores:ag_quality_scores(prompt_improvements, knowledge_gaps)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
     .not("ag_quality_scores", "is", null);
@@ -93,7 +93,7 @@ async function ensureFixesSynthesized(workspaceId: string) {
   const gapMap = new Map<string, { gap: KnowledgeGap; count: number; convIds: string[] }>();
 
   for (const conv of conversations) {
-    const qs = conv.ag_quality_scores as { prompt_improvements?: PromptImprovement[]; knowledge_gaps?: KnowledgeGap[] } | null;
+    const qs = conv.quality_scores as { prompt_improvements?: PromptImprovement[]; knowledge_gaps?: KnowledgeGap[] } | null;
     const convId = conv.id as string;
 
     for (const imp of qs?.prompt_improvements || []) {

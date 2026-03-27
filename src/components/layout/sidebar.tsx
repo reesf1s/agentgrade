@@ -66,10 +66,17 @@ export function Sidebar() {
 
       {/* User */}
       <div className="p-4 border-t border-[var(--glass-border)]">
-        <div className="flex items-center gap-3">
-          <UserButton />
-          <p className="text-xs text-[var(--text-muted)]">Account</p>
-        </div>
+        <UserButton
+          appearance={{
+            elements: {
+              userButtonBox: "flex items-center gap-3 w-full",
+              userButtonTrigger: "flex items-center gap-3 w-full rounded-xl p-1 hover:bg-[var(--surface)] transition-all",
+              userButtonAvatarBox: "w-8 h-8",
+              userButtonOuterIdentifier: "text-sm font-medium text-[var(--text-primary)] truncate",
+            },
+          }}
+          showName
+        />
       </div>
     </aside>
   );

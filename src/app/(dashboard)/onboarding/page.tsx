@@ -208,7 +208,7 @@ export default function OnboardingPage() {
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
                 <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL:</p>
                 <code className="text-xs font-mono text-[var(--text-primary)]">
-                  {process.env.NEXT_PUBLIC_APP_URL || "https://agentgrade.com"}/api/webhooks/ingest
+                  {typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/ingest
                 </code>
               </div>
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">

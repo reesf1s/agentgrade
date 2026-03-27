@@ -102,10 +102,10 @@ async function computeFixImprovements(
     // Quality after: average score of conversations since the pattern was resolved
     const { data: afterConvs } = await supabaseAdmin
       .from("ag_conversations")
-      .select("quality_scores(overall_score)")
+      .select("quality_scores:ag_quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", pattern.resolved_at)
-      .not("quality_scores", "is", null)
+      .not("ag_quality_scores", "is", null)
       .limit(20);
 
     const afterScores = (afterConvs || [])
@@ -151,7 +151,7 @@ export async function generateWeeklyReport(
   // ── Fetch this week's conversations ───────────────────────────
   const { data: thisWeekRaw } = await supabaseAdmin
     .from("ag_conversations")
-    .select("id, created_at, was_escalated, quality_scores(*)")
+    .select("id, created_at, was_escalated, quality_scores:ag_quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", weekStartISO)
     .lte("created_at", weekEndInclusive)
@@ -165,7 +165,7 @@ export async function generateWeeklyReport(
 
   const { data: lastWeekRaw } = await supabaseAdmin
     .from("ag_conversations")
-    .select("quality_scores(overall_score)")
+    .select("quality_scores:ag_quality_scores(overall_score)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", lastWeekStart.toISOString())
     .lte("created_at", lastWeekEnd.toISOString());

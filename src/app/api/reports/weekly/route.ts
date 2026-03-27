@@ -107,14 +107,14 @@ async function generateWeeklyReport(
   const [thisWeekRes, priorWeekRes] = await Promise.all([
     supabaseAdmin
       .from("ag_conversations")
-      .select("*, ag_quality_scores(*)")
+      .select("*, quality_scores:ag_quality_scores(*)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", weekStart.toISOString())
       .lt("created_at", weekEnd.toISOString()),
 
     supabaseAdmin
       .from("ag_conversations")
-      .select("ag_quality_scores(overall_score)")
+      .select("quality_scores:ag_quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorWeekStart.toISOString())
       .lt("created_at", weekStart.toISOString()),
@@ -122,23 +122,23 @@ async function generateWeeklyReport(
 
   const thisWeek = thisWeekRes.data || [];
   const scored = thisWeek.filter(
-    (c) => c.ag_quality_scores && (c.ag_quality_scores as { overall_score?: number }).overall_score !== undefined
+    (c) => c.quality_scores && (c.quality_scores as { overall_score?: number }).overall_score !== undefined
   );
 
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
 
-  const avgOverall = avg(scored.map((c) => (c.ag_quality_scores as { overall_score: number }).overall_score));
-  const avgAccuracy = avg(scored.map((c) => (c.ag_quality_scores as { accuracy_score?: number }).accuracy_score ?? 0));
-  const avgHallucination = avg(scored.map((c) => (c.ag_quality_scores as { hallucination_score?: number }).hallucination_score ?? 0));
-  const avgResolution = avg(scored.map((c) => (c.ag_quality_scores as { resolution_score?: number }).resolution_score ?? 0));
+  const avgOverall = avg(scored.map((c) => (c.quality_scores as { overall_score: number }).overall_score));
+  const avgAccuracy = avg(scored.map((c) => (c.quality_scores as { accuracy_score?: number }).accuracy_score ?? 0));
+  const avgHallucination = avg(scored.map((c) => (c.quality_scores as { hallucination_score?: number }).hallucination_score ?? 0));
+  const avgResolution = avg(scored.map((c) => (c.quality_scores as { resolution_score?: number }).resolution_score ?? 0));
 
   const priorScored = (priorWeekRes.data || []).filter(
-    (c) => c.ag_quality_scores && (c.ag_quality_scores as unknown as { overall_score?: number }).overall_score !== undefined
+    (c) => c.quality_scores && (c.quality_scores as unknown as { overall_score?: number }).overall_score !== undefined
   );
-  const priorAvg = avg(priorScored.map((c) => (c.ag_quality_scores as unknown as { overall_score: number }).overall_score));
+  const priorAvg = avg(priorScored.map((c) => (c.quality_scores as unknown as { overall_score: number }).overall_score));
 
   const hallucinationCount = scored.filter((c) => {
-    const qs = c.ag_quality_scores as { hallucination_score?: number };
+    const qs = c.quality_scores as { hallucination_score?: number };
     return qs.hallucination_score !== undefined && qs.hallucination_score < 0.5;
   }).length;
 
@@ -149,7 +149,7 @@ async function generateWeeklyReport(
   const gapMap = new Map<string, KnowledgeGap & { count: number }>();
 
   for (const conv of scored) {
-    const qs = conv.ag_quality_scores as { prompt_improvements?: PromptImprovement[]; knowledge_gaps?: KnowledgeGap[] } | null;
+    const qs = conv.quality_scores as { prompt_improvements?: PromptImprovement[]; knowledge_gaps?: KnowledgeGap[] } | null;
     for (const imp of qs?.prompt_improvements || []) {
       const key = imp.issue.toLowerCase();
       if (improvementMap.has(key)) improvementMap.get(key)!.count++;
@@ -181,8 +181,8 @@ async function generateWeeklyReport(
       .slice(0, 5)
       .map((c) => ({
         conversation_id: c.id,
-        score: (c.ag_quality_scores as { overall_score: number }).overall_score,
-        summary: (c.ag_quality_scores as { summary?: string }).summary || "No summary available",
+        score: (c.quality_scores as { overall_score: number }).overall_score,
+        summary: (c.quality_scores as { summary?: string }).summary || "No summary available",
       })),
     prompt_improvements: [...improvementMap.values()].sort((a, b) => b.count - a.count).slice(0, 5).map(({ imp }) => imp),
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

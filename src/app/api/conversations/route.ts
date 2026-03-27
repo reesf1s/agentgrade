@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from("ag_conversations")
-      .select("*, quality_scores(*)", { count: "exact" })
+      .select("*, quality_scores:ag_quality_scores(*)", { count: "exact" })
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);

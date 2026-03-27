@@ -254,10 +254,10 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
 
   const { data: convs } = await supabaseAdmin
     .from("ag_conversations")
-    .select("id, created_at, platform, quality_scores(*)")
+    .select("id, created_at, platform, quality_scores:ag_quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
-    .not("quality_scores", "is", null)
+    .not("ag_quality_scores", "is", null)
     .order("created_at", { ascending: false })
     .limit(200); // cap to avoid processing huge datasets
 
