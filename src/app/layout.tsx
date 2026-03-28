@@ -58,6 +58,7 @@ export default function RootLayout({
                 var next = t || (systemDark ? 'dark' : 'light');
                 document.documentElement.classList.toggle('dark', next === 'dark');
                 document.documentElement.dataset.theme = next;
+                document.documentElement.style.colorScheme = next;
               } catch(e) {}
             `,
             }}

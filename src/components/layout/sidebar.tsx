@@ -108,7 +108,7 @@ export function Sidebar() {
               elements: {
                 userButtonBox: "flex items-center gap-3 w-full",
                 userButtonTrigger:
-                  "flex items-center gap-3 w-full rounded-2xl p-1.5 transition-all hover:bg-white/35",
+                  "flex items-center gap-3 w-full rounded-2xl p-1.5 transition-all hover:bg-[var(--surface)]",
                 userButtonAvatarBox: "w-10 h-10",
                 userButtonOuterIdentifier:
                   "text-sm font-medium text-[var(--text-primary)] truncate",

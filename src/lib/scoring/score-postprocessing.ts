@@ -188,6 +188,35 @@ function removeMatchingFlags(flags: string[], pattern: RegExp): string[] {
   return flags.filter((flag) => !pattern.test(flag));
 }
 
+function buildDefaultSummary(result: ScoringResult, confidence: { level: "high" | "medium" | "low"; reasons: string[] }) {
+  const strongResolution = result.resolution_score >= 0.75;
+  const strongGrounding = result.hallucination_score >= 0.8 && result.accuracy_score >= 0.75;
+  const weakResolution = result.resolution_score < 0.45;
+  const weakGrounding = result.hallucination_score < 0.55 || result.accuracy_score < 0.55;
+
+  if (strongResolution && strongGrounding) {
+    return `The agent gave a strong, actionable answer that appears directionally correct. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the available evidence was sufficient"}.`;
+  }
+
+  if (strongResolution && !strongGrounding) {
+    return `The agent gave a useful answer and moved the user toward an outcome, but some claims were weakly grounded or only partially supported in the transcript. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "verification context was limited"}.`;
+  }
+
+  if (weakResolution && weakGrounding) {
+    return `The response did not reliably move the user toward a safe or correct outcome. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "multiple quality signals were weak"}.`;
+  }
+
+  if (weakResolution) {
+    return `The answer had some useful content, but it did not fully resolve the user's request. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the transcript left important uncertainty"}.`;
+  }
+
+  if (weakGrounding) {
+    return `The answer was partially helpful, but key claims were not grounded strongly enough to treat as fully reliable. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "evidence for verification was limited"}.`;
+  }
+
+  return `The response was broadly serviceable with some remaining quality tradeoffs. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the evidence was mixed"}.`;
+}
+
 function deriveConfidenceLevel(
   input: ScoringInput,
   result: ScoringResult
@@ -440,7 +469,7 @@ export function applyScoringGuardrails(
   adjusted.confidence_level = confidence.level;
   adjusted.summary =
     adjusted.summary ||
-    `Confidence: ${confidence.level}. ${confidence.reasons[0] ?? "Evaluation complete."}`;
+    buildDefaultSummary(adjusted, confidence);
 
   return adjusted;
 }

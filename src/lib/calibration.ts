@@ -1,6 +1,36 @@
 import type { Message } from "@/lib/db/types";
 import { getScoringModel, getScoringProvider } from "@/lib/scoring/config";
 
+export const CALIBRATION_SHARE_SCOPES = [
+  {
+    key: "workspace_private",
+    label: "Private to this workspace",
+    description: "Use this label set only to calibrate scoring for your own organization.",
+  },
+  {
+    key: "global_anonymous",
+    label: "Contribute anonymized features globally",
+    description:
+      "Share only anonymized scorer features and human labels across customers. Raw transcript text stays private.",
+  },
+] as const;
+
+export const CALIBRATION_EXAMPLE_KINDS = [
+  {
+    key: "real",
+    label: "Real customer conversation",
+    description: "A real production or staging conversation from your organization.",
+  },
+  {
+    key: "synthetic",
+    label: "Synthetic or fake test case",
+    description: "A crafted example used to cover edge cases, regressions, or policy tests.",
+  },
+] as const;
+
+export type CalibrationShareScope = (typeof CALIBRATION_SHARE_SCOPES)[number]["key"];
+export type CalibrationExampleKind = (typeof CALIBRATION_EXAMPLE_KINDS)[number]["key"];
+
 export const CALIBRATION_DIMENSIONS = [
   { key: "overall", label: "Overall" },
   { key: "accuracy", label: "Accuracy" },
@@ -14,13 +44,54 @@ export const CALIBRATION_DIMENSIONS = [
 export const SCORER_MODEL_INFO = {
   evaluator_model: getScoringModel(),
   evaluator_provider: getScoringProvider(),
-  evaluation_mode: "rubric + guardrails + human calibration",
+  evaluation_mode: "LLM judge + guardrails + learned calibration",
   calibration_note:
-    "Human labels are stored as calibration data for scorer tuning, evaluation regressions, and future rubric updates. They do not live-fine-tune the foundation model in real time.",
+    "Human labels train a lightweight calibration model on top of the evaluator when enough examples exist. Workspace-private labels stay inside the org. Global contribution uses anonymized scorer features plus labels, not raw transcript text. The foundation model is not live fine-tuned in real time.",
 };
 
 export function isManualCalibrationConversation(metadata?: Record<string, unknown> | null) {
   return Boolean(metadata?.manual_calibration);
+}
+
+export function getCalibrationShareScope(
+  metadata?: Record<string, unknown> | null
+): CalibrationShareScope {
+  return metadata?.calibration_share_scope === "global_anonymous"
+    ? "global_anonymous"
+    : "workspace_private";
+}
+
+export function getCalibrationExampleKind(
+  metadata?: Record<string, unknown> | null
+): CalibrationExampleKind {
+  return metadata?.calibration_example_kind === "synthetic" ? "synthetic" : "real";
+}
+
+export function isGoldSetConversation(metadata?: Record<string, unknown> | null) {
+  return Boolean(metadata?.calibration_is_gold_set);
+}
+
+export function buildCalibrationMetadataPatch(input: {
+  existing?: Record<string, unknown> | null;
+  title?: string | null;
+  notes?: string | null;
+  share_scope?: CalibrationShareScope | null;
+  example_kind?: CalibrationExampleKind | null;
+  source?: "pasted_transcript" | "existing_conversation";
+}) {
+  return {
+    ...(input.existing || {}),
+    calibration_is_gold_set: true,
+    calibration_title: input.title ?? (input.existing?.calibration_title as string | null) ?? null,
+    calibration_notes: input.notes ?? (input.existing?.calibration_notes as string | null) ?? null,
+    calibration_share_scope:
+      input.share_scope || getCalibrationShareScope(input.existing || null),
+    calibration_example_kind:
+      input.example_kind || getCalibrationExampleKind(input.existing || null),
+    calibration_source:
+      input.source || ((input.existing?.calibration_source as string | null) ?? "existing_conversation"),
+    calibration_last_labeled_at: new Date().toISOString(),
+  };
 }
 
 const ROLE_PREFIXES: Array<{ prefix: string; role: Message["role"] }> = [

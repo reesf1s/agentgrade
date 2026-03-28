@@ -62,6 +62,7 @@ Your evaluation standard:
 - Internally evaluate the response against these seven rubric dimensions as well: instruction_following, factual_accuracy, groundedness, completeness, helpfulness, calibration, safety.
 - Use hard_fail=true only when there is a dangerous factual error, fabricated citation/source/quote, major instruction miss, severe hallucination presented as fact, or a policy/safety violation.
 - Distinguish unsupported but plausible content from clearly false content. Unsupported content primarily hurts groundedness and calibration unless stronger evidence shows factual error.
+- In the summary, lead with the best judgment about answer quality and user outcome first. Mention uncertainty or confidence briefly as a qualifier, not as the whole summary.
 
 ## Scoring Rubric (0.0 to 1.0 scale for all dimensions)
 
@@ -165,7 +166,7 @@ const SCORING_OUTPUT_SCHEMA = `{
     }
   ],
   "flags": ["<descriptive flag like 'fabricated_pricing' or 'missed_escalation'>"],
-  "summary": "<2-3 sentence overall quality assessment>",
+  "summary": "<2-3 sentence overall quality assessment that starts with the actual judgment, not just uncertainty language>",
   "prompt_improvements": [
     {
       "issue": "<what went wrong or could be better>",

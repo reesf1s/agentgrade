@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
 import { GlassButton } from "@/components/ui/glass-button";
+import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { scoreColor, formatScore } from "@/lib/utils";
 import { ArrowLeft, AlertTriangle, Brain, BookOpen, User, Bot, Headphones } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +34,8 @@ export default function ConversationDetailPage() {
   const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [labelSetState, setLabelSetState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [labelNotes, setLabelNotes] = useState("");
+  const [labelShareScope, setLabelShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
+  const [labelExampleKind, setLabelExampleKind] = useState<"real" | "synthetic">("real");
   const [trainingLabels, setTrainingLabels] = useState({
     overall: "",
     accuracy: "",
@@ -120,11 +123,11 @@ export default function ConversationDetailPage() {
       : "score-critical";
 
   const roleConfig = {
-    customer: { icon: User, label: "Customer", bg: "bg-[rgba(0,0,0,0.02)]", align: "mr-auto" },
-    agent: { icon: Bot, label: "AI Agent", bg: "bg-[rgba(0,0,0,0.04)]", align: "ml-auto" },
-    human_agent: { icon: Headphones, label: "Human Agent", bg: "bg-[rgba(59,130,246,0.05)]", align: "ml-auto" },
-    tool: { icon: Bot, label: "Tool", bg: "bg-[rgba(16,185,129,0.06)]", align: "mx-auto" },
-    system: { icon: Bot, label: "System", bg: "bg-[rgba(0,0,0,0.02)]", align: "mx-auto" },
+    customer: { icon: User, label: "Customer", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mr-auto" },
+    agent: { icon: Bot, label: "AI Agent", bg: "bg-[var(--surface)] border border-[var(--border-subtle)]", align: "ml-auto" },
+    human_agent: { icon: Headphones, label: "Human Agent", bg: "bg-[var(--panel-subtle)] border border-[var(--border-subtle)]", align: "ml-auto" },
+    tool: { icon: Bot, label: "Tool", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mx-auto" },
+    system: { icon: Bot, label: "System", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mx-auto" },
   };
 
   async function submitOverride() {
@@ -167,6 +170,8 @@ export default function ConversationDetailPage() {
           conversation_id: conv.id,
           labels: trainingLabels,
           notes: labelNotes || null,
+          share_scope: labelShareScope,
+          example_kind: labelExampleKind,
         }),
       });
 
@@ -261,7 +266,7 @@ export default function ConversationDetailPage() {
               </div>
               <div className="space-y-4">
                 {qs.prompt_improvements.map((imp, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                  <div key={i} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-medium text-[var(--text-primary)]">{imp.issue}</p>
                       <SeverityBadge severity={imp.priority === "high" ? "high" : imp.priority === "medium" ? "medium" : "low"} />
@@ -269,7 +274,7 @@ export default function ConversationDetailPage() {
                     <p className="text-xs text-[var(--text-secondary)] mb-3">
                       <strong>Current behavior:</strong> {imp.current_behavior}
                     </p>
-                    <div className="p-3 rounded-lg bg-[rgba(0,0,0,0.03)] font-mono text-xs text-[var(--text-primary)] leading-relaxed">
+                    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 font-mono text-xs text-[var(--text-primary)] leading-relaxed">
                       {imp.recommended_prompt_change}
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mt-2">Expected impact: {imp.expected_impact}</p>
@@ -288,7 +293,7 @@ export default function ConversationDetailPage() {
               </div>
               <div className="space-y-3">
                 {qs.knowledge_gaps.map((gap, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
+                  <div key={i} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                     <p className="text-sm font-medium text-[var(--text-primary)] capitalize mb-1">{gap.topic}</p>
                     <p className="text-xs text-[var(--text-secondary)] mb-2">{gap.description}</p>
                     <p className="text-xs text-[var(--text-muted)]">Suggested content: {gap.suggested_content}</p>
@@ -321,7 +326,7 @@ export default function ConversationDetailPage() {
                           {formatScore(score || 0)}%
                         </span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
+                      <div className="h-1.5 rounded-full bg-[var(--surface)]">
                         <div
                           className={`h-full rounded-full transition-all ${
                             (score || 0) >= 0.7 ? "bg-score-good" : (score || 0) >= 0.4 ? "bg-score-warning" : "bg-score-critical"
@@ -338,10 +343,18 @@ export default function ConversationDetailPage() {
                 <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
                 {confidenceLevel ? (
-                  <div className="mt-4 rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+                  <div className="mt-4 rounded-xl bg-[var(--surface)] p-3">
                     <p className="text-xs text-[var(--text-muted)]">Confidence</p>
                     <p className={`mt-1 text-sm font-medium capitalize ${confidenceTone}`}>
                       {confidenceLevel}
+                    </p>
+                  </div>
+                ) : null}
+                {qs.structural_metrics?.learned_calibration?.applied ? (
+                  <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3">
+                    <p className="text-xs text-[var(--text-muted)]">Calibration model</p>
+                    <p className="mt-1 text-sm text-[var(--text-primary)]">
+                      Learned calibration adjusted this score using human labels.
                     </p>
                   </div>
                 ) : null}
@@ -352,7 +365,7 @@ export default function ConversationDetailPage() {
                   <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Flags</h2>
                   <div className="flex flex-wrap gap-2">
                     {qs.flags.map((flag, i) => (
-                      <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-[rgba(239,68,68,0.08)] text-[#EF4444] font-medium">
+                      <span key={i} className="score-bg-critical text-xs px-2.5 py-1 rounded-full score-critical font-medium">
                         {flag}
                       </span>
                     ))}
@@ -372,7 +385,7 @@ export default function ConversationDetailPage() {
                         fabricated: "score-critical",
                       }[ca.verdict];
                       return (
-                        <div key={i} className="p-2.5 rounded-lg bg-[rgba(0,0,0,0.02)]">
+                        <div key={i} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-2.5">
                           <p className="text-xs text-[var(--text-primary)] mb-1">{ca.claim}</p>
                           <span className={`text-xs font-medium capitalize ${verdictColor}`}>{ca.verdict}</span>
                         </div>
@@ -387,8 +400,6 @@ export default function ConversationDetailPage() {
               <p className="text-sm text-[var(--text-muted)]">
                 {conv.score_status === "waiting_for_completion"
                   ? "Waiting for the conversation to finish before scoring..."
-                  : conv.score_status === "waiting_for_quiet_period"
-                    ? "Waiting for 10 minutes of inactivity before scoring..."
                   : conv.score_status === "refreshing"
                     ? "Refreshing assessment..."
                     : "Scoring in progress..."}
@@ -453,10 +464,30 @@ export default function ConversationDetailPage() {
           </GlassCard>
 
           <GlassCard className="p-5">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Training Label Set</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Gold-Set Label</h2>
             <p className="text-xs text-[var(--text-muted)] mb-4">
-              Save a full human label set for this conversation. These labels are used for scorer calibration and evaluation, not instant live fine-tuning.
+              Save a full human label set for this conversation. AgentGrade uses these labels to evaluate scoring regressions and train a lightweight calibration model on top of the base evaluator.
             </p>
+            <div className="grid grid-cols-2 gap-3">
+              <GlassSelect
+                label="Example type"
+                value={labelExampleKind}
+                onChange={(event) => setLabelExampleKind(event.target.value as "real" | "synthetic")}
+                options={[
+                  { value: "real", label: "Real customer conversation" },
+                  { value: "synthetic", label: "Synthetic or fake test case" },
+                ]}
+              />
+              <GlassSelect
+                label="Training scope"
+                value={labelShareScope}
+                onChange={(event) => setLabelShareScope(event.target.value as "workspace_private" | "global_anonymous")}
+                options={[
+                  { value: "workspace_private", label: "Private to this workspace" },
+                  { value: "global_anonymous", label: "Contribute anonymized features globally" },
+                ]}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {[
                 ["overall", "Overall"],
@@ -486,17 +517,38 @@ export default function ConversationDetailPage() {
                 </div>
               ))}
             </div>
-            <textarea
+            <GlassButton
+              size="sm"
+              variant="ghost"
+              className="mt-3 w-full"
+              onClick={() =>
+                setTrainingLabels({
+                  overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
+                  accuracy: qs?.accuracy_score !== undefined ? String(Math.round(qs.accuracy_score * 100)) : "",
+                  hallucination: qs?.hallucination_score !== undefined ? String(Math.round(qs.hallucination_score * 100)) : "",
+                  resolution: qs?.resolution_score !== undefined ? String(Math.round(qs.resolution_score * 100)) : "",
+                  escalation: qs?.escalation_score !== undefined ? String(Math.round(qs.escalation_score * 100)) : "",
+                  tone: qs?.tone_score !== undefined ? String(Math.round(qs.tone_score * 100)) : "",
+                  sentiment: qs?.sentiment_score !== undefined ? String(Math.round(qs.sentiment_score * 100)) : "",
+                })
+              }
+            >
+              Start from current scores
+            </GlassButton>
+            <GlassTextarea
               value={labelNotes}
               onChange={(event) => setLabelNotes(event.target.value)}
-              className="glass-input mt-3 min-h-[96px] w-full px-3 py-2 text-sm"
+              className="mt-3 min-h-[96px]"
               placeholder="Why are these labels correct? Capture groundedness, user intent, escalation quality, and any notes for calibration."
             />
+            <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
+              Global sharing uses anonymized score features and your labels, not raw transcript text.
+            </p>
             <GlassButton size="sm" className="mt-3 w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
-              {labelSetState === "saving" ? "Saving labels..." : "Save training labels"}
+              {labelSetState === "saving" ? "Saving labels..." : "Save gold-set labels"}
             </GlassButton>
             {labelSetState === "saved" ? (
-              <p className="mt-3 text-xs text-score-good">Training labels saved.</p>
+              <p className="mt-3 text-xs text-score-good">Gold-set labels saved.</p>
             ) : null}
             {labelSetState === "error" ? (
               <p className="mt-3 text-xs text-score-critical">Failed to save training labels.</p>

@@ -4,8 +4,19 @@ import path from "node:path";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
-import { CALIBRATION_DIMENSIONS, normalizeLabelScores, parseTranscriptText, SCORER_MODEL_INFO } from "@/lib/calibration";
+import {
+  buildCalibrationMetadataPatch,
+  CALIBRATION_DIMENSIONS,
+  CALIBRATION_EXAMPLE_KINDS,
+  CALIBRATION_SHARE_SCOPES,
+  getCalibrationExampleKind,
+  getCalibrationShareScope,
+  normalizeLabelScores,
+  parseTranscriptText,
+  SCORER_MODEL_INFO,
+} from "@/lib/calibration";
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
+import { getLearnedCalibrationSummary } from "@/lib/scoring/calibration-model";
 
 function originalScoreForDimension(
   qualityScore: Record<string, unknown>,
@@ -54,7 +65,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [manualConversationsRes, overridesRes] = await Promise.all([
+    const [manualConversationsRes, overridesRes, learnedSummary] = await Promise.all([
       supabaseAdmin
         .from("conversations")
         .select("id, customer_identifier, created_at, metadata")
@@ -66,6 +77,7 @@ export async function GET() {
         .select("id, quality_score_id, dimension, override_score, reason, overridden_by, created_at")
         .order("created_at", { ascending: false })
         .limit(200),
+      getLearnedCalibrationSummary(ctx.workspace.id),
     ]);
 
     const manualConversations = (manualConversationsRes.data || []).filter((conversation) =>
@@ -110,10 +122,18 @@ export async function GET() {
           reason: override.reason,
           created_at: override.created_at,
           source: (conversation.metadata as Record<string, unknown> | null)?.manual_calibration ? "pasted" : "existing",
+          share_scope: getCalibrationShareScope((conversation.metadata as Record<string, unknown> | null) || null),
+          example_kind: getCalibrationExampleKind((conversation.metadata as Record<string, unknown> | null) || null),
         };
       })
       .filter(Boolean)
       .slice(0, 20);
+
+    const uniqueLabeledConversationCount = new Set(
+      (overridesRes.data || [])
+        .map((override) => qualityScoreMap.get(override.quality_score_id))
+        .filter(Boolean)
+    ).size;
 
     let repoEvalCaseCount = 0;
     try {
@@ -128,9 +148,12 @@ export async function GET() {
         ...SCORER_MODEL_INFO,
         scoring_model_version: SCORING_MODEL_VERSION,
         supported_dimensions: CALIBRATION_DIMENSIONS,
+        share_scope_options: CALIBRATION_SHARE_SCOPES,
+        example_kind_options: CALIBRATION_EXAMPLE_KINDS,
         repo_eval_cases: repoEvalCaseCount,
-        labeled_examples: recentLabels.length,
+        labeled_examples: uniqueLabeledConversationCount,
         manual_calibration_conversations: manualConversations.length,
+        learned_calibration: learnedSummary,
       },
       recent_labels: recentLabels,
       manual_examples: manualConversations.slice(0, 10),
@@ -155,11 +178,13 @@ export async function POST(request: NextRequest) {
     }
 
     let conversationId = body.conversation_id as string | null;
+    const shareScope = body.share_scope === "global_anonymous" ? "global_anonymous" : "workspace_private";
+    const exampleKind = body.example_kind === "synthetic" ? "synthetic" : "real";
 
     if (conversationId) {
       const { data: conversation } = await supabaseAdmin
         .from("conversations")
-        .select("id")
+        .select("id, metadata")
         .eq("id", conversationId)
         .eq("workspace_id", ctx.workspace.id)
         .maybeSingle();
@@ -167,6 +192,21 @@ export async function POST(request: NextRequest) {
       if (!conversation) {
         return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
       }
+
+      await supabaseAdmin
+        .from("conversations")
+        .update({
+          metadata: buildCalibrationMetadataPatch({
+            existing: (conversation.metadata as Record<string, unknown> | null) || null,
+            notes: body.notes || body.reason || null,
+            title: body.title || null,
+            share_scope: shareScope,
+            example_kind: exampleKind,
+            source: "existing_conversation",
+          }),
+        })
+        .eq("id", conversationId)
+        .eq("workspace_id", ctx.workspace.id);
     } else {
       const transcript = String(body.transcript || "").trim();
       const messages = parseTranscriptText(transcript);
@@ -190,9 +230,13 @@ export async function POST(request: NextRequest) {
           ended_at: messages[messages.length - 1]?.timestamp,
           metadata: {
             manual_calibration: true,
-            calibration_title: body.title || null,
-            calibration_notes: body.notes || null,
-            calibration_source: "pasted_transcript",
+            ...buildCalibrationMetadataPatch({
+              title: body.title || null,
+              notes: body.notes || null,
+              share_scope: shareScope,
+              example_kind: exampleKind,
+              source: "pasted_transcript",
+            }),
           },
         })
         .select("id")

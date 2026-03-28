@@ -105,6 +105,13 @@ export interface StructuralMetrics {
   evaluation_rubric?: Record<string, { score: number; rationale: string }>;
   overall_decision?: "pass" | "borderline" | "fail";
   hard_fail?: boolean;
+  learned_calibration?: {
+    applied?: boolean;
+    workspace_model_applied?: boolean;
+    global_model_applied?: boolean;
+    workspace_private_labels?: number;
+    global_shared_labels?: number;
+  };
 }
 
 export interface QualityScore {

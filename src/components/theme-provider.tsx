@@ -20,6 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTheme(stored);
       document.documentElement.classList.toggle("dark", stored === "dark");
       document.documentElement.dataset.theme = stored;
+      document.documentElement.style.colorScheme = stored;
     } else {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
@@ -27,6 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTheme(systemTheme);
       document.documentElement.classList.toggle("dark", systemTheme === "dark");
       document.documentElement.dataset.theme = systemTheme;
+      document.documentElement.style.colorScheme = systemTheme;
     }
   }, []);
 
@@ -36,6 +38,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("agentgrade-theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
     document.documentElement.dataset.theme = next;
+    document.documentElement.style.colorScheme = next;
   };
 
   return (

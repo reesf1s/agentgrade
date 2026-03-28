@@ -4,23 +4,24 @@
 
 /* ─── Light Theme (default) ─────────────────────────────────────── */
 :root {
-  --background: #f6f7f9;
+  --background: #f3f5f8;
   --foreground: #111827;
-  --page-shell: rgba(255, 255, 255, 0.62);
+  --page-shell: rgba(255, 255, 255, 0.78);
   --page-shell-border: rgba(15, 23, 42, 0.06);
-  --panel: rgba(255, 255, 255, 0.92);
-  --panel-subtle: rgba(255, 255, 255, 0.76);
-  --surface: rgba(17, 24, 39, 0.04);
-  --surface-strong: rgba(17, 24, 39, 0.08);
+  --panel: rgba(255, 255, 255, 0.96);
+  --panel-subtle: rgba(255, 255, 255, 0.88);
+  --surface: rgba(15, 23, 42, 0.045);
+  --surface-strong: rgba(15, 23, 42, 0.08);
+  --surface-soft: rgba(15, 23, 42, 0.03);
   --border-subtle: rgba(17, 24, 39, 0.08);
   --border-strong: rgba(17, 24, 39, 0.12);
-  --glass-bg: rgba(255, 255, 255, 0.84);
-  --glass-bg-hover: rgba(255, 255, 255, 0.96);
+  --glass-bg: rgba(255, 255, 255, 0.94);
+  --glass-bg-hover: rgba(255, 255, 255, 0.98);
   --glass-bg-elevated: rgba(255, 255, 255, 0.98);
   --glass-border: rgba(17, 24, 39, 0.08);
   --glass-border-hover: rgba(17, 24, 39, 0.14);
-  --glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-  --glass-shadow-elevated: 0 16px 38px rgba(15, 23, 42, 0.08);
+  --glass-shadow: 0 12px 34px rgba(15, 23, 42, 0.05);
+  --glass-shadow-elevated: 0 18px 42px rgba(15, 23, 42, 0.08);
   --text-primary: #0f172a;
   --text-secondary: #4b5563;
   --text-muted: #6b7280;
@@ -29,28 +30,30 @@
   --btn-primary-bg: #111827;
   --btn-primary-hover: #0f172a;
   --btn-primary-text: #ffffff;
+  --focus-ring: rgba(59, 130, 246, 0.14);
 }
 
 /* ─── Dark Theme ────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
-  --background: #0a0d13;
+  --background: #0b1017;
   --foreground: rgba(245, 248, 255, 0.96);
-  --page-shell: rgba(12, 17, 26, 0.72);
+  --page-shell: rgba(10, 14, 21, 0.92);
   --page-shell-border: rgba(148, 163, 184, 0.08);
-  --panel: rgba(14, 19, 29, 0.92);
-  --panel-subtle: rgba(16, 22, 34, 0.82);
-  --surface: rgba(148, 163, 184, 0.08);
+  --panel: rgba(15, 20, 29, 0.98);
+  --panel-subtle: rgba(17, 23, 34, 0.9);
+  --surface: rgba(148, 163, 184, 0.09);
   --surface-strong: rgba(148, 163, 184, 0.14);
+  --surface-soft: rgba(148, 163, 184, 0.05);
   --border-subtle: rgba(148, 163, 184, 0.14);
   --border-strong: rgba(226, 232, 240, 0.16);
-  --glass-bg: rgba(15, 20, 31, 0.86);
-  --glass-bg-hover: rgba(20, 27, 40, 0.94);
-  --glass-bg-elevated: rgba(18, 24, 36, 0.98);
+  --glass-bg: rgba(14, 19, 28, 0.96);
+  --glass-bg-hover: rgba(18, 24, 35, 0.98);
+  --glass-bg-elevated: rgba(16, 22, 33, 0.99);
   --glass-border: rgba(148, 163, 184, 0.14);
-  --glass-border-hover: rgba(191, 219, 254, 0.24);
-  --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
-  --glass-shadow-elevated: 0 24px 72px rgba(0, 0, 0, 0.44);
+  --glass-border-hover: rgba(148, 163, 184, 0.22);
+  --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+  --glass-shadow-elevated: 0 22px 60px rgba(0, 0, 0, 0.34);
   --text-primary: rgba(245, 248, 255, 0.96);
   --text-secondary: rgba(214, 219, 229, 0.84);
   --text-muted: rgba(154, 163, 177, 0.78);
@@ -59,31 +62,33 @@
   --btn-primary-bg: #e2e8f0;
   --btn-primary-hover: #ffffff;
   --btn-primary-text: #111827;
+  --focus-ring: rgba(125, 211, 252, 0.14);
 }
 
 body {
   color: var(--foreground);
   background:
-    radial-gradient(circle at top left, rgba(255,255,255,0.7), transparent 22%),
-    linear-gradient(180deg, #f8f9fb 0%, #f3f4f6 100%);
+    radial-gradient(circle at top left, rgba(255,255,255,0.82), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(148, 163, 184, 0.08), transparent 22%),
+    linear-gradient(180deg, #f7f8fb 0%, #eef2f6 100%);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .dark body {
   background:
-    radial-gradient(circle at top left, rgba(125, 211, 252, 0.08), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.08), transparent 18%),
-    linear-gradient(180deg, #09101a 0%, #0b0d13 48%, #111827 100%);
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.05), transparent 22%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.04), transparent 16%),
+    linear-gradient(180deg, #0a0f16 0%, #0c1118 100%);
 }
 
 /* ─── Glass Components ──────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   box-shadow: var(--glass-shadow);
@@ -97,8 +102,8 @@ body {
 
 .glass-elevated {
   background: var(--glass-bg-elevated);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   box-shadow: var(--glass-shadow-elevated);
@@ -106,8 +111,8 @@ body {
 
 .glass-static {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   box-shadow: var(--glass-shadow);
@@ -115,8 +120,8 @@ body {
 
 .glass-sidebar {
   background: var(--panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--glass-shadow);
 }
@@ -126,6 +131,10 @@ body {
   border: 1px solid var(--page-shell-border);
   border-radius: 2rem;
   box-shadow: var(--glass-shadow);
+}
+
+html {
+  background: var(--background);
 }
 
 .dark .glass-sidebar {
@@ -148,7 +157,7 @@ body {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(128, 128, 128, 0.08);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .glass-input::placeholder {

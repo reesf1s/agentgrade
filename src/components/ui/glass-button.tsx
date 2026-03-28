@@ -24,7 +24,7 @@ export function GlassButton({
     default: "glass-button",
     primary: "glass-button glass-button-primary",
     ghost:
-      "bg-transparent border border-transparent hover:bg-[rgba(0,0,0,0.03)] rounded-xl px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer",
+      "bg-transparent border border-transparent hover:bg-[var(--surface)] rounded-xl px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer",
   };
 
   return (

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
-import { GlassInput } from "@/components/ui/glass-input";
+import { GlassInput, GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { Plug, Bell, Users, CreditCard, BookOpen, Trash2, Copy, Check, RefreshCw, Brain } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,13 +53,36 @@ interface BillingData {
 interface CalibrationInfo {
   scorer: {
     evaluator_model: string;
+    evaluator_provider: string;
     evaluation_mode: string;
     calibration_note: string;
     scoring_model_version: string;
     supported_dimensions: Array<{ key: string; label: string }>;
+    share_scope_options: Array<{ key: string; label: string; description: string }>;
+    example_kind_options: Array<{ key: string; label: string; description: string }>;
     repo_eval_cases: number;
     labeled_examples: number;
     manual_calibration_conversations: number;
+    learned_calibration: {
+      mode: "inactive" | "active";
+      training_mode: "llm_judge_plus_calibration_model";
+      workspace_private_labels: number;
+      global_shared_labels: number;
+      workspace_model: {
+        active: boolean;
+        label_count: number;
+        trained_dimensions: string[];
+        mean_abs_error?: number;
+        last_label_at?: string;
+      };
+      global_model: {
+        active: boolean;
+        label_count: number;
+        trained_dimensions: string[];
+        mean_abs_error?: number;
+        last_label_at?: string;
+      };
+    };
   };
   recent_labels: Array<{
     id: string;
@@ -70,6 +93,8 @@ interface CalibrationInfo {
     reason?: string;
     created_at: string;
     source: "pasted" | "existing";
+    share_scope: "workspace_private" | "global_anonymous";
+    example_kind: "real" | "synthetic";
   }>;
 }
 
@@ -175,7 +200,7 @@ function ConnectionsTab() {
         ) : (
           <div className="space-y-3 mb-6">
             {connections.map((conn) => (
-              <div key={conn.id} className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)]">
+              <div key={conn.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)]">{conn.name}</p>
@@ -269,7 +294,7 @@ function ConnectionsTab() {
                           Copy env vars
                         </GlassButton>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
                         {setupByConnection[conn.id].env_example}
                       </pre>
                       <div className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
@@ -283,7 +308,7 @@ function ConnectionsTab() {
 
                     <div>
                       <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Quick test</p>
-                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
 {`curl -X POST ${setupByConnection[conn.id].webhook_url} \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${setupByConnection[conn.id].api_key}" \\
@@ -306,7 +331,7 @@ function ConnectionsTab() {
                           Copy snippet
                         </GlassButton>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl bg-[rgba(0,0,0,0.03)] p-3 text-xs text-[var(--text-secondary)]">
+                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
                         {setupByConnection[conn.id].snippet}
                       </pre>
                     </div>
@@ -327,7 +352,7 @@ function ConnectionsTab() {
           ].map((option) => (
             <button
               key={option.platform}
-              className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] hover:bg-[rgba(0,0,0,0.04)] transition-colors text-center"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-center transition-colors hover:bg-[var(--surface-hover)]"
               onClick={() => {
                 window.location.href = `/onboarding?platform=${option.platform}`;
               }}
@@ -345,7 +370,7 @@ function ConnectionsTab() {
             onClick={() => {
               window.location.href = "/onboarding?platform=csv";
             }}
-            className="w-full border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors"
+            className="w-full rounded-xl border-2 border-dashed border-[var(--border-subtle)] p-8 text-center transition-colors hover:border-[var(--border-strong)]"
           >
             <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
             <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
@@ -511,7 +536,7 @@ function TeamTab() {
       ) : (
         <div className="space-y-3 mb-6">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+            <div key={m.id} className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   {m.email || m.clerk_user_id}
@@ -667,7 +692,7 @@ function KnowledgeTab() {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="mb-4 w-full border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors"
+        className="mb-4 w-full rounded-xl border-2 border-dashed border-[var(--border-subtle)] p-8 text-center transition-colors hover:border-[var(--border-strong)]"
       >
         <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
         <p className="text-sm text-[var(--text-secondary)]">
@@ -716,7 +741,7 @@ function KnowledgeTab() {
       ) : (
         <div className="space-y-2">
           {sources.map((s) => (
-            <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
+            <div key={s.id} className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
               <div>
                 <p className="text-sm text-[var(--text-primary)]">{s.source}</p>
                 <p className="text-xs text-[var(--text-muted)]">
@@ -821,7 +846,7 @@ function BillingTab() {
             </div>
           )}
 
-          <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] mb-6">
+          <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)] capitalize">{billing.plan} Plan</p>
@@ -841,7 +866,7 @@ function BillingTab() {
                     {(billing.usage ?? 0).toLocaleString()} / {billing.limit.toLocaleString()}
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]">
+                <div className="h-1.5 rounded-full bg-[var(--surface)]">
                   <div
                     className="h-full rounded-full bg-[var(--text-primary)]"
                     style={{ width: `${usagePct}%` }}
@@ -869,6 +894,8 @@ function CalibrationTab() {
   const [title, setTitle] = useState("");
   const [transcript, setTranscript] = useState("");
   const [notes, setNotes] = useState("");
+  const [shareScope, setShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
+  const [exampleKind, setExampleKind] = useState<"real" | "synthetic">("synthetic");
   const [labels, setLabels] = useState<Record<string, string>>({
     overall: "",
     accuracy: "",
@@ -908,6 +935,8 @@ function CalibrationTab() {
           transcript,
           notes,
           labels,
+          share_scope: shareScope,
+          example_kind: exampleKind,
         }),
       });
 
@@ -920,6 +949,8 @@ function CalibrationTab() {
       setTitle("");
       setTranscript("");
       setNotes("");
+      setShareScope("workspace_private");
+      setExampleKind("synthetic");
       setLabels({
         overall: "",
         accuracy: "",
@@ -949,42 +980,105 @@ function CalibrationTab() {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Scorer Model Info</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[var(--text-muted)]">Evaluator model</p>
-            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.evaluator_model}</p>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">Scorer Model Info</h2>
+            <p className="text-xs leading-5 text-[var(--text-secondary)]">
+              AgentGrade now uses an LLM judge plus a learned calibration layer trained from human labels. The base evaluator is still API-backed, but score correction can become truly learned once enough labels exist.
+            </p>
           </div>
-          <div>
-            <p className="text-[var(--text-muted)]">Scoring model version</p>
-            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.scoring_model_version}</p>
+          <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+            {data?.scorer.learned_calibration.mode === "active" ? "Learned calibration active" : "Collecting labels"}
           </div>
-          <div>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-[var(--text-muted)]">Evaluator</p>
+            <p className="mt-1 font-medium text-[var(--text-primary)]">
+              {data?.scorer.evaluator_provider} / {data?.scorer.evaluator_model}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-[var(--text-muted)]">Scoring version</p>
+            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.scoring_model_version}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
             <p className="text-[var(--text-muted)]">Repo eval cases</p>
-            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.repo_eval_cases}</p>
+            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.repo_eval_cases}</p>
           </div>
-          <div>
-            <p className="text-[var(--text-muted)]">Human labels captured</p>
-            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.labeled_examples}</p>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-[var(--text-muted)]">Human labels</p>
+            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.labeled_examples}</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Workspace Model</p>
+            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+              {data?.scorer.learned_calibration.workspace_model.active ? "Active" : "Not enough labels yet"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              {data?.scorer.learned_calibration.workspace_private_labels} private labels across this workspace
+            </p>
+            {data?.scorer.learned_calibration.workspace_model.mean_abs_error !== undefined ? (
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Holdout MAE: {(data.scorer.learned_calibration.workspace_model.mean_abs_error * 100).toFixed(1)} points
+              </p>
+            ) : null}
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Global Anonymized Model</p>
+            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+              {data?.scorer.learned_calibration.global_model.active ? "Active" : "Waiting for shared labels"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              {data?.scorer.learned_calibration.global_shared_labels} shared anonymized labels from opted-in workspaces
+            </p>
+            {data?.scorer.learned_calibration.global_model.mean_abs_error !== undefined ? (
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Holdout MAE: {(data.scorer.learned_calibration.global_model.mean_abs_error * 100).toFixed(1)} points
+              </p>
+            ) : null}
           </div>
         </div>
         <p className="mt-4 text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.calibration_note}</p>
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Paste and Label a Conversation</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Paste and Label a Gold-Set Conversation</h2>
         <p className="mb-4 text-xs text-[var(--text-muted)]">
           Paste a transcript with lines like <span className="font-mono">Customer:</span>, <span className="font-mono">AI Agent:</span>, <span className="font-mono">Human Agent:</span>, or <span className="font-mono">Tool:</span>.
         </p>
         <GlassInput label="Example title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Crestline health trend example" />
-        <div className="mt-3">
-          <textarea
-            value={transcript}
-            onChange={(event) => setTranscript(event.target.value)}
-            className="glass-input min-h-[220px] w-full px-3 py-2 text-sm"
-            placeholder={"Customer: What changed and when?\nAI Agent: Here's the timeline...\nTool: get_deal_health(...) => ..."}
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <GlassSelect
+            label="Example type"
+            value={exampleKind}
+            onChange={(event) => setExampleKind(event.target.value as "real" | "synthetic")}
+            options={(data?.scorer.example_kind_options || []).map((option) => ({
+              value: option.key,
+              label: option.label,
+            }))}
+          />
+          <GlassSelect
+            label="Training scope"
+            value={shareScope}
+            onChange={(event) => setShareScope(event.target.value as "workspace_private" | "global_anonymous")}
+            options={(data?.scorer.share_scope_options || []).map((option) => ({
+              value: option.key,
+              label: option.label,
+            }))}
           />
         </div>
+        <GlassTextarea
+          className="mt-3 min-h-[220px]"
+          value={transcript}
+          onChange={(event) => setTranscript(event.target.value)}
+          placeholder={"Customer: What changed and when?\nAI Agent: Here's the timeline...\nTool: get_deal_health(...) => ..."}
+        />
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          Global sharing uses anonymized score features plus your labels. AgentGrade does not export raw transcript text from this workspace into the shared calibration model.
+        </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           {data?.scorer.supported_dimensions.map((dimension) => (
             <div key={dimension.key}>
@@ -1006,16 +1100,16 @@ function CalibrationTab() {
             </div>
           ))}
         </div>
-        <textarea
+        <GlassTextarea
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
-          className="glass-input mt-3 min-h-[96px] w-full px-3 py-2 text-sm"
+          className="mt-3 min-h-[96px]"
           placeholder="Explain the correct judgment. Capture grounding, user intent, escalation quality, and any org policy context."
         />
         <GlassButton className="mt-3" onClick={submitCalibrationExample} disabled={saving}>
-          {saving ? "Saving..." : "Save calibration example"}
+          {saving ? "Saving..." : "Save gold-set example"}
         </GlassButton>
-        {state === "saved" ? <p className="mt-3 text-xs text-score-good">Calibration example saved.</p> : null}
+        {state === "saved" ? <p className="mt-3 text-xs text-score-good">Gold-set example saved.</p> : null}
         {state === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save calibration example.</p> : null}
       </GlassCard>
 
@@ -1023,10 +1117,16 @@ function CalibrationTab() {
         <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent Human Labels</h2>
         <div className="space-y-3">
           {data?.recent_labels?.length ? data.recent_labels.map((label) => (
-            <div key={label.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+            <div key={label.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-[var(--text-primary)]">{label.customer_identifier || label.conversation_id}</p>
-                <span className="text-xs capitalize text-[var(--text-muted)]">{label.source}</span>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-[var(--text-muted)]">{label.source}</span>
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-[var(--text-muted)]">{label.example_kind}</span>
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-[var(--text-muted)]">
+                    {label.share_scope === "global_anonymous" ? "shared" : "private"}
+                  </span>
+                </div>
               </div>
               <p className="mt-1 text-xs text-[var(--text-secondary)]">
                 {label.dimension} · {(label.override_score * 100).toFixed(0)}%
@@ -1073,8 +1173,8 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left ${
                   activeTab === tab.id
-                    ? "bg-[rgba(0,0,0,0.05)] text-[var(--text-primary)] font-medium"
-                    : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.02)]"
+                    ? "bg-[var(--surface)] text-[var(--text-primary)] font-medium"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)]"
                 }`}
               >
                 <Icon className="w-4 h-4" />

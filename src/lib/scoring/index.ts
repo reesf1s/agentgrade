@@ -5,7 +5,7 @@
  *
  * Orchestrates the 3-pass evaluation pipeline:
  *   Pass 1: Structural Analysis  — local, zero API calls
- *   Pass 2: Claude Evaluation    — 1 Claude API call, all dimensions at once
+ *   Pass 2: LLM Evaluation       — 1 model API call, all dimensions at once
  *   Pass 3: Pattern Detection    — local, runs after scoring is persisted
  *
  * Also handles:
@@ -25,6 +25,8 @@ import type { Message, QualityScore } from "@/lib/db/types";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { SCORING_MODEL_VERSION } from "./version";
 import { isManualCalibrationConversation } from "@/lib/calibration";
+import { applyLearnedCalibration } from "./calibration-model";
+import { buildDeterministicFallbackScore } from "./fallback";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false;
@@ -37,6 +39,18 @@ export { analyzeStructure } from "./structural-analyzer";
 export { evaluateWithClaude, scoreConversation as evaluateMessages } from "./claude-scorer";
 export { detectPatterns, aggregatePromptImprovements, aggregateKnowledgeGaps } from "./pattern-detector";
 
+function shouldUseDeterministicPass(messages: Message[]) {
+  const agentTurns = messages.filter((message) => message.role === "agent");
+  if (agentTurns.length === 0) return true;
+
+  const totalWords = agentTurns.reduce(
+    (count, message) => count + message.content.trim().split(/\s+/).filter(Boolean).length,
+    0
+  );
+
+  return messages.length <= 2 && totalWords <= 18;
+}
+
 // ─── Stateless Pipeline (backward compatible) ───────────────────────
 /**
  * Runs the scoring pipeline on an in-memory message array.
@@ -47,6 +61,7 @@ export { detectPatterns, aggregatePromptImprovements, aggregateKnowledgeGaps } f
 export interface ScorePipelineInput {
   messages: Message[];
   knowledgeBaseContext?: string[];
+  workspaceId?: string;
 }
 
 export async function runScoringPipeline(
@@ -57,27 +72,71 @@ export async function runScoringPipeline(
   const structuralMetrics = analyzeStructure(compactMessages);
 
   // Pass 2: Claude Evaluation (1 API call)
-  const claudeResult = await evaluateWithClaude({
-    messages: compactMessages,
-    structuralMetrics,
-    knowledgeBaseContext: input.knowledgeBaseContext,
-  });
+  const claudeResult = shouldUseDeterministicPass(compactMessages)
+    ? buildDeterministicFallbackScore(
+        {
+          messages: compactMessages,
+          structuralMetrics,
+          knowledgeBaseContext: input.knowledgeBaseContext,
+        },
+        "low_complexity_fast_path"
+      )
+    : await evaluateWithClaude({
+        messages: compactMessages,
+        structuralMetrics,
+        knowledgeBaseContext: input.knowledgeBaseContext,
+      });
 
-  return {
+  let adjustedScores = {
     overall_score: claudeResult.overall_score,
     accuracy_score: claudeResult.accuracy_score,
     hallucination_score: claudeResult.hallucination_score,
     resolution_score: claudeResult.resolution_score,
     tone_score: claudeResult.tone_score,
     sentiment_score: claudeResult.sentiment_score,
-    edge_case_score: claudeResult.edge_case_score,
     escalation_score: claudeResult.escalation_score,
+  };
+
+  let learnedCalibrationInfo: Record<string, unknown> | undefined;
+
+  if (input.workspaceId) {
+    const calibration = await applyLearnedCalibration(input.workspaceId, {
+      overall_score: claudeResult.overall_score,
+      accuracy_score: claudeResult.accuracy_score,
+      hallucination_score: claudeResult.hallucination_score,
+      resolution_score: claudeResult.resolution_score,
+      tone_score: claudeResult.tone_score,
+      sentiment_score: claudeResult.sentiment_score,
+      edge_case_score: claudeResult.edge_case_score,
+      escalation_score: claudeResult.escalation_score,
+      claim_analysis: claudeResult.claim_analysis,
+      flags: claudeResult.flags,
+      prompt_improvements: claudeResult.prompt_improvements,
+      knowledge_gaps: claudeResult.knowledge_gaps,
+      confidence_level: claudeResult.confidence_level,
+      structural_metrics: structuralMetrics,
+    });
+
+    adjustedScores = calibration.adjusted;
+    learnedCalibrationInfo = calibration.metadata;
+  }
+
+  return {
+    overall_score: adjustedScores.overall_score,
+    accuracy_score: adjustedScores.accuracy_score,
+    hallucination_score: adjustedScores.hallucination_score,
+    resolution_score: adjustedScores.resolution_score,
+    tone_score: adjustedScores.tone_score,
+    sentiment_score: adjustedScores.sentiment_score,
+    edge_case_score: claudeResult.edge_case_score,
+    escalation_score: adjustedScores.escalation_score,
     structural_metrics: {
       ...structuralMetrics,
       confidence_level: claudeResult.confidence_level,
       evaluation_rubric: claudeResult.rubric_scores,
       overall_decision: claudeResult.overall_decision,
       hard_fail: claudeResult.hard_fail,
+      ...(learnedCalibrationInfo ? { learned_calibration: learnedCalibrationInfo } : {}),
     },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
@@ -161,16 +220,25 @@ export async function scoreConversation(conversationId: string): Promise<{
     console.warn("[scoring] KB search failed, proceeding without context:", e);
   }
 
-  // ── Pass 2: Claude Evaluation (1 API call) ──────────────────────
+  // ── Pass 2: LLM Evaluation (1 API call) ─────────────────────────
   let claudeResult;
   let isPartial = false;
 
   try {
-    claudeResult = await evaluateWithClaude({
-      messages,
-      structuralMetrics,
-      knowledgeBaseContext,
-    });
+    claudeResult = shouldUseDeterministicPass(messages)
+      ? buildDeterministicFallbackScore(
+          {
+            messages,
+            structuralMetrics,
+            knowledgeBaseContext,
+          },
+          "low_complexity_fast_path"
+        )
+      : await evaluateWithClaude({
+          messages,
+          structuralMetrics,
+          knowledgeBaseContext,
+        });
   } catch (e) {
     console.error(`[scoring] Claude evaluation failed for ${conversationId}:`, e);
     isPartial = true;
@@ -220,6 +288,35 @@ export async function scoreConversation(conversationId: string): Promise<{
     scoring_model_version: SCORING_MODEL_VERSION,
   };
 
+  const calibration = await applyLearnedCalibration(workspaceId, {
+    overall_score: scoreData.overall_score,
+    accuracy_score: scoreData.accuracy_score,
+    hallucination_score: scoreData.hallucination_score,
+    resolution_score: scoreData.resolution_score,
+    tone_score: scoreData.tone_score,
+    sentiment_score: scoreData.sentiment_score,
+    edge_case_score: scoreData.edge_case_score,
+    escalation_score: scoreData.escalation_score,
+    claim_analysis: scoreData.claim_analysis,
+    flags: scoreData.flags,
+    prompt_improvements: scoreData.prompt_improvements,
+    knowledge_gaps: scoreData.knowledge_gaps,
+    confidence_level: scoreData.confidence_level,
+    structural_metrics: scoreData.structural_metrics,
+  });
+
+  scoreData.overall_score = calibration.adjusted.overall_score;
+  scoreData.accuracy_score = calibration.adjusted.accuracy_score;
+  scoreData.hallucination_score = calibration.adjusted.hallucination_score;
+  scoreData.resolution_score = calibration.adjusted.resolution_score;
+  scoreData.tone_score = calibration.adjusted.tone_score;
+  scoreData.sentiment_score = calibration.adjusted.sentiment_score;
+  scoreData.escalation_score = calibration.adjusted.escalation_score;
+  scoreData.structural_metrics = {
+    ...scoreData.structural_metrics,
+    learned_calibration: calibration.metadata,
+  };
+
   // ── Persist score to DB ─────────────────────────────────────────
   const scoredAt = new Date().toISOString();
   const fullRecord = {
@@ -228,15 +325,16 @@ export async function scoreConversation(conversationId: string): Promise<{
   };
   const legacyRecord = {
     conversation_id: conversationId,
-    overall_score: claudeResult.overall_score,
-    accuracy_score: claudeResult.accuracy_score,
-    hallucination_score: claudeResult.hallucination_score,
-    resolution_score: claudeResult.resolution_score,
-    tone_score: claudeResult.tone_score,
-    sentiment_score: claudeResult.sentiment_score,
+    overall_score: scoreData.overall_score,
+    accuracy_score: scoreData.accuracy_score,
+    hallucination_score: scoreData.hallucination_score,
+    resolution_score: scoreData.resolution_score,
+    tone_score: scoreData.tone_score,
+    sentiment_score: scoreData.sentiment_score,
     structural_metrics: {
       ...structuralMetrics,
       confidence_level: claudeResult.confidence_level,
+      learned_calibration: calibration.metadata,
     },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
