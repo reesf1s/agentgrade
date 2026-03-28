@@ -76,7 +76,8 @@ export default function ConversationsPage() {
   return (
     <div className="max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Conversations</h1>
+        <p className="enterprise-section-title">Conversations</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Review conversations</h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
           {loading ? "Loading..." : `${total} conversations`}
         </p>
@@ -88,7 +89,7 @@ export default function ConversationsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="Search by customer..."
+            placeholder="Search customer or conversation..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="glass-input w-full pl-10 pr-4 py-2.5 text-sm"
@@ -133,7 +134,7 @@ export default function ConversationsPage() {
         </select>
         <input
           type="text"
-          placeholder="Filter by flag..."
+          placeholder="Filter by issue flag..."
           value={flag}
           onChange={(e) => setFlag(e.target.value)}
           className="glass-input px-3 py-2 text-sm"

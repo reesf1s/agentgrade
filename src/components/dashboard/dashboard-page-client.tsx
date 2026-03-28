@@ -22,33 +22,35 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
   const escalationRate = data.stats.escalation_rate ?? 0;
   const trustState =
     avgScore >= 0.8 ? "Stable" : avgScore >= 0.65 ? "Watching" : "Needs intervention";
+  const priorityPattern = data.patterns[0];
+  const priorityAlert = data.alerts[0];
 
   return (
     <div className="max-w-6xl pb-10">
-      <div className="mb-8 rounded-[1.25rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div className="mb-8 rounded-[1.5rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--text-muted)]">
-              Operations overview
+            <p className="enterprise-section-title">
+              Overview
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-[var(--text-primary)]">
-              Dashboard
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
+              What needs attention now
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Monitor quality, trace grounding risk, and prioritize interventions across every monitored AI workflow.
+              Track conversation quality, spot repeated issues, and decide what to fix next without digging through every transcript.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 md:min-w-[34rem] sm:grid-cols-3">
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Quality state</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{trustState}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Conversations</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Scored recently</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{data.stats.conversations_scored ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Monitoring</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">System status</p>
               <p className="mt-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">Live</p>
             </div>
           </div>
@@ -57,20 +59,20 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
       <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Overall Quality"
+          label="Average quality"
           value={`${(avgScore * 100).toFixed(0)}%`}
-          subtitle="Weighted quality across scored conversations"
+          subtitle="Across recently scored conversations"
           scoreColor={scoreColor(avgScore)}
         />
         <StatCard
-          label="Conversations Scored"
+          label="Scored conversations"
           value={data.stats.conversations_scored ?? 0}
           subtitle="Rolling 30 day window"
         />
         <StatCard
-          label="Hallucination Rate"
+          label="Grounding risk"
           value={`${(hallucinationRate * 100).toFixed(1)}%`}
-          subtitle="Conversations with meaningful grounding risk"
+          subtitle="Conversations that need evidence review"
           scoreColor={
             hallucinationRate > 0.1
               ? "score-critical"
@@ -80,9 +82,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           }
         />
         <StatCard
-          label="Escalation Rate"
+          label="Escalation rate"
           value={`${(escalationRate * 100).toFixed(1)}%`}
-          subtitle="Cases handed to a human path"
+          subtitle="Conversations that needed a human"
           scoreColor={
             escalationRate > 0.15
               ? "score-critical"
@@ -93,19 +95,19 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
-        <GlassCard className="glass-highlight rounded-[1.1rem] p-6">
+      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <GlassCard className="rounded-[1.25rem] p-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                Trend line
+              <p className="enterprise-section-title">
+                Trend
               </p>
               <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
-                30-day Quality Trend
+                Quality over the last 30 days
               </h2>
             </div>
             <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs text-[var(--text-secondary)]">
-              Enterprise health view
+              Rolling workspace view
             </div>
           </div>
           {data.trend_data.length === 0 ? (
@@ -149,10 +151,38 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </GlassCard>
 
         <div className="space-y-4">
-          <GlassCard className="glass-highlight rounded-[1.1rem] p-5">
+          <GlassCard className="rounded-[1.25rem] p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="enterprise-section-title">Priority</p>
+                <h2 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Next thing to review</h2>
+              </div>
+              <Link href={priorityPattern ? "/patterns" : "/conversations"} className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                Open →
+              </Link>
+            </div>
+            {priorityPattern ? (
+              <div className="rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{priorityPattern.title}</p>
+                  <SeverityBadge severity={priorityPattern.severity} />
+                </div>
+                <p className="text-xs leading-5 text-[var(--text-secondary)]">{priorityPattern.description}</p>
+              </div>
+            ) : priorityAlert ? (
+              <div className="rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{priorityAlert.title}</p>
+                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{priorityAlert.description}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-muted)]">No urgent issue is standing out yet.</p>
+            )}
+          </GlassCard>
+
+          <GlassCard className="rounded-[1.25rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Alerts</h2>
+              <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent alerts</h2>
             </div>
             {data.alerts.length === 0 ? (
               <p className="text-xs text-[var(--text-muted)]">No active alerts.</p>
@@ -168,13 +198,13 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             )}
           </GlassCard>
 
-          <GlassCard className="glass-highlight rounded-[1.1rem] p-5">
+          <GlassCard className="rounded-[1.25rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
+              <h2 className="text-sm font-medium text-[var(--text-primary)]">Recurring issues</h2>
             </div>
             {data.patterns.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">Score conversations to detect recurring quality failures.</p>
+              <p className="text-xs text-[var(--text-muted)]">Score conversations to surface repeated issues automatically.</p>
             ) : (
               <div className="space-y-3">
                 {data.patterns.slice(0, 3).map((pattern) => (
@@ -192,11 +222,11 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <GlassCard className="glass-highlight mt-6 rounded-[1.1rem] p-6">
+      <GlassCard className="mt-6 rounded-[1.25rem] p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Conversations</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent conversations</h2>
           </div>
           <Link href="/conversations" className="text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
             View all →

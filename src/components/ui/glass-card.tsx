@@ -40,12 +40,12 @@ interface StatCardProps {
 export function StatCard({ label, value, subtitle, scoreColor }: StatCardProps) {
   return (
     <GlassCard className="p-5">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
         {label}
       </p>
       <p
         className={cn(
-          "text-3xl font-semibold tracking-tight",
+          "text-[2rem] font-semibold tracking-[-0.04em]",
           scoreColor || "text-[var(--text-primary)]"
         )}
       >

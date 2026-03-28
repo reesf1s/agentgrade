@@ -2,6 +2,12 @@ import { after, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { detectPatterns } from "@/lib/scoring";
+import type { FailurePattern } from "@/lib/db/types";
+import {
+  dedupeFailurePatterns,
+  getPatternFingerprint,
+  mergePatternGroup,
+} from "@/lib/patterns/normalize";
 
 /**
  * GET /api/patterns
@@ -28,6 +34,8 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch patterns" }, { status: 500 });
     }
 
+    const dedupedPatterns = dedupeFailurePatterns((patterns || []) as FailurePattern[]);
+
     if (!patterns || patterns.length === 0) {
       after(async () => {
         try {
@@ -38,7 +46,7 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ patterns: patterns || [] });
+    return NextResponse.json({ patterns: dedupedPatterns });
   } catch (error) {
     console.error("Patterns API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -90,6 +98,7 @@ async function detectAndStorePatterns(workspaceId: string) {
       };
       return {
         id: c.id,
+        platform: "workspace",
         created_at: c.created_at,
         quality_score: {
           overall_score: qs.overall_score,
@@ -105,20 +114,35 @@ async function detectAndStorePatterns(workspaceId: string) {
 
   if (scoredConversations.length < 3) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const newPatterns = detectPatterns(scoredConversations as any);
+  const newPatterns = dedupeFailurePatterns(
+    detectPatterns(
+      scoredConversations as unknown as Parameters<typeof detectPatterns>[0]
+    ).map((pattern) => ({
+      workspace_id: workspaceId,
+      ...pattern,
+    }))
+  );
+
+  const { data: existingPatterns } = await supabaseAdmin
+    .from("failure_patterns")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("is_resolved", false);
+
+  const existingByFingerprint = new Map<string, FailurePattern[]>();
+
+  for (const rawPattern of ((existingPatterns || []) as FailurePattern[])) {
+    const fingerprint = getPatternFingerprint(rawPattern);
+    const current = existingByFingerprint.get(fingerprint) || [];
+    current.push(rawPattern);
+    existingByFingerprint.set(fingerprint, current);
+  }
 
   for (const pattern of newPatterns) {
-    // Upsert by title to avoid duplicates
-    const { data: existing } = await supabaseAdmin
-      .from("failure_patterns")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("title", pattern.title)
-      .eq("is_resolved", false)
-      .single();
+    const fingerprint = getPatternFingerprint(pattern);
+    const existingGroup = existingByFingerprint.get(fingerprint) || [];
 
-    if (!existing) {
+    if (existingGroup.length === 0) {
       await supabaseAdmin.from("failure_patterns").insert({
         workspace_id: workspaceId,
         pattern_type: pattern.pattern_type,
@@ -130,6 +154,38 @@ async function detectAndStorePatterns(workspaceId: string) {
         prompt_fix: pattern.prompt_fix,
         knowledge_base_suggestion: pattern.knowledge_base_suggestion,
       });
+      continue;
+    }
+
+    const canonical = mergePatternGroup(existingGroup);
+    const primary = existingGroup.find((candidate) => candidate.id === canonical.id) || existingGroup[0];
+
+    await supabaseAdmin
+      .from("failure_patterns")
+      .update({
+        title: pattern.title,
+        description: pattern.description,
+        affected_conversation_ids: [...new Set([...(primary.affected_conversation_ids || []), ...pattern.affected_conversation_ids])],
+        severity: pattern.severity,
+        recommendation: pattern.recommendation,
+        prompt_fix: pattern.prompt_fix,
+        knowledge_base_suggestion: pattern.knowledge_base_suggestion,
+        detected_at: new Date().toISOString(),
+      })
+      .eq("id", primary.id);
+
+    const duplicateIds = existingGroup
+      .filter((candidate) => candidate.id !== primary.id)
+      .map((candidate) => candidate.id);
+
+    if (duplicateIds.length > 0) {
+      await supabaseAdmin
+        .from("failure_patterns")
+        .update({
+          is_resolved: true,
+          resolved_at: new Date().toISOString(),
+        })
+        .in("id", duplicateIds);
     }
   }
 }

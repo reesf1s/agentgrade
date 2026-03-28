@@ -11,6 +11,7 @@ import type {
 } from "@/lib/db/types";
 import { buildOrgRecommendations } from "@/lib/scoring/org-recommendations";
 import { isManualCalibrationConversation } from "@/lib/calibration";
+import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
 
 export interface DashboardStats {
   avg_score: number;
@@ -107,14 +108,14 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
       .order("detected_at", { ascending: false })
-      .limit(5),
+      .limit(25),
   ]);
 
   const conversations = ((conversationsRes.data || []) as DashboardConversationRow[]).filter(
     (conversation) => !isManualCalibrationConversation((conversation as { metadata?: Record<string, unknown> }).metadata || null)
   );
   const alerts = (alertsRes.data || []) as Alert[];
-  const patterns = (patternsRes.data || []) as FailurePattern[];
+  const patterns = dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]).slice(0, 5);
   const scored = conversations.filter(
     (conversation) =>
       getJoinedRecord(conversation.quality_scores)?.overall_score !== undefined
@@ -193,7 +194,7 @@ export async function loadPatternsData(workspaceId: string): Promise<FailurePatt
     throw new Error(`Failed to fetch patterns: ${error.message}`);
   }
 
-  return (data || []) as FailurePattern[];
+  return dedupeFailurePatterns((data || []) as FailurePattern[]);
 }
 
 export async function loadReportData(workspaceId: string): Promise<ReportData> {
@@ -235,7 +236,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
       .order("detected_at", { ascending: false })
-      .limit(5),
+      .limit(25),
   ]);
 
   const thisWeek = (thisWeekRes.data || []).filter(
@@ -445,6 +446,8 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       : 0;
   };
 
+  const dedupedPatterns = dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]).slice(0, 5);
+
   return {
     week_start: sevenDaysAgo.toISOString().slice(0, 10),
     week_end: new Date().toISOString().slice(0, 10),
@@ -463,7 +466,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       knowledge_gaps: knowledgeGaps,
     },
     alerts: (alertsRes.data || []) as Alert[],
-    patterns: (patternsRes.data || []) as FailurePattern[],
+    patterns: dedupedPatterns,
     organization_recommendations: buildOrgRecommendations(
       scored.map((conversation) => ({
         id: conversation.id as string,
@@ -474,7 +477,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
             | null
         ) as QualityScore,
       })),
-      (patternsRes.data || []) as FailurePattern[]
+      dedupedPatterns
     ),
     trend_data: Object.entries(trendByDay)
       .sort(([left], [right]) => left.localeCompare(right))

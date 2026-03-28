@@ -44,13 +44,14 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
     <div className="max-w-5xl">
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Failure Patterns</h1>
+          <p className="enterprise-section-title">Insights</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Recurring issues</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Detected issues across your AI agent conversations
+            The most common breakdowns across your conversations, grouped so the same issue only appears once.
           </p>
         </div>
         <GlassButton onClick={refreshPatterns} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh analysis"}
+          {refreshing ? "Refreshing..." : "Refresh insights"}
         </GlassButton>
       </div>
 
@@ -63,7 +64,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       ) : (
         <div className="space-y-4">
           {patterns.map((pattern) => (
-            <GlassCard key={pattern.id} className="p-6">
+          <GlassCard key={pattern.id} className="p-6">
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -90,7 +91,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     <div className="mt-1 flex items-center gap-2">
                       <SeverityBadge severity={pattern.severity} />
                       <span className="text-xs text-[var(--text-muted)]">
-                        {pattern.affected_conversation_ids.length} conversations affected
+                        Seen across {pattern.affected_conversation_ids.length} conversations
                       </span>
                     </div>
                   </div>
@@ -102,7 +103,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                   disabled={resolving === pattern.id}
                 >
                   <Check className="h-3.5 w-3.5" />
-                  {resolving === pattern.id ? "Resolving..." : "Resolve"}
+                  {resolving === pattern.id ? "Resolving..." : "Mark resolved"}
                 </GlassButton>
               </div>
 
@@ -112,7 +113,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 <div className="mb-3 rounded-xl bg-[rgba(0,0,0,0.02)] p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                    <span className="text-xs font-medium text-[var(--text-primary)]">Affected conversations</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">Example conversations</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {pattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (

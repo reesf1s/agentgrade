@@ -16,12 +16,12 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/reports", label: "Reports", icon: FileBarChart },
-  { href: "/patterns", label: "Patterns", icon: AlertTriangle },
+  { href: "/patterns", label: "Insights", icon: AlertTriangle },
   { href: "/benchmarks", label: "Benchmarks", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Setup", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -35,15 +35,15 @@ export function Sidebar() {
   }, [router]);
 
   return (
-    <aside className="fixed left-5 top-5 z-40 flex h-[calc(100vh-2.5rem)] w-[16rem] flex-col rounded-[1.6rem] glass-sidebar px-3 py-4">
+    <aside className="fixed left-5 top-5 z-40 flex h-[calc(100vh-2.5rem)] w-[16.5rem] flex-col rounded-[1.9rem] glass-sidebar px-3.5 py-4">
       <div className="mb-5 flex items-center justify-between px-2">
         <Link href="/dashboard" prefetch className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] text-[var(--text-primary)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] text-[var(--text-primary)] shadow-sm">
             <Zap className="h-4 w-4" />
           </div>
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--text-muted)]">
-              Quality Ops
+              AI Quality
             </p>
             <span className="text-[17px] font-semibold tracking-tight text-[var(--text-primary)]">
               AgentGrade
@@ -55,7 +55,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="glass-static mb-5 rounded-[1.1rem] p-4">
+      <div className="glass-static mb-5 rounded-[1.25rem] p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
             Workspace
@@ -65,19 +65,19 @@ export function Sidebar() {
           </span>
         </div>
         <p className="text-sm font-semibold leading-5 text-[var(--text-primary)]">
-          Quality command center
+          Review what needs attention
         </p>
         <p className="mt-1.5 text-xs leading-5 text-[var(--text-secondary)]">
-          Ingest conversations, audit AI quality, and ship fixes with an evidence trail.
+          Monitor conversations, spot recurring issues, and tighten your assistant with an audit trail.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Mode</p>
-            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Trust-first</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Focus</p>
+            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Scoring</p>
           </div>
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Scope</p>
-            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Workspace</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Status</p>
+            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Tracking live</p>
           </div>
         </div>
       </div>

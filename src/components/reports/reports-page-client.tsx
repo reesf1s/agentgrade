@@ -59,7 +59,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
     <div className="max-w-6xl">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Weekly Report</h1>
+          <p className="enterprise-section-title">Reports</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Weekly report</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Week of {report.week_start} - {report.week_end}
           </p>
@@ -86,15 +87,15 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           scoreColor={scoreColor(summary?.avg_overall_score ?? 0)}
         />
         <StatCard
-          label="Hallucinations"
+          label="Grounding issues"
           value={summary?.hallucination_count ?? 0}
-          subtitle="Conversations with fabrications"
+          subtitle="Conversations that need evidence review"
           scoreColor={(summary?.hallucination_count ?? 0) > 5 ? "score-critical" : "score-warning"}
         />
         <StatCard
           label="Escalations"
           value={summary?.escalation_count ?? 0}
-          subtitle="Requested human agent"
+          subtitle="Needed a human handoff"
           scoreColor={(summary?.escalation_count ?? 0) > 10 ? "score-warning" : "score-good"}
         />
       </div>
@@ -141,7 +142,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Prompt Improvements</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Best prompt changes</h2>
           </div>
           {!summary?.prompt_improvements?.length ? (
             <p className="text-sm text-[var(--text-muted)]">None detected this week.</p>
@@ -165,7 +166,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge Base Gaps</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge gaps</h2>
           </div>
           {!summary?.knowledge_gaps?.length ? (
             <p className="text-sm text-[var(--text-muted)]">No gaps detected this week.</p>
@@ -187,7 +188,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Siren className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts Triggered</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts triggered</h2>
           </div>
           {report.alerts.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No alerts triggered this week.</p>
@@ -215,7 +216,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Org-Wide Improvements</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Team-wide improvements</h2>
           </div>
           {report.organization_recommendations.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No repeated operating recommendations yet.</p>
@@ -251,7 +252,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recurring issues</h2>
           </div>
           {report.patterns.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No recurring patterns detected this week.</p>
