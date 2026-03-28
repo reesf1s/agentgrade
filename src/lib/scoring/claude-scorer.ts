@@ -59,6 +59,9 @@ Your evaluation standard:
 - If the agent answered the user's question well but grounding is missing, prefer scores that reflect "helpful but unverified" over scores that imply "failed response".
 - Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
 - If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
+- Internally evaluate the response against these seven rubric dimensions as well: instruction_following, factual_accuracy, groundedness, completeness, helpfulness, calibration, safety.
+- Use hard_fail=true only when there is a dangerous factual error, fabricated citation/source/quote, major instruction miss, severe hallucination presented as fact, or a policy/safety violation.
+- Distinguish unsupported but plausible content from clearly false content. Unsupported content primarily hurts groundedness and calibration unless stronger evidence shows factual error.
 
 ## Scoring Rubric (0.0 to 1.0 scale for all dimensions)
 
@@ -179,7 +182,18 @@ const SCORING_OUTPUT_SCHEMA = `{
       "affected_conversations": 1,
       "suggested_content": "<draft content to add to the knowledge base>"
     }
-  ]
+  ],
+  "rubric_scores": {
+    "instruction_following": { "score": <1-5>, "rationale": "<string>" },
+    "factual_accuracy": { "score": <1-5>, "rationale": "<string>" },
+    "groundedness": { "score": <1-5>, "rationale": "<string>" },
+    "completeness": { "score": <1-5>, "rationale": "<string>" },
+    "helpfulness": { "score": <1-5>, "rationale": "<string>" },
+    "calibration": { "score": <1-5>, "rationale": "<string>" },
+    "safety": { "score": <1-5>, "rationale": "<string>" }
+  },
+  "hard_fail": <boolean>,
+  "overall_decision": "pass|borderline|fail"
 }`;
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -204,6 +218,9 @@ export interface ScoringResult {
   confidence_level?: "high" | "medium" | "low";
   prompt_improvements: PromptImprovement[];
   knowledge_gaps: KnowledgeGap[];
+  rubric_scores?: Record<string, { score: number; rationale: string }>;
+  hard_fail?: boolean;
+  overall_decision?: "pass" | "borderline" | "fail";
   // Metadata (not stored in DB, logged for cost monitoring)
   _meta?: {
     input_tokens: number;
@@ -259,6 +276,17 @@ function clamp(value: unknown, fallback = 0.5): number {
 function truncateText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength)}…`;
+}
+
+function normalizeFivePointScore(value: unknown, fallback = 3): number {
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (Number.isNaN(n)) return fallback;
+  return Math.max(1, Math.min(5, n));
+}
+
+function toZeroOneFromFivePoint(value: unknown, fallback = 0.6): number {
+  const five = normalizeFivePointScore(value, fallback * 5);
+  return (five - 1) / 4;
 }
 
 // ─── Main Evaluation Function ───────────────────────────────────────
@@ -346,6 +374,26 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
     }
 
     const raw = JSON.parse(jsonMatch[0]);
+    const rubricScores = typeof raw.rubric_scores === "object" && raw.rubric_scores
+      ? raw.rubric_scores as Record<string, { score?: number; rationale?: string }>
+      : {};
+
+    const instructionFollowing = toZeroOneFromFivePoint(rubricScores.instruction_following?.score, 0.6);
+    const factualAccuracy = toZeroOneFromFivePoint(rubricScores.factual_accuracy?.score, raw.accuracy_score ?? 0.6);
+    const groundedness = toZeroOneFromFivePoint(rubricScores.groundedness?.score, raw.hallucination_score ?? 0.6);
+    const completeness = toZeroOneFromFivePoint(rubricScores.completeness?.score, raw.resolution_score ?? 0.6);
+    const helpfulness = toZeroOneFromFivePoint(rubricScores.helpfulness?.score, raw.resolution_score ?? 0.6);
+    const calibration = toZeroOneFromFivePoint(rubricScores.calibration?.score, 0.6);
+    const safety = toZeroOneFromFivePoint(rubricScores.safety?.score, 0.85);
+
+    const derivedOverall =
+      instructionFollowing * 0.2 +
+      factualAccuracy * 0.2 +
+      groundedness * 0.2 +
+      completeness * 0.15 +
+      helpfulness * 0.15 +
+      calibration * 0.05 +
+      safety * 0.05;
 
     // ── Compute cost ──────────────────────────────────────────────
     const inputTokens = response.usage?.input_tokens || 0;
@@ -360,19 +408,44 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
 
     // ── Validate and sanitize scores ──────────────────────────────
     const result: ScoringResult = {
-      overall_score: clamp(raw.overall_score),
-      accuracy_score: clamp(raw.accuracy_score),
-      hallucination_score: clamp(raw.hallucination_score),
-      resolution_score: clamp(raw.resolution_score),
+      overall_score: clamp(raw.overall_score ?? derivedOverall),
+      accuracy_score: clamp(raw.accuracy_score ?? factualAccuracy),
+      hallucination_score: clamp(raw.hallucination_score ?? groundedness),
+      resolution_score: clamp(
+        raw.resolution_score ??
+          (instructionFollowing * 0.35 + completeness * 0.3 + helpfulness * 0.35)
+      ),
       tone_score: clamp(raw.tone_score),
       sentiment_score: clamp(raw.sentiment_score),
       edge_case_score: clamp(raw.edge_case_score, 0.8),   // default neutral if missing
       escalation_score: clamp(raw.escalation_score, 0.85), // default neutral if no escalation
-      claim_analysis: Array.isArray(raw.claim_analysis) ? raw.claim_analysis : [],
+      claim_analysis: Array.isArray(raw.claim_analysis)
+        ? raw.claim_analysis
+        : Array.isArray(raw.claim_checks)
+          ? raw.claim_checks.map((item: Record<string, unknown>) => ({
+              claim: String(item.claim || ""),
+              verdict: String(item.status || "unverifiable"),
+              evidence: typeof item.evidence === "string" ? item.evidence : undefined,
+            }))
+          : [],
       flags: Array.isArray(raw.flags) ? raw.flags : [],
       summary: typeof raw.summary === "string" ? raw.summary : "Evaluation complete.",
       prompt_improvements: Array.isArray(raw.prompt_improvements) ? raw.prompt_improvements : [],
       knowledge_gaps: Array.isArray(raw.knowledge_gaps) ? raw.knowledge_gaps : [],
+      rubric_scores: Object.fromEntries(
+        Object.entries(rubricScores).map(([key, value]) => [
+          key,
+          {
+            score: normalizeFivePointScore(value?.score),
+            rationale: typeof value?.rationale === "string" ? value.rationale : "",
+          },
+        ])
+      ),
+      hard_fail: Boolean(raw.hard_fail),
+      overall_decision:
+        raw.overall_decision === "pass" || raw.overall_decision === "borderline" || raw.overall_decision === "fail"
+          ? raw.overall_decision
+          : undefined,
       _meta: {
         input_tokens: inputTokens,
         output_tokens: outputTokens,

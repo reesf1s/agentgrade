@@ -419,6 +419,13 @@ export function applyScoringGuardrails(
     });
   }
 
+  if (adjusted.hard_fail) {
+    adjusted.overall_score = Math.min(adjusted.overall_score, 0.35);
+    adjusted.accuracy_score = Math.min(adjusted.accuracy_score, 0.35);
+    adjusted.hallucination_score = Math.min(adjusted.hallucination_score, 0.35);
+    pushUniqueFlag(adjusted.flags, "hard_fail_triggered");
+  }
+
   adjusted.overall_score = clamp(
     adjusted.accuracy_score * 0.2 +
       adjusted.hallucination_score * 0.25 +

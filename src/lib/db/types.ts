@@ -102,6 +102,9 @@ export interface StructuralMetrics {
   sentiment_per_turn: { turn: number; role: string; sentiment: number }[];
   confidence_level?: "high" | "medium" | "low";
   confidence_reasons?: string[];
+  evaluation_rubric?: Record<string, { score: number; rationale: string }>;
+  overall_decision?: "pass" | "borderline" | "fail";
+  hard_fail?: boolean;
 }
 
 export interface QualityScore {

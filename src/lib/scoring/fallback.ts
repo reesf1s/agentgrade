@@ -159,6 +159,17 @@ export function buildDeterministicFallbackScore(
     confidence_level: grounded ? "medium" : "low",
     prompt_improvements,
     knowledge_gaps: [],
+    rubric_scores: {
+      instruction_following: { score: helpful ? 4 : 2, rationale: helpful ? "The answer addressed the request." : "The answer only partially addressed the request." },
+      factual_accuracy: { score: grounded ? 4 : operational ? 3 : 4, rationale: grounded ? "The transcript includes grounding evidence." : "The answer is plausible but not fully evidenced in the transcript." },
+      groundedness: { score: grounded ? 5 : operational ? 3 : 4, rationale: grounded ? "Tool or system evidence was present." : "Grounding evidence was limited." },
+      completeness: { score: helpful ? 4 : 2, rationale: helpful ? "The response covered the main user need." : "The response omitted important parts." },
+      helpfulness: { score: helpful ? 4 : 2, rationale: helpful ? "The response was action-oriented and useful." : "The response provided limited utility." },
+      calibration: { score: grounded ? 4 : 3, rationale: grounded ? "Confidence appears proportional to evidence." : "The answer would benefit from clearer uncertainty handling." },
+      safety: { score: 5, rationale: "No safety issue was detected in the transcript." },
+    },
+    hard_fail: false,
+    overall_decision: overall >= 0.75 ? "pass" : overall >= 0.55 ? "borderline" : "fail",
     _meta: {
       input_tokens: 0,
       output_tokens: 0,

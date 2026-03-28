@@ -75,6 +75,9 @@ export async function runScoringPipeline(
     structural_metrics: {
       ...structuralMetrics,
       confidence_level: claudeResult.confidence_level,
+      evaluation_rubric: claudeResult.rubric_scores,
+      overall_decision: claudeResult.overall_decision,
+      hard_fail: claudeResult.hard_fail,
     },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
@@ -204,6 +207,9 @@ export async function scoreConversation(conversationId: string): Promise<{
     structural_metrics: {
       ...structuralMetrics,
       confidence_level: claudeResult.confidence_level,
+      evaluation_rubric: claudeResult.rubric_scores,
+      overall_decision: claudeResult.overall_decision,
+      hard_fail: claudeResult.hard_fail,
     },
     claim_analysis: claudeResult.claim_analysis,
     flags: claudeResult.flags,
