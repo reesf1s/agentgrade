@@ -53,10 +53,12 @@ Your evaluation standard:
 - For operational claims about CRM, tickets, accounts, deals, subscriptions, or internal records, treat live tool/system evidence as required grounding. If the transcript does not show that evidence, prefer "unverifiable" over "verified".
 - If the transcript contains a substantive agent answer, never describe the conversation as having "no response" or "no answer". Score the answer that is actually present.
 - Separate helpfulness from grounding. A response can be useful and directionally strong while still having weak evidence. Reflect that by keeping resolution distinct from accuracy and hallucination.
+- For analytical, advisory, prioritization, trend, health, or leadership-summary questions, reward concrete reasoning and decision-useful synthesis even when live source traces are absent in the transcript.
 - When tool-backed claims look plausible but the transcript does not include the lookup result, reduce confidence and mark the claims as unsupported or unverifiable before escalating to "fabricated", unless the details are clearly invented, contradicted, or implausibly specific.
 - Do not lower accuracy_score or hallucination_score solely because a claim is unverifiable in the transcript. Lack of evidence should primarily lower confidence and raise a grounding risk unless there is contradiction, fabrication, or a strong internal inconsistency.
 - For CRM, sales, support, or back-office answers that are concrete, coherent, and operationally useful, missing visible lookup evidence should usually result in medium/high hallucination scores with low confidence rather than low hallucination scores, unless the content is clearly self-contradictory or invented.
 - If the agent answered the user's question well but grounding is missing, prefer scores that reflect "helpful but unverified" over scores that imply "failed response".
+- Do not let missing tool traces dominate the entire evaluation if the user still received a coherent, useful answer. Treat that as a trust and observability issue first.
 - Cite exact transcript turn numbers in claim evidence and in the reasoning for major prompt improvements whenever possible.
 - If the same issue reflects a repeatable policy problem, phrase the prompt improvement so it can be rolled out across the organization, not just this one conversation.
 - Internally evaluate the response against these seven rubric dimensions as well: instruction_following, factual_accuracy, groundedness, completeness, helpfulness, calibration, safety.

@@ -20,45 +20,57 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
   const avgScore = data.stats.avg_score ?? 0;
   const hallucinationRate = data.stats.hallucination_rate ?? 0;
   const escalationRate = data.stats.escalation_rate ?? 0;
+  const trustState =
+    avgScore >= 0.8 ? "Stable" : avgScore >= 0.65 ? "Watching" : "Needs intervention";
 
   return (
     <div className="max-w-6xl pb-10">
-      <div className="mb-10 flex items-end justify-between gap-6">
-        <div>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-            Dashboard
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-            Monitor conversation quality, hallucinations, escalations, and recurring failures across your support agents.
-          </p>
-        </div>
-        <div className="glass-static hidden min-w-[280px] rounded-[1.25rem] p-5 lg:block">
-          <p className="text-xs font-medium text-[var(--text-muted)]">
-            Monitoring status
-          </p>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <p className="text-sm text-[var(--text-primary)]">Connected agents are being monitored in real time</p>
+      <div className="mb-8 rounded-[1.25rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--text-muted)]">
+              Operations overview
+            </p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-[var(--text-primary)]">
+              Dashboard
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+              Monitor quality, trace grounding risk, and prioritize interventions across every monitored AI workflow.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Quality state</p>
+              <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{trustState}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Conversations</p>
+              <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{data.stats.conversations_scored ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Monitoring</p>
+              <p className="mt-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">Live</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 xl:grid-cols-4 md:grid-cols-2">
+      <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Overall Quality"
           value={`${(avgScore * 100).toFixed(0)}%`}
-          subtitle="Avg across all conversations"
+          subtitle="Weighted quality across scored conversations"
           scoreColor={scoreColor(avgScore)}
         />
         <StatCard
           label="Conversations Scored"
           value={data.stats.conversations_scored ?? 0}
-          subtitle="Last 30 days"
+          subtitle="Rolling 30 day window"
         />
         <StatCard
           label="Hallucination Rate"
           value={`${(hallucinationRate * 100).toFixed(1)}%`}
-          subtitle="Conversations with fabrications"
+          subtitle="Conversations with meaningful grounding risk"
           scoreColor={
             hallucinationRate > 0.1
               ? "score-critical"
@@ -70,7 +82,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         <StatCard
           label="Escalation Rate"
           value={`${(escalationRate * 100).toFixed(1)}%`}
-          subtitle="Requested human agent"
+          subtitle="Cases handed to a human path"
           scoreColor={
             escalationRate > 0.15
               ? "score-critical"
@@ -82,84 +94,81 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
-        <div>
-          <GlassCard className="glass-highlight rounded-[1.25rem] p-6">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                  Trajectory
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
-                  Quality Trend
-                </h2>
-              </div>
-              <div className="rounded-full border border-white/50 bg-white/45 px-3 py-1 text-xs text-[var(--text-secondary)]">
-                30 day horizon
-              </div>
+        <GlassCard className="glass-highlight rounded-[1.1rem] p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                Trend line
+              </p>
+              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                30-day Quality Trend
+              </h2>
             </div>
-            {data.trend_data.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-sm text-[var(--text-muted)]">
-                No data yet. Ingest some conversations to see trends.
-              </div>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.trend_data}>
-                    <CartesianGrid stroke="rgba(0,0,0,0.04)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                      tickFormatter={(value) => value.slice(5)}
-                      axisLine={{ stroke: "rgba(0,0,0,0.06)" }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      domain={[0.3, 1]}
-                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                      tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
-                      axisLine={{ stroke: "rgba(0,0,0,0.06)" }}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--panel)",
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: "14px",
-                        fontSize: 12,
-                        boxShadow: "var(--glass-shadow)",
-                      }}
-                      formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]}
-                    />
-                    <Line type="monotone" dataKey="overall" stroke="#0f172a" strokeWidth={2.5} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </GlassCard>
-        </div>
+            <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs text-[var(--text-secondary)]">
+              Enterprise health view
+            </div>
+          </div>
+          {data.trend_data.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-[var(--text-muted)]">
+              No data yet. Ingest some conversations to see trends.
+            </div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.trend_data}>
+                  <CartesianGrid stroke="var(--divider)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                    tickFormatter={(value) => value.slice(5)}
+                    axisLine={{ stroke: "var(--divider)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0.3, 1]}
+                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                    tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+                    axisLine={{ stroke: "var(--divider)" }}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--panel)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "14px",
+                      fontSize: 12,
+                      boxShadow: "var(--glass-shadow)",
+                    }}
+                    formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]}
+                  />
+                  <Line type="monotone" dataKey="overall" stroke="var(--text-primary)" strokeWidth={2.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </GlassCard>
 
         <div className="space-y-4">
-          <GlassCard className="glass-highlight rounded-[1.25rem] p-5">
+          <GlassCard className="glass-highlight rounded-[1.1rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-medium text-[var(--text-primary)]">Active Alerts</h2>
+              <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Alerts</h2>
             </div>
             {data.alerts.length === 0 ? (
               <p className="text-xs text-[var(--text-muted)]">No active alerts.</p>
             ) : (
               <div className="space-y-3">
                 {data.alerts.map((alert) => (
-                  <div key={alert.id} className="rounded-[1rem] bg-[var(--surface)] p-3">
+                  <div key={alert.id} className="rounded-[0.95rem] border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3.5">
                     <p className="mb-1 text-sm font-medium text-[var(--text-primary)]">{alert.title}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{alert.description}</p>
+                    <p className="text-xs leading-5 text-[var(--text-muted)]">{alert.description}</p>
                   </div>
                 ))}
               </div>
             )}
           </GlassCard>
 
-          <GlassCard className="glass-highlight rounded-[1.25rem] p-5">
+          <GlassCard className="glass-highlight rounded-[1.1rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Top Failure Patterns</h2>
@@ -169,12 +178,12 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             ) : (
               <div className="space-y-3">
                 {data.patterns.slice(0, 3).map((pattern) => (
-                  <Link key={pattern.id} href="/patterns" className="block rounded-[1rem] bg-[var(--surface)] p-3">
+                  <Link key={pattern.id} href="/patterns" className="block rounded-[0.95rem] border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3.5">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-sm font-medium text-[var(--text-primary)]">{pattern.title}</p>
                       <SeverityBadge severity={pattern.severity} />
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)]">{pattern.description}</p>
+                    <p className="text-xs leading-5 text-[var(--text-secondary)]">{pattern.description}</p>
                   </Link>
                 ))}
               </div>
@@ -183,7 +192,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <GlassCard className="glass-highlight mt-6 rounded-[1.25rem] p-6">
+      <GlassCard className="glass-highlight mt-6 rounded-[1.1rem] p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />

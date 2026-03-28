@@ -73,6 +73,19 @@ function customerRequestedGuidance(messages: Message[]): boolean {
   );
 }
 
+function agentDeliveredStructuredPlan(messages: Message[]): boolean {
+  return messages.some((message) => {
+    if (message.role !== "agent") return false;
+
+    return (
+      /\b(priority|priorities|next step|next steps|watch point|recommend|start with|follow up|leadership|briefing|summary|trend|health)\b/i.test(
+        message.content
+      ) &&
+      (/[-•\n]/.test(message.content) || /\bfirst\b|\bsecond\b|\bthird\b/i.test(message.content))
+    );
+  });
+}
+
 function hasSubstantiveAgentResponse(messages: Message[]): boolean {
   const agentMessages = messages.filter((message) => message.role === "agent");
   if (agentMessages.length === 0) return false;
@@ -145,6 +158,15 @@ function hasMissingToolEvidenceButHelpfulResponse(messages: Message[]): boolean 
   );
 }
 
+function isStrongAdvisoryAnswer(messages: Message[]): boolean {
+  return (
+    (customerRequestedGuidance(messages) || customerAskedForAnalysis(messages)) &&
+    hasSubstantiveAgentResponse(messages) &&
+    agentDeliveredStructuredPlan(messages) &&
+    !hasCustomerDissatisfaction(messages)
+  );
+}
+
 function pushPromptImprovement(
   improvements: PromptImprovement[],
   improvement: PromptImprovement
@@ -199,7 +221,7 @@ function buildDefaultSummary(result: ScoringResult, confidence: { level: "high" 
   }
 
   if (strongResolution && !strongGrounding) {
-    return `The agent gave a useful answer and moved the user toward an outcome, but some claims were weakly grounded or only partially supported in the transcript. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "verification context was limited"}.`;
+    return `The agent gave a strong, decision-useful answer and moved the user toward a sensible next step, but some claims were only weakly grounded in the available evidence. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "verification context was limited"}.`;
   }
 
   if (weakResolution && weakGrounding) {
@@ -223,9 +245,10 @@ function deriveConfidenceLevel(
 ): { level: "high" | "medium" | "low"; reasons: string[] } {
   const reasons: string[] = [];
   let penalty = 0;
+  const strongAdvisoryAnswer = isStrongAdvisoryAnswer(input.messages);
 
   if (!input.knowledgeBaseContext?.length) {
-    penalty += 1;
+    penalty += strongAdvisoryAnswer ? 0.5 : 1;
     reasons.push("No workspace knowledge base evidence was available for grounding.");
   }
 
@@ -239,12 +262,12 @@ function deriveConfidenceLevel(
     penalty += 2;
     reasons.push("The conversation contains contradicted or fabricated claims.");
   } else if (unverifiableClaims.length >= 2) {
-    penalty += 1;
+    penalty += strongAdvisoryAnswer ? 0.5 : 1;
     reasons.push("Several important claims could not be verified confidently.");
   }
 
   if (claims.length > 0 && verifiedClaims.length === 0) {
-    penalty += 1;
+    penalty += strongAdvisoryAnswer ? 0.5 : 1;
     reasons.push("No extracted claims were positively verified.");
   }
 
@@ -264,18 +287,18 @@ function deriveConfidenceLevel(
   }
 
   if (
-    result.flags.includes("integration_missing_tool_trace") ||
+    result.flags.includes("grounding_risk_without_tool_trace") ||
     result.flags.includes("limited_transcript_grounding")
   ) {
-    penalty += 1;
+    penalty += strongAdvisoryAnswer ? 0.5 : 1;
     reasons.push("The transcript omitted some lookup or tool evidence, which limits verification confidence.");
   }
 
-  if (penalty >= 4) {
+  if (penalty >= 3.5) {
     return { level: "low", reasons };
   }
 
-  if (penalty >= 2) {
+  if (penalty >= 1.5) {
     return { level: "medium", reasons };
   }
 
@@ -360,8 +383,7 @@ export function applyScoringGuardrails(
     pushUniqueFlag(adjusted.flags, "tool_backed_claim_without_evidence");
     pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
     if (unsupportedButHelpful) {
-      pushUniqueFlag(adjusted.flags, "integration_missing_tool_trace");
-      pushUniqueFlag(adjusted.flags, "limited_transcript_grounding");
+      pushUniqueFlag(adjusted.flags, "grounding_risk_without_tool_trace");
     }
     pushPromptImprovement(adjusted.prompt_improvements, {
       issue: "Agent makes record-specific claims without visible lookup evidence",
@@ -383,8 +405,8 @@ export function applyScoringGuardrails(
     });
 
     if (unsupportedButHelpful && fabricatedClaims.length === 0 && contradictedClaims.length === 0) {
-      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.82);
-      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.68);
+      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.86);
+      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.72);
     }
   }
 
@@ -393,9 +415,9 @@ export function applyScoringGuardrails(
     hasSubstantiveAgentResponse(input.messages) &&
     !hasCustomerDissatisfaction(input.messages)
   ) {
-    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.8);
-    adjusted.tone_score = Math.max(adjusted.tone_score, 0.82);
-    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.62);
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.82);
+    adjusted.tone_score = Math.max(adjusted.tone_score, 0.84);
+    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.64);
   }
 
   if (
@@ -403,8 +425,14 @@ export function applyScoringGuardrails(
     hasSubstantiveAgentResponse(input.messages) &&
     !hasCustomerDissatisfaction(input.messages)
   ) {
-    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.76);
-    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.58);
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.8);
+    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.62);
+  }
+
+  if (isStrongAdvisoryAnswer(input.messages)) {
+    adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.86);
+    adjusted.tone_score = Math.max(adjusted.tone_score, 0.86);
+    adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.66);
   }
 
   if (
@@ -413,13 +441,12 @@ export function applyScoringGuardrails(
     contradictedClaims.length === 0 &&
     hasSubstantiveAgentResponse(input.messages)
   ) {
-    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.78);
-    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.64);
+    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, isStrongAdvisoryAnswer(input.messages) ? 0.88 : 0.8);
+    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, isStrongAdvisoryAnswer(input.messages) ? 0.74 : 0.66);
     if (!hasNegativeAgentTone(input.messages)) {
-      adjusted.tone_score = Math.max(adjusted.tone_score, 0.8);
+      adjusted.tone_score = Math.max(adjusted.tone_score, 0.82);
     }
-    adjusted.summary =
-      "The agent gave a substantive and potentially useful answer, but the transcript does not include enough grounding evidence to fully verify the operational claims. Treat this as a confidence and traceability risk, not proof of hallucination.";
+    pushUniqueFlag(adjusted.flags, "grounding_risk_review_recommended");
   }
 
   if (endsWithUnresolvedCustomerIntent(input.messages)) {
