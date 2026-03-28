@@ -83,6 +83,32 @@ interface CalibrationInfo {
         last_label_at?: string;
       };
     };
+    training_stage: {
+      key: "bootstrapping" | "calibrating" | "adaptive";
+      label: string;
+      description: string;
+    };
+    model_card: {
+      scorer_name: string;
+      version_family: string;
+      base_evaluator: {
+        provider: string;
+        model: string;
+        role: string;
+      };
+      learned_layers: Array<{
+        name: string;
+        status: string;
+        purpose: string;
+      }>;
+      privacy: {
+        workspace_private: string;
+        global_anonymous: string;
+      };
+      strengths: string[];
+      current_limitations: string[];
+      path_to_proprietary_model: string[];
+    };
   };
   recent_labels: Array<{
     id: string;
@@ -988,9 +1014,12 @@ function CalibrationTab() {
             </p>
           </div>
           <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
-            {data?.scorer.learned_calibration.mode === "active" ? "Learned calibration active" : "Collecting labels"}
+            {data?.scorer.training_stage.label}
           </div>
         </div>
+        <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+          {data?.scorer.training_stage.description}
+        </p>
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
           <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
             <p className="text-[var(--text-muted)]">Evaluator</p>
@@ -1042,6 +1071,78 @@ function CalibrationTab() {
           </div>
         </div>
         <p className="mt-4 text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.calibration_note}</p>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Model Card</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">What runs in production</p>
+            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+              {data?.scorer.model_card.base_evaluator.provider} / {data?.scorer.model_card.base_evaluator.model}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              {data?.scorer.model_card.base_evaluator.role}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Privacy posture</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              {data?.scorer.model_card.privacy.workspace_private}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              {data?.scorer.model_card.privacy.global_anonymous}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          {data?.scorer.model_card.learned_layers.map((layer) => (
+            <div key={layer.name} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{layer.name}</p>
+                <span className="rounded-full bg-[var(--surface)] px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {layer.status.replace("_", " ")}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{layer.purpose}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Current strengths</p>
+            <div className="mt-3 space-y-2">
+              {data?.scorer.model_card.strengths.map((item) => (
+                <p key={item} className="text-xs leading-5 text-[var(--text-secondary)]">• {item}</p>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Current limitations</p>
+            <div className="mt-3 space-y-2">
+              {data?.scorer.model_card.current_limitations.map((item) => (
+                <p key={item} className="text-xs leading-5 text-[var(--text-secondary)]">• {item}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Path to a Proprietary Model</h2>
+        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
+          Today the product is best described as LLM-judged scoring plus learned calibration. The path to a truly proprietary scorer is to grow a trusted gold set, export anonymized supervised data, and then train dedicated ranking or regression models before considering foundation fine-tuning.
+        </p>
+        <div className="space-y-3">
+          {data?.scorer.model_card.path_to_proprietary_model.map((step, index) => (
+            <div key={step} className="flex gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-strong)] text-xs font-semibold text-[var(--text-primary)]">
+                {index + 1}
+              </span>
+              <p className="text-xs leading-5 text-[var(--text-secondary)]">{step}</p>
+            </div>
+          ))}
+        </div>
       </GlassCard>
 
       <GlassCard className="p-6">

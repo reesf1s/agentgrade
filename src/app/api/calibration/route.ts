@@ -17,6 +17,7 @@ import {
 } from "@/lib/calibration";
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 import { getLearnedCalibrationSummary } from "@/lib/scoring/calibration-model";
+import { AGENTGRADE_MODEL_CARD, inferTrainingStage } from "@/lib/scoring/model-card";
 
 function originalScoreForDimension(
   qualityScore: Record<string, unknown>,
@@ -143,6 +144,8 @@ export async function GET() {
       repoEvalCaseCount = 0;
     }
 
+    const trainingStage = inferTrainingStage(learnedSummary);
+
     return NextResponse.json({
       scorer: {
         ...SCORER_MODEL_INFO,
@@ -154,6 +157,8 @@ export async function GET() {
         labeled_examples: uniqueLabeledConversationCount,
         manual_calibration_conversations: manualConversations.length,
         learned_calibration: learnedSummary,
+        training_stage: trainingStage,
+        model_card: AGENTGRADE_MODEL_CARD,
       },
       recent_labels: recentLabels,
       manual_examples: manualConversations.slice(0, 10),

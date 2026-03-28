@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "eval:scoring": "tsx scripts/run-scoring-evals.ts"
+    "eval:scoring": "tsx scripts/run-scoring-evals.ts",
+    "export:calibration": "tsx scripts/export-calibration-dataset.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
