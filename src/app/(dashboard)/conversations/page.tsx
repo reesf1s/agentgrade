@@ -142,19 +142,19 @@ export default function ConversationsPage() {
       </div>
 
       {/* Table */}
-      <GlassCard className="overflow-hidden">
-        <table className="glass-table">
+      <GlassCard className="overflow-x-auto">
+        <table className="glass-table min-w-[920px] table-fixed">
           <thead>
             <tr>
-              <th>Customer</th>
-              <th>Platform</th>
-              <th>Overall</th>
-              <th>Confidence</th>
-              <th>Accuracy</th>
-              <th>Hallucination</th>
-              <th>Resolution</th>
-              <th>Escalated</th>
-              <th>Date</th>
+              <th className="w-[24%]">Customer</th>
+              <th className="w-[10%]">Platform</th>
+              <th className="w-[9%]">Overall</th>
+              <th className="w-[10%]">Confidence</th>
+              <th className="w-[9%]">Accuracy</th>
+              <th className="w-[11%]">Grounding</th>
+              <th className="w-[10%]">Resolution</th>
+              <th className="w-[8%]">Escalated</th>
+              <th className="w-[9%] whitespace-nowrap text-right">Date</th>
             </tr>
           </thead>
           <tbody>
@@ -168,7 +168,7 @@ export default function ConversationsPage() {
                     {conv.customer_identifier || "Unknown"}
                   </Link>
                 </td>
-                <td className="capitalize text-[var(--text-secondary)] text-sm">{conv.platform}</td>
+                <td className="truncate capitalize text-[var(--text-secondary)] text-sm">{conv.platform}</td>
                 <td>
                   {conv.quality_scores ? (
                     <ScoreBadge score={conv.quality_scores.overall_score} />
@@ -207,7 +207,7 @@ export default function ConversationsPage() {
                     <span className="text-xs text-[var(--text-muted)]">No</span>
                   )}
                 </td>
-                <td className="text-xs text-[var(--text-muted)]">{formatDate(conv.created_at)}</td>
+                <td className="whitespace-nowrap text-right text-xs text-[var(--text-muted)]">{formatDate(conv.created_at)}</td>
               </tr>
             ))}
           </tbody>

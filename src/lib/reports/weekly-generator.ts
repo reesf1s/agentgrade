@@ -12,6 +12,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { aggregatePromptImprovements, aggregateKnowledgeGaps } from "@/lib/scoring/pattern-detector";
 import type { WeeklyReport, WeeklyReportSummary, QualityScore, PromptImprovement, KnowledgeGap } from "@/lib/db/types";
+import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
 
 // ─── Type Helpers ───────────────────────────────────────────────────
 interface ConversationRow {
@@ -171,7 +172,7 @@ export async function generateWeeklyReport(
     .lte("created_at", lastWeekEnd.toISOString());
 
   const thisWeek = (thisWeekRaw || []) as unknown as ConversationRow[];
-  const scored = thisWeek.filter((c) => c.quality_scores !== null);
+  const scored = thisWeek.filter((c) => isAnalyticsEligibleScore(c.quality_scores));
 
   // ── Compute aggregated metrics ─────────────────────────────────
   const avgs = computeAverages(scored);
@@ -180,17 +181,16 @@ export async function generateWeeklyReport(
   const lastWeekAvg =
     (lastWeekRaw || []).length > 0
       ? (lastWeekRaw || [])
-          .map((c) => {
-            const qs = c.quality_scores as unknown as { overall_score?: number } | null;
-            return qs?.overall_score;
-          })
+          .map((c) => c.quality_scores as unknown as { overall_score?: number; flags?: string[] | null } | null)
+          .filter((qs) => isAnalyticsEligibleScore(qs))
+          .map((qs) => qs!.overall_score)
           .filter((s): s is number => s !== undefined)
           .reduce((a, b) => a + b, 0) /
           Math.max(
             1,
             (lastWeekRaw || []).filter((c) => {
-              const qs = c.quality_scores as unknown as { overall_score?: number } | null;
-              return qs?.overall_score !== undefined;
+              const qs = c.quality_scores as unknown as { overall_score?: number; flags?: string[] | null } | null;
+              return isAnalyticsEligibleScore(qs);
             }).length
           )
       : 0;

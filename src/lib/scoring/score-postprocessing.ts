@@ -210,6 +210,26 @@ function removeMatchingFlags(flags: string[], pattern: RegExp): string[] {
   return flags.filter((flag) => !pattern.test(flag));
 }
 
+function removePromptImprovementsByPattern(
+  improvements: PromptImprovement[],
+  pattern: RegExp
+): PromptImprovement[] {
+  return improvements.filter((improvement) => {
+    const combined = `${improvement.issue} ${improvement.current_behavior} ${improvement.recommended_prompt_change}`;
+    return !pattern.test(combined);
+  });
+}
+
+function removeKnowledgeGapsByPattern(
+  gaps: KnowledgeGap[],
+  pattern: RegExp
+): KnowledgeGap[] {
+  return gaps.filter((gap) => {
+    const combined = `${gap.topic} ${gap.description} ${gap.suggested_content}`;
+    return !pattern.test(combined);
+  });
+}
+
 function buildDefaultSummary(result: ScoringResult, confidence: { level: "high" | "medium" | "low"; reasons: string[] }) {
   const strongResolution = result.resolution_score >= 0.75;
   const strongGrounding = result.hallucination_score >= 0.8 && result.accuracy_score >= 0.75;
@@ -313,6 +333,7 @@ export function applyScoringGuardrails(
   input: ScoringInput,
   result: ScoringResult
 ): ScoringResult {
+  const strongAdvisoryAnswer = isStrongAdvisoryAnswer(input.messages);
   const adjusted = {
     ...result,
     flags: [...result.flags],
@@ -405,8 +426,38 @@ export function applyScoringGuardrails(
     });
 
     if (unsupportedButHelpful && fabricatedClaims.length === 0 && contradictedClaims.length === 0) {
-      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, 0.86);
-      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, 0.72);
+      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, strongAdvisoryAnswer ? 0.92 : 0.86);
+      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.78 : 0.72);
+      adjusted.resolution_score = Math.max(adjusted.resolution_score, strongAdvisoryAnswer ? 0.84 : adjusted.resolution_score);
+      adjusted.hard_fail = false;
+      adjusted.overall_decision = strongAdvisoryAnswer ? "pass" : adjusted.overall_decision === "fail" ? "borderline" : adjusted.overall_decision;
+      adjusted.flags = removeMatchingFlags(
+        adjusted.flags,
+        /hard_fail_triggered|unsupported_crm_briefing|needed_escalation_for_data_access|potentially_fabricated|critical_time_sensitive_claim_ungrounded|specific_financial_figures_without_source|integration_missing_tool_trace/i
+      );
+      adjusted.prompt_improvements = removePromptImprovementsByPattern(
+        adjusted.prompt_improvements,
+        /source attribution|timestamp|crm lookup tool|deal briefing access workflow|operational data.*source|tool capability to do so/i
+      );
+      adjusted.knowledge_gaps = removeKnowledgeGapsByPattern(
+        adjusted.knowledge_gaps,
+        /operational tool verification policy|crm deal briefing access workflow|score vs ml win probability/i
+      );
+
+      pushPromptImprovement(adjusted.prompt_improvements, {
+        issue: "Show evidence when summarizing live records",
+        current_behavior:
+          "The answer was useful, but the transcript did not include the lookup result or source reference behind record-level claims.",
+        recommended_prompt_change:
+          "When answering with live deal, CRM, account, or ticket data, include a short source cue if available. If the lookup result is not visible in the reply context, state that the answer is a working summary and mark it as needing verification instead of presenting it as fully confirmed.",
+        expected_impact:
+          "Keeps strong answers useful while making evidence gaps obvious without turning every operational answer into a hard failure.",
+        priority: "medium",
+      });
+
+      adjusted.summary = strongAdvisoryAnswer
+        ? "The agent delivered a strong, actionable answer that would be useful to a human operator. The main limitation is that the transcript did not include the live lookup or source evidence needed to fully verify some record-level claims, so this should be treated as useful but low-confidence rather than incorrect."
+        : "The answer was directionally useful, but some record-level claims were not traceable in the transcript. Treat it as a helpful response with evidence gaps, not as a verified source of truth.";
     }
   }
 
@@ -429,7 +480,7 @@ export function applyScoringGuardrails(
     adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.62);
   }
 
-  if (isStrongAdvisoryAnswer(input.messages)) {
+  if (strongAdvisoryAnswer) {
     adjusted.resolution_score = Math.max(adjusted.resolution_score, 0.86);
     adjusted.tone_score = Math.max(adjusted.tone_score, 0.86);
     adjusted.sentiment_score = Math.max(adjusted.sentiment_score, 0.66);
@@ -441,8 +492,8 @@ export function applyScoringGuardrails(
     contradictedClaims.length === 0 &&
     hasSubstantiveAgentResponse(input.messages)
   ) {
-    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, isStrongAdvisoryAnswer(input.messages) ? 0.88 : 0.8);
-    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, isStrongAdvisoryAnswer(input.messages) ? 0.74 : 0.66);
+    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, strongAdvisoryAnswer ? 0.9 : 0.8);
+    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.76 : 0.66);
     if (!hasNegativeAgentTone(input.messages)) {
       adjusted.tone_score = Math.max(adjusted.tone_score, 0.82);
     }

@@ -27,6 +27,8 @@ import { SCORING_MODEL_VERSION } from "./version";
 import { isManualCalibrationConversation } from "@/lib/calibration";
 import { applyLearnedCalibration } from "./calibration-model";
 import { buildDeterministicFallbackScore } from "./fallback";
+import { isAnalyticsEligibleScore } from "./quality-score-status";
+import { syncFailurePatterns } from "@/lib/patterns/store";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false;
@@ -423,7 +425,11 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
 
   // Shape into the format detectPatterns expects
   const scoredConversations = convs
-    .filter((c) => c.quality_scores)
+    .filter((c) =>
+      isAnalyticsEligibleScore(
+        c.quality_scores as unknown as { overall_score?: number; flags?: string[] | null } | null
+      )
+    )
     .map((c) => {
       // Supabase returns quality_scores as nested object
       const qs = c.quality_scores as unknown as QualityScore;
@@ -437,32 +443,12 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
 
   if (scoredConversations.length < 3) return;
 
-  const newPatterns = detectPatterns(scoredConversations);
+  const newPatterns = detectPatterns(scoredConversations).map((pattern) => ({
+    workspace_id: workspaceId,
+    ...pattern,
+  }));
 
-  // Persist each new pattern (skip if title already exists and is unresolved)
-  for (const pattern of newPatterns) {
-    const { data: existing } = await supabaseAdmin
-      .from("failure_patterns")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("title", pattern.title)
-      .eq("is_resolved", false)
-      .maybeSingle();
-
-    if (!existing) {
-      await supabaseAdmin.from("failure_patterns").insert({
-        workspace_id: workspaceId,
-        pattern_type: pattern.pattern_type,
-        title: pattern.title,
-        description: pattern.description,
-        affected_conversation_ids: pattern.affected_conversation_ids,
-        severity: pattern.severity,
-        recommendation: pattern.recommendation,
-        prompt_fix: pattern.prompt_fix,
-        knowledge_base_suggestion: pattern.knowledge_base_suggestion,
-      });
-    }
-  }
+  await syncFailurePatterns(workspaceId, newPatterns);
 
   if (newPatterns.length > 0) {
     console.log(

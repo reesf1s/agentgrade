@@ -340,7 +340,7 @@ export async function evaluateWithJudge(input: ScoringInput): Promise<ScoringRes
       userMessage += `[KB Doc ${i + 1}]:\n${truncateText(chunk, 1800)}\n\n`;
     });
   } else {
-    userMessage += `## Knowledge Base Context\nNone provided. Score accuracy and hallucination based on general plausibility and internal consistency.\n\n`;
+    userMessage += `## Knowledge Base Context\nNone provided. Use transcript evidence and internal consistency to judge grounding. Missing knowledge base context should lower confidence, but it should not automatically be treated as hallucination unless claims are clearly contradictory, fabricated, or implausibly specific.\n\n`;
   }
 
   userMessage += `## Required Output\n${SCORING_OUTPUT_SCHEMA}\n\nReturn ONLY the JSON object. No other text.`;

@@ -5,9 +5,9 @@ import { detectPatterns } from "@/lib/scoring";
 import type { FailurePattern } from "@/lib/db/types";
 import {
   dedupeFailurePatterns,
-  getPatternFingerprint,
-  mergePatternGroup,
 } from "@/lib/patterns/normalize";
+import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
+import { syncFailurePatterns } from "@/lib/patterns/store";
 
 /**
  * GET /api/patterns
@@ -86,7 +86,7 @@ async function detectAndStorePatterns(workspaceId: string) {
   if (!convs || convs.length < 3) return;
 
   const scoredConversations = convs
-    .filter((c) => c.quality_scores)
+    .filter((c) => isAnalyticsEligibleScore(c.quality_scores as { overall_score?: number; flags?: string[] | null } | null))
     .map((c) => {
       const qs = (c.quality_scores as unknown) as {
         overall_score: number;
@@ -122,70 +122,5 @@ async function detectAndStorePatterns(workspaceId: string) {
       ...pattern,
     }))
   );
-
-  const { data: existingPatterns } = await supabaseAdmin
-    .from("failure_patterns")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("is_resolved", false);
-
-  const existingByFingerprint = new Map<string, FailurePattern[]>();
-
-  for (const rawPattern of ((existingPatterns || []) as FailurePattern[])) {
-    const fingerprint = getPatternFingerprint(rawPattern);
-    const current = existingByFingerprint.get(fingerprint) || [];
-    current.push(rawPattern);
-    existingByFingerprint.set(fingerprint, current);
-  }
-
-  for (const pattern of newPatterns) {
-    const fingerprint = getPatternFingerprint(pattern);
-    const existingGroup = existingByFingerprint.get(fingerprint) || [];
-
-    if (existingGroup.length === 0) {
-      await supabaseAdmin.from("failure_patterns").insert({
-        workspace_id: workspaceId,
-        pattern_type: pattern.pattern_type,
-        title: pattern.title,
-        description: pattern.description,
-        affected_conversation_ids: pattern.affected_conversation_ids,
-        severity: pattern.severity,
-        recommendation: pattern.recommendation,
-        prompt_fix: pattern.prompt_fix,
-        knowledge_base_suggestion: pattern.knowledge_base_suggestion,
-      });
-      continue;
-    }
-
-    const canonical = mergePatternGroup(existingGroup);
-    const primary = existingGroup.find((candidate) => candidate.id === canonical.id) || existingGroup[0];
-
-    await supabaseAdmin
-      .from("failure_patterns")
-      .update({
-        title: pattern.title,
-        description: pattern.description,
-        affected_conversation_ids: [...new Set([...(primary.affected_conversation_ids || []), ...pattern.affected_conversation_ids])],
-        severity: pattern.severity,
-        recommendation: pattern.recommendation,
-        prompt_fix: pattern.prompt_fix,
-        knowledge_base_suggestion: pattern.knowledge_base_suggestion,
-        detected_at: new Date().toISOString(),
-      })
-      .eq("id", primary.id);
-
-    const duplicateIds = existingGroup
-      .filter((candidate) => candidate.id !== primary.id)
-      .map((candidate) => candidate.id);
-
-    if (duplicateIds.length > 0) {
-      await supabaseAdmin
-        .from("failure_patterns")
-        .update({
-          is_resolved: true,
-          resolved_at: new Date().toISOString(),
-        })
-        .in("id", duplicateIds);
-    }
-  }
+  await syncFailurePatterns(workspaceId, newPatterns);
 }

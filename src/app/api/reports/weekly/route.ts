@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { PromptImprovement, KnowledgeGap, WeeklyReportSummary } from "@/lib/db/types";
+import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
 
 /**
  * GET /api/reports/weekly
@@ -121,8 +122,8 @@ async function generateWeeklyReport(
   ]);
 
   const thisWeek = thisWeekRes.data || [];
-  const scored = thisWeek.filter(
-    (c) => c.quality_scores && (c.quality_scores as { overall_score?: number }).overall_score !== undefined
+  const scored = thisWeek.filter((c) =>
+    isAnalyticsEligibleScore(c.quality_scores as { overall_score?: number; flags?: string[] | null } | null)
   );
 
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
@@ -132,8 +133,8 @@ async function generateWeeklyReport(
   const avgHallucination = avg(scored.map((c) => (c.quality_scores as { hallucination_score?: number }).hallucination_score ?? 0));
   const avgResolution = avg(scored.map((c) => (c.quality_scores as { resolution_score?: number }).resolution_score ?? 0));
 
-  const priorScored = (priorWeekRes.data || []).filter(
-    (c) => c.quality_scores && (c.quality_scores as unknown as { overall_score?: number }).overall_score !== undefined
+  const priorScored = (priorWeekRes.data || []).filter((c) =>
+    isAnalyticsEligibleScore(c.quality_scores as unknown as { overall_score?: number; flags?: string[] | null } | null)
   );
   const priorAvg = avg(priorScored.map((c) => (c.quality_scores as unknown as { overall_score: number }).overall_score));
 

@@ -9,6 +9,7 @@ import { scoreColor, formatScore } from "@/lib/utils";
 import { ArrowLeft, AlertTriangle, Brain, BookOpen, User, Bot, Headphones } from "lucide-react";
 import Link from "next/link";
 import type { Message, QualityScore, ClaimAnalysis } from "@/lib/db/types";
+import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
 
 interface ConversationDetail {
   id: string;
@@ -124,6 +125,16 @@ export default function ConversationDetailPage() {
   const groundingRiskFlags = qs?.flags?.filter((flag) =>
     /(grounding|tool_backed|verification|trace|unverified|ungrounded)/i.test(flag)
   ) || [];
+  const groundingOnlyScore = isGroundingRiskOnlyScore(qs);
+  const visiblePromptImprovements = groundingOnlyScore
+    ? (qs?.prompt_improvements || []).slice(0, 1)
+    : (qs?.prompt_improvements || []);
+  const visibleKnowledgeGaps = groundingOnlyScore
+    ? (qs?.knowledge_gaps || []).filter((gap) => !/operational tool verification policy|crm deal briefing access workflow/i.test(gap.topic))
+    : (qs?.knowledge_gaps || []);
+  const visibleClaimAnalysis = groundingOnlyScore
+    ? (qs?.claim_analysis || []).slice(0, 5)
+    : (qs?.claim_analysis || []);
 
   const roleConfig = {
     customer: { icon: User, label: "Customer", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mr-auto" },
@@ -221,7 +232,7 @@ export default function ConversationDetailPage() {
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Grounding</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                {groundingRiskFlags.length > 0 ? "Needs review" : "Clear enough"}
+                {groundingRiskFlags.length > 0 ? "Evidence limited" : "Clear enough"}
               </p>
             </div>
           </div>
@@ -289,14 +300,16 @@ export default function ConversationDetailPage() {
           </GlassCard>
 
           {/* Prompt Improvements */}
-          {qs && qs.prompt_improvements.length > 0 && (
+          {qs && visiblePromptImprovements.length > 0 && (
             <GlassCard className="rounded-[1.1rem] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="w-4 h-4 text-[var(--text-secondary)]" />
-                <h2 className="text-sm font-medium text-[var(--text-primary)]">Recommended Prompt Improvements</h2>
+                <h2 className="text-sm font-medium text-[var(--text-primary)]">
+                  {groundingOnlyScore ? "Suggested trust improvement" : "Recommended prompt improvements"}
+                </h2>
               </div>
               <div className="space-y-4">
-                {qs.prompt_improvements.map((imp, i) => (
+                {visiblePromptImprovements.map((imp, i) => (
                   <div key={i} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-medium text-[var(--text-primary)]">{imp.issue}</p>
@@ -316,14 +329,14 @@ export default function ConversationDetailPage() {
           )}
 
           {/* Knowledge Gaps */}
-          {qs && qs.knowledge_gaps.length > 0 && (
+          {qs && visibleKnowledgeGaps.length > 0 && (
             <GlassCard className="rounded-[1.1rem] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-4 h-4 text-[var(--text-secondary)]" />
-                <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge Base Gaps</h2>
+                <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge gaps</h2>
               </div>
               <div className="space-y-3">
-                {qs.knowledge_gaps.map((gap, i) => (
+                {visibleKnowledgeGaps.map((gap, i) => (
                   <div key={i} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
                     <p className="text-sm font-medium text-[var(--text-primary)] capitalize mb-1">{gap.topic}</p>
                     <p className="text-xs text-[var(--text-secondary)] mb-2">{gap.description}</p>
@@ -375,9 +388,9 @@ export default function ConversationDetailPage() {
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
                 {groundingRiskFlags.length > 0 ? (
                   <div className="mt-4 rounded-xl bg-[var(--surface)] p-3">
-                    <p className="text-xs text-[var(--text-muted)]">Grounding risk</p>
+                    <p className="text-xs text-[var(--text-muted)]">Evidence note</p>
                     <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
-                      The answer quality may be strong, but some record-level claims were not directly traceable in the transcript.
+                      The answer may still be useful, but some record-level claims were not directly traceable in the transcript.
                     </p>
                   </div>
                 ) : null}
@@ -401,7 +414,9 @@ export default function ConversationDetailPage() {
 
               {qs.flags.length > 0 && (
                 <GlassCard className="rounded-[1.1rem] p-5">
-                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Flags</h2>
+                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">
+                    {groundingOnlyScore ? "Review notes" : "Flags"}
+                  </h2>
                   <div className="flex flex-wrap gap-2">
                     {qs.flags.map((flag, i) => (
                       <span
@@ -419,11 +434,13 @@ export default function ConversationDetailPage() {
                 </GlassCard>
               )}
 
-              {qs.claim_analysis.length > 0 && (
+              {visibleClaimAnalysis.length > 0 && (
                 <GlassCard className="rounded-[1.1rem] p-5">
-                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Claim Verification</h2>
+                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">
+                    {groundingOnlyScore ? "Claims that need checking" : "Claim verification"}
+                  </h2>
                   <div className="space-y-2.5">
-                    {qs.claim_analysis.map((ca, i) => {
+                    {visibleClaimAnalysis.map((ca, i) => {
                       const verdictColor = {
                         verified: "score-good",
                         unverifiable: "text-[var(--text-muted)]",

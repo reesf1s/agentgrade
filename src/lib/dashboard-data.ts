@@ -12,6 +12,10 @@ import type {
 import { buildOrgRecommendations } from "@/lib/scoring/org-recommendations";
 import { isManualCalibrationConversation } from "@/lib/calibration";
 import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
+import {
+  filterPatternsWithUsableScores,
+  isAnalyticsEligibleScore,
+} from "@/lib/scoring/quality-score-status";
 
 export interface DashboardStats {
   avg_score: number;
@@ -69,6 +73,24 @@ function getJoinedRecord<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
+async function loadUsableScoreMap(conversationIds: string[]) {
+  const { data } = await supabaseAdmin
+    .from("quality_scores")
+    .select("conversation_id, overall_score, flags")
+    .in("conversation_id", conversationIds);
+
+  const map = new Map<string, boolean>();
+
+  for (const row of data || []) {
+    map.set(
+      row.conversation_id as string,
+      isAnalyticsEligibleScore(row as { overall_score?: number; flags?: string[] | null })
+    );
+  }
+
+  return map;
+}
+
 export async function getCurrentWorkspaceId(): Promise<string> {
   const ctx = await getWorkspaceContext();
   if (!ctx?.workspace.id) {
@@ -115,10 +137,15 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
     (conversation) => !isManualCalibrationConversation((conversation as { metadata?: Record<string, unknown> }).metadata || null)
   );
   const alerts = (alertsRes.data || []) as Alert[];
-  const patterns = dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]).slice(0, 5);
+  const patterns = (
+    await filterPatternsWithUsableScores(
+      dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]),
+      loadUsableScoreMap
+    )
+  ).slice(0, 5);
   const scored = conversations.filter(
     (conversation) =>
-      getJoinedRecord(conversation.quality_scores)?.overall_score !== undefined
+      isAnalyticsEligibleScore(getJoinedRecord(conversation.quality_scores))
   );
 
   const avgScore =
@@ -157,9 +184,11 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
         | { overall_score?: number }[]
         | null
     );
-    if (qualityScore?.overall_score !== undefined) {
+    if (isAnalyticsEligibleScore(qualityScore)) {
       if (!trendByDay[day]) trendByDay[day] = [];
-      trendByDay[day].push(qualityScore.overall_score);
+      const safeQualityScore = qualityScore as { overall_score: number };
+      const overallScore = safeQualityScore.overall_score;
+      trendByDay[day].push(overallScore);
     }
   }
 
@@ -245,14 +274,15 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
   const lastWeek = (lastWeekRes.data || []).filter(
     (conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)
   );
-  const scored = thisWeek.filter(
-    (conversation) =>
+  const scored = thisWeek.filter((conversation) =>
+    isAnalyticsEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
-          | { overall_score?: number }
-          | { overall_score?: number }[]
+          | { overall_score?: number; flags?: string[] | null }
+          | { overall_score?: number; flags?: string[] | null }[]
           | null
-      )?.overall_score !== undefined
+      )
+    )
   );
 
   const avgScore =
@@ -270,14 +300,15 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
         ) / scored.length
       : 0;
 
-  const lastWeekScored = lastWeek.filter(
-    (conversation) =>
+  const lastWeekScored = lastWeek.filter((conversation) =>
+    isAnalyticsEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
-          | { overall_score?: number }
-          | { overall_score?: number }[]
+          | { overall_score?: number; flags?: string[] | null }
+          | { overall_score?: number; flags?: string[] | null }[]
           | null
-      )?.overall_score !== undefined
+      )
+    )
   );
 
   const lastWeekAvg =
@@ -412,16 +443,18 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
         | null
     );
 
-    if (qualityScore?.overall_score !== undefined) {
+    if (isAnalyticsEligibleScore(qualityScore)) {
       if (!trendByDay[day]) {
         trendByDay[day] = { overall: [], accuracy: [], hallucination: [] };
       }
-      trendByDay[day].overall.push(qualityScore.overall_score);
-      if (qualityScore.accuracy_score !== undefined) {
-        trendByDay[day].accuracy.push(qualityScore.accuracy_score);
+      const safeQualityScore = qualityScore as { overall_score: number; accuracy_score?: number; hallucination_score?: number };
+      const overallScore = safeQualityScore.overall_score;
+      trendByDay[day].overall.push(overallScore);
+      if (safeQualityScore.accuracy_score !== undefined) {
+        trendByDay[day].accuracy.push(safeQualityScore.accuracy_score);
       }
-      if (qualityScore.hallucination_score !== undefined) {
-        trendByDay[day].hallucination.push(qualityScore.hallucination_score);
+      if (safeQualityScore.hallucination_score !== undefined) {
+        trendByDay[day].hallucination.push(safeQualityScore.hallucination_score);
       }
     }
   }
@@ -446,7 +479,12 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       : 0;
   };
 
-  const dedupedPatterns = dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]).slice(0, 5);
+  const dedupedPatterns = (
+    await filterPatternsWithUsableScores(
+      dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]),
+      loadUsableScoreMap
+    )
+  ).slice(0, 5);
 
   return {
     week_start: sevenDaysAgo.toISOString().slice(0, 10),
