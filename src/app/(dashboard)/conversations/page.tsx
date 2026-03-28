@@ -75,17 +75,25 @@ export default function ConversationsPage() {
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-8">
-        <p className="enterprise-section-title">Conversations</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Review conversations</h1>
+      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <p className="enterprise-kicker">Conversations</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Review what actually happened</h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          {loading ? "Loading..." : `${total} conversations`}
+          {loading ? "Loading conversations..." : `${total} conversations available for review`}
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <GlassCard className="mb-6 rounded-[1.2rem] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Filter the queue</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Find weak conversations, check a specific customer, or focus on one platform.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[250px] flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
@@ -95,7 +103,7 @@ export default function ConversationsPage() {
             className="glass-input w-full pl-10 pr-4 py-2.5 text-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-2 py-1">
           <Filter className="w-4 h-4 text-[var(--text-muted)]" />
           {["all", "critical", "warning", "good"].map((f) => (
             <button
@@ -103,8 +111,8 @@ export default function ConversationsPage() {
               onClick={() => setScoreFilter(f)}
               className={`text-xs px-3 py-1.5 rounded-lg transition-all capitalize ${
                 scoreFilter === f
-                  ? "bg-[rgba(0,0,0,0.06)] text-[var(--text-primary)] font-medium"
-                  : "text-[var(--text-secondary)] hover:bg-[rgba(0,0,0,0.03)]"
+                  ? "bg-[var(--panel)] text-[var(--text-primary)] font-medium shadow-sm"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface)]"
               }`}
             >
               {f}
@@ -139,14 +147,15 @@ export default function ConversationsPage() {
           onChange={(e) => setFlag(e.target.value)}
           className="glass-input px-3 py-2 text-sm"
         />
-      </div>
+        </div>
+      </GlassCard>
 
       {/* Table */}
-      <GlassCard className="overflow-x-auto">
-        <table className="glass-table min-w-[920px] table-fixed">
+      <GlassCard className="overflow-x-auto rounded-[1.2rem]">
+        <table className="glass-table min-w-[980px] table-fixed">
           <thead>
             <tr>
-              <th className="w-[24%]">Customer</th>
+              <th className="w-[26%]">Customer</th>
               <th className="w-[10%]">Platform</th>
               <th className="w-[9%]">Overall</th>
               <th className="w-[10%]">Confidence</th>
@@ -154,7 +163,7 @@ export default function ConversationsPage() {
               <th className="w-[11%]">Grounding</th>
               <th className="w-[10%]">Resolution</th>
               <th className="w-[8%]">Escalated</th>
-              <th className="w-[9%] whitespace-nowrap text-right">Date</th>
+              <th className="w-[11%] whitespace-nowrap text-right">Date</th>
             </tr>
           </thead>
           <tbody>

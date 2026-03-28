@@ -1,12 +1,12 @@
 "use client";
+import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-interface GlassCardProps {
+interface GlassCardProps extends HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   elevated?: boolean;
   hoverable?: boolean;
-  onClick?: () => void;
 }
 
 export function GlassCard({
@@ -15,9 +15,11 @@ export function GlassCard({
   elevated,
   hoverable = false,
   onClick,
+  ...props
 }: GlassCardProps) {
   return (
     <div
+      {...props}
       onClick={onClick}
       className={cn(
         elevated ? "glass-elevated" : hoverable ? "glass" : "glass-static",

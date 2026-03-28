@@ -42,10 +42,11 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
   return (
     <div className="max-w-5xl">
-      <div className="mb-8 flex items-end justify-between gap-4">
+      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="enterprise-section-title">Insights</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Recurring issues</h1>
+          <p className="enterprise-kicker">Insights</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Recurring issues worth fixing once</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             The most common breakdowns across your conversations, grouped so the same issue only appears once.
           </p>
@@ -53,6 +54,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
         <GlassButton onClick={refreshPatterns} disabled={refreshing}>
           {refreshing ? "Refreshing..." : "Refresh insights"}
         </GlassButton>
+        </div>
       </div>
 
       {patterns.length === 0 ? (

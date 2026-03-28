@@ -481,12 +481,16 @@ function calibrateDimension(
   let globalApplied = false;
 
   const workspaceModel = workspaceBundle?.dimensions[dimension];
+  let strongestLabelCount = 0;
+  let strongestMae = 0.25;
   if (workspaceModel) {
     const predicted = predictWithWeights(features, workspaceModel.intercept, workspaceModel.weights);
     const weight = workspaceModel.blend_weight * 0.65;
     blended = blended * (1 - weight) + predicted * weight;
     totalWeight += weight;
     workspaceApplied = true;
+    strongestLabelCount = Math.max(strongestLabelCount, workspaceModel.label_count);
+    strongestMae = Math.min(strongestMae, workspaceModel.mae);
   }
 
   const globalModel = globalBundle?.dimensions[dimension];
@@ -496,10 +500,23 @@ function calibrateDimension(
     const weight = Math.min(globalModel.blend_weight * 0.35, remainingWeight);
     blended = blended * (1 - weight) + predicted * weight;
     globalApplied = weight > 0;
+    if (weight > 0) {
+      strongestLabelCount = Math.max(strongestLabelCount, globalModel.label_count);
+      strongestMae = Math.min(strongestMae, globalModel.mae);
+    }
   }
 
+  const sampleAllowance =
+    strongestLabelCount >= 60 ? 0.2 :
+    strongestLabelCount >= 24 ? 0.14 :
+    strongestLabelCount >= 12 ? 0.1 :
+    0.06;
+  const reliabilityAllowance = strongestMae <= 0.08 ? 0.03 : strongestMae <= 0.14 ? 0.015 : 0;
+  const maxDelta = sampleAllowance + reliabilityAllowance;
+  const capped = Math.max(raw - maxDelta, Math.min(raw + maxDelta, blended));
+
   return {
-    score: clamp(blended),
+    score: clamp(capped),
     workspaceApplied,
     globalApplied,
   };

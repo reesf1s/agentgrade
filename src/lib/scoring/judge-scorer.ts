@@ -292,6 +292,25 @@ function toZeroOneFromFivePoint(value: unknown, fallback = 0.6): number {
   return (five - 1) / 4;
 }
 
+function resolveDimensionScore(rawValue: unknown, rubricValue: number, fallback = 0.6): number {
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return clamp(rubricValue, fallback);
+  }
+
+  const raw = clamp(rawValue, fallback);
+  const gap = Math.abs(raw - rubricValue);
+
+  if (gap <= 0.15) {
+    return clamp((raw + rubricValue) / 2, fallback);
+  }
+
+  if (gap >= 0.45) {
+    return clamp(rubricValue, fallback);
+  }
+
+  return clamp(rubricValue * 0.7 + raw * 0.3, fallback);
+}
+
 // ─── Main Evaluation Function ───────────────────────────────────────
 /**
  * Calls the configured model to evaluate a conversation across all quality dimensions.
@@ -410,10 +429,14 @@ export async function evaluateWithJudge(input: ScoringInput): Promise<ScoringRes
     );
 
     // ── Validate and sanitize scores ──────────────────────────────
+    const resolvedAccuracy = resolveDimensionScore(raw.accuracy_score, factualAccuracy, 0.6);
+    const resolvedGroundedness = resolveDimensionScore(raw.hallucination_score, groundedness, 0.6);
+    const resolvedOverall = resolveDimensionScore(raw.overall_score, derivedOverall, 0.62);
+
     const result: ScoringResult = {
-      overall_score: clamp(raw.overall_score ?? derivedOverall),
-      accuracy_score: clamp(raw.accuracy_score ?? factualAccuracy),
-      hallucination_score: clamp(raw.hallucination_score ?? groundedness),
+      overall_score: resolvedOverall,
+      accuracy_score: resolvedAccuracy,
+      hallucination_score: resolvedGroundedness,
       resolution_score: clamp(
         raw.resolution_score ??
           (instructionFollowing * 0.35 + completeness * 0.3 + helpfulness * 0.35)

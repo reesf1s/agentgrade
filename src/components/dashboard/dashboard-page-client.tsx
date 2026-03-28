@@ -27,17 +27,15 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
   return (
     <div className="max-w-6xl pb-10">
-      <div className="mb-8 rounded-[1.5rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+      <div className="mb-8 rounded-[1.65rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="enterprise-section-title">
-              Overview
-            </p>
+            <p className="enterprise-kicker">Overview</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-              What needs attention now
+              Know whether your AI is actually helping
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Track conversation quality, spot repeated issues, and decide what to fix next without digging through every transcript.
+              See where quality is holding, where trust is slipping, and what to improve next without combing through every transcript.
             </p>
           </div>
           <div className="grid gap-3 md:min-w-[34rem] sm:grid-cols-3">
@@ -46,7 +44,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{trustState}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Scored recently</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Reviewed recently</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{data.stats.conversations_scored ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
@@ -99,9 +97,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         <GlassCard className="rounded-[1.25rem] p-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <p className="enterprise-section-title">
-                Trend
-              </p>
+              <p className="enterprise-kicker">Trend</p>
               <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
                 Quality over the last 30 days
               </h2>
@@ -182,7 +178,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           <GlassCard className="rounded-[1.25rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent alerts</h2>
+              <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts that need action</h2>
             </div>
             {data.alerts.length === 0 ? (
               <p className="text-xs text-[var(--text-muted)]">No active alerts.</p>

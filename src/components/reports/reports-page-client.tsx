@@ -57,15 +57,17 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <div className="flex items-center justify-between">
         <div>
-          <p className="enterprise-section-title">Reports</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Weekly report</h1>
+          <p className="enterprise-kicker">Reports</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Weekly quality report</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Week of {report.week_start} - {report.week_end}
           </p>
         </div>
         <button className="glass-button text-sm">Export PDF</button>
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-4 gap-4">

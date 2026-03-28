@@ -158,6 +158,13 @@ function hasMissingToolEvidenceButHelpfulResponse(messages: Message[]): boolean 
   );
 }
 
+function hasOnlyUnverifiableClaims(result: ScoringResult): boolean {
+  const claims = result.claim_analysis || [];
+  if (claims.length === 0) return false;
+
+  return claims.every((claim) => claim.verdict === "unverifiable" || claim.verdict === "verified");
+}
+
 function isStrongAdvisoryAnswer(messages: Message[]): boolean {
   return (
     (customerRequestedGuidance(messages) || customerAskedForAnalysis(messages)) &&
@@ -228,6 +235,44 @@ function removeKnowledgeGapsByPattern(
     const combined = `${gap.topic} ${gap.description} ${gap.suggested_content}`;
     return !pattern.test(combined);
   });
+}
+
+function downgradeUnsupportedOperationalFabrication(
+  input: ScoringInput,
+  result: ScoringResult
+): ScoringResult {
+  const hasKb = Boolean(input.knowledgeBaseContext?.length);
+  const hasToolEvidence = hasTranscriptToolEvidence(input.messages);
+  const operational = hasOperationalRecordClaim(input.messages);
+
+  if (hasKb || hasToolEvidence || !operational) {
+    return result;
+  }
+
+  const remappedClaims = result.claim_analysis.map((claim) => {
+    if (claim.verdict !== "fabricated") {
+      return claim;
+    }
+
+    return {
+      ...claim,
+      verdict: "unverifiable" as const,
+      evidence:
+        claim.evidence ||
+        "The transcript did not include a visible lookup or source trace, so this claim could not be verified from the available evidence.",
+    };
+  });
+
+  const hadFabricatedClaims = remappedClaims.some((claim) => claim.verdict === "fabricated");
+  if (hadFabricatedClaims) {
+    return result;
+  }
+
+  return {
+    ...result,
+    claim_analysis: remappedClaims,
+    flags: removeMatchingFlags(result.flags, /fabricat|hallucinat/i),
+  };
 }
 
 function buildDefaultSummary(result: ScoringResult, confidence: { level: "high" | "medium" | "low"; reasons: string[] }) {
@@ -333,12 +378,13 @@ export function applyScoringGuardrails(
   input: ScoringInput,
   result: ScoringResult
 ): ScoringResult {
+  const normalizedResult = downgradeUnsupportedOperationalFabrication(input, result);
   const strongAdvisoryAnswer = isStrongAdvisoryAnswer(input.messages);
   const adjusted = {
-    ...result,
-    flags: [...result.flags],
-    prompt_improvements: [...result.prompt_improvements],
-    knowledge_gaps: [...result.knowledge_gaps],
+    ...normalizedResult,
+    flags: [...normalizedResult.flags],
+    prompt_improvements: [...normalizedResult.prompt_improvements],
+    knowledge_gaps: [...normalizedResult.knowledge_gaps],
   };
 
   const contradictedClaims = adjusted.claim_analysis.filter(
@@ -400,64 +446,51 @@ export function applyScoringGuardrails(
 
   if (hasOperationalRecordClaim(input.messages) && !hasTranscriptToolEvidence(input.messages)) {
     const unsupportedButHelpful = hasMissingToolEvidenceButHelpfulResponse(input.messages);
-
-    pushUniqueFlag(adjusted.flags, "tool_backed_claim_without_evidence");
-    pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
-    if (unsupportedButHelpful) {
-      pushUniqueFlag(adjusted.flags, "grounding_risk_without_tool_trace");
+    pushUniqueFlag(adjusted.flags, unsupportedButHelpful ? "limited_verification_trace" : "tool_backed_claim_without_evidence");
+    if (!unsupportedButHelpful) {
+      pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
+      pushPromptImprovement(adjusted.prompt_improvements, {
+        issue: "Agent makes record-specific claims without visible lookup evidence",
+        current_behavior:
+          "The agent referenced CRM or account state without showing a tool lookup or system result in the transcript.",
+        recommended_prompt_change:
+          "Add to the system prompt: 'Before making any claim about a deal, account, ticket, order, subscription, or internal record, perform the live lookup first. Only state record details after the lookup succeeds. If you cannot verify the record state with a live tool call, say explicitly that you cannot confirm it yet and ask permission to retry or escalate.'",
+        expected_impact:
+          "Reduces hallucinated operational claims and creates a reusable org-wide policy for tool-backed answers.",
+        priority: "high",
+      });
+      pushKnowledgeGap(adjusted.knowledge_gaps, {
+        topic: "Operational Tool Verification Policy",
+        description:
+          "The workspace needs a documented rule for how the agent should verify CRM or account state before making record-specific claims.",
+        affected_conversations: 1,
+        suggested_content:
+          "Document an agent policy that any CRM, account, ticket, order, or subscription claim must come from a live lookup. Include the exact tool name, what fields can be stated after lookup, and the fallback response when the tool is unavailable.",
+      });
     }
-    pushPromptImprovement(adjusted.prompt_improvements, {
-      issue: "Agent makes record-specific claims without visible lookup evidence",
-      current_behavior:
-        "The agent referenced CRM or account state without showing a tool lookup or system result in the transcript.",
-      recommended_prompt_change:
-        "Add to the system prompt: 'Before making any claim about a deal, account, ticket, order, subscription, or internal record, perform the live lookup first. Only state record details after the lookup succeeds. If you cannot verify the record state with a live tool call, say explicitly that you cannot confirm it yet and ask permission to retry or escalate.'",
-      expected_impact:
-        "Reduces hallucinated operational claims and creates a reusable org-wide policy for tool-backed answers.",
-      priority: "high",
-    });
-    pushKnowledgeGap(adjusted.knowledge_gaps, {
-      topic: "Operational Tool Verification Policy",
-      description:
-        "The workspace needs a documented rule for how the agent should verify CRM or account state before making record-specific claims.",
-      affected_conversations: 1,
-      suggested_content:
-        "Document an agent policy that any CRM, account, ticket, order, or subscription claim must come from a live lookup. Include the exact tool name, what fields can be stated after lookup, and the fallback response when the tool is unavailable.",
-    });
 
     if (unsupportedButHelpful && fabricatedClaims.length === 0 && contradictedClaims.length === 0) {
-      adjusted.hallucination_score = Math.max(adjusted.hallucination_score, strongAdvisoryAnswer ? 0.92 : 0.86);
-      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.78 : 0.72);
+      adjusted.hallucination_score = 1;
+      adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.84 : 0.76);
       adjusted.resolution_score = Math.max(adjusted.resolution_score, strongAdvisoryAnswer ? 0.84 : adjusted.resolution_score);
       adjusted.hard_fail = false;
       adjusted.overall_decision = strongAdvisoryAnswer ? "pass" : adjusted.overall_decision === "fail" ? "borderline" : adjusted.overall_decision;
       adjusted.flags = removeMatchingFlags(
         adjusted.flags,
-        /hard_fail_triggered|unsupported_crm_briefing|needed_escalation_for_data_access|potentially_fabricated|critical_time_sensitive_claim_ungrounded|specific_financial_figures_without_source|integration_missing_tool_trace/i
+        /hard_fail_triggered|unsupported_crm_briefing|needed_escalation_for_data_access|potentially_fabricated|critical_time_sensitive_claim_ungrounded|specific_financial_figures_without_source|integration_missing_tool_trace|tool_backed_claim_without_evidence|org_policy_gap_tool_verification/i
       );
       adjusted.prompt_improvements = removePromptImprovementsByPattern(
         adjusted.prompt_improvements,
-        /source attribution|timestamp|crm lookup tool|deal briefing access workflow|operational data.*source|tool capability to do so/i
+        /source attribution|timestamp|crm lookup tool|deal briefing access workflow|operational data.*source|tool capability to do so|record-specific claims without visible lookup evidence|live lookup first/i
       );
       adjusted.knowledge_gaps = removeKnowledgeGapsByPattern(
         adjusted.knowledge_gaps,
         /operational tool verification policy|crm deal briefing access workflow|score vs ml win probability/i
       );
 
-      pushPromptImprovement(adjusted.prompt_improvements, {
-        issue: "Show evidence when summarizing live records",
-        current_behavior:
-          "The answer was useful, but the transcript did not include the lookup result or source reference behind record-level claims.",
-        recommended_prompt_change:
-          "When answering with live deal, CRM, account, or ticket data, include a short source cue if available. If the lookup result is not visible in the reply context, state that the answer is a working summary and mark it as needing verification instead of presenting it as fully confirmed.",
-        expected_impact:
-          "Keeps strong answers useful while making evidence gaps obvious without turning every operational answer into a hard failure.",
-        priority: "medium",
-      });
-
       adjusted.summary = strongAdvisoryAnswer
-        ? "The agent delivered a strong, actionable answer that would be useful to a human operator. The main limitation is that the transcript did not include the live lookup or source evidence needed to fully verify some record-level claims, so this should be treated as useful but low-confidence rather than incorrect."
-        : "The answer was directionally useful, but some record-level claims were not traceable in the transcript. Treat it as a helpful response with evidence gaps, not as a verified source of truth.";
+        ? "The agent delivered a strong, actionable answer that appears useful and internally coherent. The main limitation is that the transcript did not include the lookup evidence needed to verify some record-level details, so this should be treated as a low-confidence review rather than a hallucination failure."
+        : "The answer was directionally useful, but some record-level details could not be checked from the transcript alone. Treat it as helpful output with limited verification evidence.";
     }
   }
 
@@ -492,12 +525,23 @@ export function applyScoringGuardrails(
     contradictedClaims.length === 0 &&
     hasSubstantiveAgentResponse(input.messages)
   ) {
-    adjusted.hallucination_score = Math.max(adjusted.hallucination_score, strongAdvisoryAnswer ? 0.9 : 0.8);
-    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.76 : 0.66);
+    adjusted.hallucination_score = 1;
+    adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.82 : 0.7);
     if (!hasNegativeAgentTone(input.messages)) {
       adjusted.tone_score = Math.max(adjusted.tone_score, 0.82);
     }
     pushUniqueFlag(adjusted.flags, "grounding_risk_review_recommended");
+  }
+
+  if (hasOnlyUnverifiableClaims(adjusted) && strongAdvisoryAnswer) {
+    adjusted.prompt_improvements = removePromptImprovementsByPattern(
+      adjusted.prompt_improvements,
+      /lookup evidence|tool verification|source attribution|timestamp|crm lookup|escalate instead of guessing/i
+    );
+    adjusted.knowledge_gaps = removeKnowledgeGapsByPattern(
+      adjusted.knowledge_gaps,
+      /operational tool verification policy|crm deal briefing access workflow/i
+    );
   }
 
   if (endsWithUnresolvedCustomerIntent(input.messages)) {

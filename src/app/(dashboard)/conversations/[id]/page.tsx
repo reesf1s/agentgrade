@@ -127,14 +127,17 @@ export default function ConversationDetailPage() {
   ) || [];
   const groundingOnlyScore = isGroundingRiskOnlyScore(qs);
   const visiblePromptImprovements = groundingOnlyScore
-    ? (qs?.prompt_improvements || []).slice(0, 1)
+    ? []
     : (qs?.prompt_improvements || []);
   const visibleKnowledgeGaps = groundingOnlyScore
-    ? (qs?.knowledge_gaps || []).filter((gap) => !/operational tool verification policy|crm deal briefing access workflow/i.test(gap.topic))
+    ? []
     : (qs?.knowledge_gaps || []);
   const visibleClaimAnalysis = groundingOnlyScore
-    ? (qs?.claim_analysis || []).slice(0, 5)
+    ? (qs?.claim_analysis || []).filter((claim) => claim.verdict !== "verified").slice(0, 3)
     : (qs?.claim_analysis || []);
+  const visibleFlags = groundingOnlyScore
+    ? (qs?.flags || []).filter((flag) => !/(tool_backed|verification|trace|org_policy_gap|ungrounded|grounding_risk_review_recommended)/i.test(flag))
+    : (qs?.flags || []);
 
   const roleConfig = {
     customer: { icon: User, label: "Customer", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mr-auto" },
@@ -230,7 +233,7 @@ export default function ConversationDetailPage() {
               <p className={`mt-2 text-sm font-semibold capitalize ${confidenceTone}`}>{confidenceLevel || "Pending"}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Grounding</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Evidence</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
                 {groundingRiskFlags.length > 0 ? "Evidence limited" : "Clear enough"}
               </p>
@@ -412,13 +415,13 @@ export default function ConversationDetailPage() {
                 ) : null}
               </GlassCard>
 
-              {qs.flags.length > 0 && (
+              {visibleFlags.length > 0 && (
                 <GlassCard className="rounded-[1.1rem] p-5">
                   <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">
                     {groundingOnlyScore ? "Review notes" : "Flags"}
                   </h2>
                   <div className="flex flex-wrap gap-2">
-                    {qs.flags.map((flag, i) => (
+                    {visibleFlags.map((flag, i) => (
                       <span
                         key={i}
                         className={`text-xs px-2.5 py-1 rounded-full font-medium ${
@@ -455,6 +458,11 @@ export default function ConversationDetailPage() {
                       );
                     })}
                   </div>
+                  {groundingOnlyScore ? (
+                    <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+                      These claims were not disproven. They just could not be verified from the transcript alone.
+                    </p>
+                  ) : null}
                 </GlassCard>
               )}
             </>

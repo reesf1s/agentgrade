@@ -35,17 +35,17 @@ export function Sidebar() {
   }, [router]);
 
   return (
-    <aside className="fixed left-5 top-5 z-40 flex h-[calc(100vh-2.5rem)] w-[16.5rem] flex-col rounded-[1.9rem] glass-sidebar px-3.5 py-4">
+    <aside className="fixed left-5 top-5 z-40 flex h-[calc(100vh-2.5rem)] w-[16.5rem] flex-col rounded-[2rem] glass-sidebar px-3.5 py-4">
       <div className="mb-5 flex items-center justify-between px-2">
         <Link href="/dashboard" prefetch className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] text-[var(--text-primary)] shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--sidebar-accent)] text-[var(--text-primary)] shadow-sm">
             <Zap className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--text-muted)]">
-              AI Quality
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--text-muted)]">
+              Quality Ops
             </p>
-            <span className="text-[17px] font-semibold tracking-tight text-[var(--text-primary)]">
+            <span className="text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
               AgentGrade
             </span>
           </div>
@@ -55,9 +55,9 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="glass-static mb-5 rounded-[1.25rem] p-4">
+      <div className="mb-5 rounded-[1.35rem] border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--text-muted)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">
             Workspace
           </p>
           <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
@@ -65,15 +65,15 @@ export function Sidebar() {
           </span>
         </div>
         <p className="text-sm font-semibold leading-5 text-[var(--text-primary)]">
-          Review what needs attention
+          See where your assistant is helping, drifting, or bluffing
         </p>
         <p className="mt-1.5 text-xs leading-5 text-[var(--text-secondary)]">
-          Monitor conversations, spot recurring issues, and tighten your assistant with an audit trail.
+          Review conversations, find repeated failure modes, and tighten performance with an audit trail.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Focus</p>
-            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Scoring</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Priority</p>
+            <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Scoring trust</p>
           </div>
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
             <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Status</p>
