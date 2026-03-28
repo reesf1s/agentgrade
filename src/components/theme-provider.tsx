@@ -13,18 +13,20 @@ const ThemeContext = createContext<{
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem("agentgrade-theme") as Theme | null;
     if (stored) {
       setTheme(stored);
       document.documentElement.classList.toggle("dark", stored === "dark");
+      document.documentElement.dataset.theme = stored;
     } else {
-      // Default to light — no OS preference detection
-      setTheme("light");
-      document.documentElement.classList.remove("dark");
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+      setTheme(systemTheme);
+      document.documentElement.classList.toggle("dark", systemTheme === "dark");
+      document.documentElement.dataset.theme = systemTheme;
     }
   }, []);
 
@@ -33,9 +35,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(next);
     localStorage.setItem("agentgrade-theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.dataset.theme = next;
   };
-
-  if (!mounted) return <>{children}</>;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

@@ -6,6 +6,8 @@
 :root {
   --background: #f6f7f9;
   --foreground: #111827;
+  --page-shell: rgba(255, 255, 255, 0.62);
+  --page-shell-border: rgba(15, 23, 42, 0.06);
   --panel: rgba(255, 255, 255, 0.92);
   --panel-subtle: rgba(255, 255, 255, 0.76);
   --surface: rgba(17, 24, 39, 0.04);
@@ -31,27 +33,30 @@
 
 /* ─── Dark Theme ────────────────────────────────────────────────── */
 .dark {
-  --background: #0b0d12;
+  color-scheme: dark;
+  --background: #0a0d13;
   --foreground: rgba(245, 248, 255, 0.96);
-  --panel: rgba(20, 24, 33, 0.9);
-  --panel-subtle: rgba(20, 24, 33, 0.76);
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-strong: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.12);
-  --glass-bg: rgba(17, 21, 29, 0.88);
-  --glass-bg-hover: rgba(24, 28, 38, 0.96);
-  --glass-bg-elevated: rgba(24, 28, 38, 0.98);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-border-hover: rgba(255, 255, 255, 0.12);
-  --glass-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-  --glass-shadow-elevated: 0 22px 64px rgba(0, 0, 0, 0.36);
+  --page-shell: rgba(12, 17, 26, 0.72);
+  --page-shell-border: rgba(148, 163, 184, 0.08);
+  --panel: rgba(14, 19, 29, 0.92);
+  --panel-subtle: rgba(16, 22, 34, 0.82);
+  --surface: rgba(148, 163, 184, 0.08);
+  --surface-strong: rgba(148, 163, 184, 0.14);
+  --border-subtle: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(226, 232, 240, 0.16);
+  --glass-bg: rgba(15, 20, 31, 0.86);
+  --glass-bg-hover: rgba(20, 27, 40, 0.94);
+  --glass-bg-elevated: rgba(18, 24, 36, 0.98);
+  --glass-border: rgba(148, 163, 184, 0.14);
+  --glass-border-hover: rgba(191, 219, 254, 0.24);
+  --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
+  --glass-shadow-elevated: 0 24px 72px rgba(0, 0, 0, 0.44);
   --text-primary: rgba(245, 248, 255, 0.96);
   --text-secondary: rgba(214, 219, 229, 0.84);
   --text-muted: rgba(154, 163, 177, 0.78);
-  --surface-hover: rgba(255, 255, 255, 0.06);
-  --divider: rgba(255, 255, 255, 0.08);
-  --btn-primary-bg: #f3f4f6;
+  --surface-hover: rgba(148, 163, 184, 0.12);
+  --divider: rgba(148, 163, 184, 0.12);
+  --btn-primary-bg: #e2e8f0;
   --btn-primary-hover: #ffffff;
   --btn-primary-text: #111827;
 }
@@ -69,8 +74,9 @@ body {
 
 .dark body {
   background:
-    radial-gradient(circle at top left, rgba(255,255,255,0.04), transparent 20%),
-    linear-gradient(180deg, #0b0d12 0%, #11131a 100%);
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.08), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.08), transparent 18%),
+    linear-gradient(180deg, #09101a 0%, #0b0d13 48%, #111827 100%);
 }
 
 /* ─── Glass Components ──────────────────────────────────────────── */
@@ -112,6 +118,13 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
+  box-shadow: var(--glass-shadow);
+}
+
+.dashboard-shell {
+  background: var(--page-shell);
+  border: 1px solid var(--page-shell-border);
+  border-radius: 2rem;
   box-shadow: var(--glass-shadow);
 }
 
@@ -185,6 +198,10 @@ body {
 .score-bg-good { background: rgba(16, 185, 129, 0.1); }
 .score-bg-warning { background: rgba(245, 158, 11, 0.1); }
 .score-bg-critical { background: rgba(239, 68, 68, 0.1); }
+
+.dark .score-bg-good { background: rgba(16, 185, 129, 0.18); }
+.dark .score-bg-warning { background: rgba(245, 158, 11, 0.18); }
+.dark .score-bg-critical { background: rgba(239, 68, 68, 0.18); }
 
 /* ─── Glass Table ───────────────────────────────────────────────── */
 .glass-table {

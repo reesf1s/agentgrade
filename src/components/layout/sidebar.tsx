@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { UserButton } from "@clerk/nextjs";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -25,13 +26,20 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    for (const item of navItems) {
+      router.prefetch(item.href);
+    }
+  }, [router]);
 
   return (
     <aside className="fixed left-6 top-6 z-40 flex h-[calc(100vh-3rem)] w-[17rem] flex-col rounded-[2rem] glass-sidebar px-4 py-5">
       <div className="mb-6 flex items-center justify-between px-2">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--surface-strong)]">
-            <Zap className="h-4 w-4 text-slate-900" />
+        <Link href="/dashboard" prefetch className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--surface-strong)] text-[var(--text-primary)]">
+            <Zap className="h-4 w-4" />
           </div>
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--text-muted)]">
@@ -67,6 +75,8 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
+              onMouseEnter={() => router.prefetch(item.href)}
               className={cn(
                 "group flex items-center gap-3 rounded-[1.25rem] px-3.5 py-3 text-sm font-medium transition-all duration-300",
                 isActive

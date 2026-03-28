@@ -9,7 +9,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[var(--background)]">
       <Sidebar />
       <main className="relative ml-[20rem] min-h-screen px-8 py-8">
-        <div className="mx-auto max-w-7xl">{children}</div>
+        <div className="dashboard-shell mx-auto max-w-7xl p-6 md:p-8">{children}</div>
       </main>
     </div>
   );

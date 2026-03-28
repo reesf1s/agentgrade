@@ -1,0 +1,156 @@
+[
+  {
+    "id": "grounded_tool_backed_health_answer",
+    "description": "A strong analytical answer with explicit tool evidence should score well and not be treated as hallucinated.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Show me the score history and health trend for the Crestline Partners deal. Is it improving or declining? What changed and when?"
+      },
+      {
+        "role": "tool",
+        "content": "get_deal_health({\"deal\":\"Crestline Partners\"}) => {\"current_score\":68,\"ml_win_probability\":58,\"trend\":\"stable\",\"history\":[{\"date\":\"2026-03-07\",\"score\":66,\"event\":\"trial kickoff\"},{\"date\":\"2026-03-14\",\"score\":68,\"event\":\"week 1 positive check-in\"}],\"last_update\":\"2026-03-14\"}",
+        "metadata": {
+          "tool_name": "get_deal_health",
+          "tool_result": {
+            "current_score": 68,
+            "ml_win_probability": 58,
+            "trend": "stable"
+          }
+        }
+      },
+      {
+        "role": "agent",
+        "content": "Crestline Partners is stable rather than improving or declining. The score moved from 66 on 7 March to 68 on 14 March after a positive week-one check-in, and it has stayed flat since then because no new data has been logged after 14 March."
+      }
+    ],
+    "expected": {
+      "overall_min": 0.78,
+      "accuracy_min": 0.8,
+      "hallucination_min": 0.85,
+      "resolution_min": 0.82,
+      "confidence": "high",
+      "forbidden_flags": ["scoring_error", "ungrounded_claims_require_review"]
+    }
+  },
+  {
+    "id": "useful_but_ungrounded_pipeline_guidance",
+    "description": "A helpful sales guidance answer without visible evidence should be useful but low-confidence, not hallucination-failed.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "what shall I do today to convert Nexuus"
+      },
+      {
+        "role": "agent",
+        "content": "Start with the security questionnaire, then follow up on the evaluation timeline, prepare the finalist deck, and get the Meridian Capital ROI case study. The deal looks winnable, but the security work is the key blocker right now."
+      }
+    ],
+    "expected": {
+      "overall_min": 0.68,
+      "hallucination_min": 0.72,
+      "resolution_min": 0.78,
+      "confidence": "low",
+      "required_flags": ["ungrounded_claims_require_review"],
+      "forbidden_flags": ["scoring_error"]
+    }
+  },
+  {
+    "id": "clear_fabricated_record_state",
+    "description": "A very specific operational claim without tool evidence and with invented state should score poorly on trust.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Did the refund for order 99142 go through?"
+      },
+      {
+        "role": "agent",
+        "content": "Yes, the refund completed yesterday at 14:32 and will hit your bank by Monday. I can also see your account has been flagged as VIP priority for future refunds."
+      }
+    ],
+    "expected": {
+      "overall_max": 0.62,
+      "accuracy_max": 0.7,
+      "hallucination_max": 0.72,
+      "confidence": "low",
+      "required_flags": ["tool_backed_claim_without_evidence"]
+    }
+  },
+  {
+    "id": "stalled_action_request",
+    "description": "An action request that ends on clarification without progressing should be marked unresolved.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Add deal named Barclays"
+      },
+      {
+        "role": "agent",
+        "content": "I can see Barclays already exists in your pipeline as a Lead stage deal. Did you want to create a second Barclays deal, or update the existing one?"
+      },
+      {
+        "role": "customer",
+        "content": "dont worry"
+      },
+      {
+        "role": "agent",
+        "content": "No problem! Let me know if you need anything else."
+      }
+    ],
+    "expected": {
+      "overall_min": 0.55,
+      "overall_max": 0.8,
+      "resolution_max": 0.62,
+      "confidence": "low",
+      "required_flags": ["tool_backed_claim_without_evidence"]
+    }
+  },
+  {
+    "id": "proper_human_escalation",
+    "description": "A billing lockout escalated cleanly to a human should preserve escalation quality.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "I cannot access the admin billing panel and our invoices are overdue."
+      },
+      {
+        "role": "agent",
+        "content": "I can’t change billing permissions myself, but I’m escalating this now and passing your account details plus the overdue invoice issue to our billing team."
+      },
+      {
+        "role": "human_agent",
+        "content": "Hi, I’m taking this over. I’ve restored your billing admin access and emailed the invoice summary."
+      }
+    ],
+    "expected": {
+      "overall_min": 0.78,
+      "escalation_min": 0.9,
+      "resolution_min": 0.82,
+      "confidence": "medium",
+      "forbidden_flags": ["missed_human_handoff", "scoring_error"]
+    }
+  },
+  {
+    "id": "repeat_message_retransmission",
+    "description": "Replay artifacts should not be interpreted as customer frustration.",
+    "messages": [
+      {
+        "role": "customer",
+        "content": "How do I reset my password?"
+      },
+      {
+        "role": "customer",
+        "content": "How do I reset my password?"
+      },
+      {
+        "role": "agent",
+        "content": "Use the Forgot password link on the login page, then check your email for the reset link."
+      }
+    ],
+    "expected": {
+      "overall_min": 0.72,
+      "resolution_min": 0.8,
+      "forbidden_flags": ["duplicate_customer_message_not_acknowledged", "scoring_error"]
+    }
+  }
+]

@@ -54,9 +54,10 @@ export default function RootLayout({
               __html: `
               try {
                 var t = localStorage.getItem('agentgrade-theme');
-                if (t === 'dark') {
-                  document.documentElement.classList.add('dark');
-                }
+                var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var next = t || (systemDark ? 'dark' : 'light');
+                document.documentElement.classList.toggle('dark', next === 'dark');
+                document.documentElement.dataset.theme = next;
               } catch(e) {}
             `,
             }}
