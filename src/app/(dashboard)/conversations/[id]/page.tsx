@@ -31,6 +31,17 @@ export default function ConversationDetailPage() {
   const [overrideScore, setOverrideScore] = useState("50");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [labelSetState, setLabelSetState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [labelNotes, setLabelNotes] = useState("");
+  const [trainingLabels, setTrainingLabels] = useState({
+    overall: "",
+    accuracy: "",
+    hallucination: "",
+    resolution: "",
+    escalation: "",
+    tone: "",
+    sentiment: "",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +152,32 @@ export default function ConversationDetailPage() {
       setOverrideReason("");
     } catch {
       setOverrideState("error");
+    }
+  }
+
+  async function submitTrainingLabels() {
+    if (!conv) return;
+
+    setLabelSetState("saving");
+    try {
+      const response = await fetch("/api/calibration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: conv.id,
+          labels: trainingLabels,
+          notes: labelNotes || null,
+        }),
+      });
+
+      if (!response.ok) {
+        setLabelSetState("error");
+        return;
+      }
+
+      setLabelSetState("saved");
+    } catch {
+      setLabelSetState("error");
     }
   }
 
@@ -412,6 +449,57 @@ export default function ConversationDetailPage() {
             ) : null}
             {overrideState === "error" ? (
               <p className="mt-3 text-xs text-score-critical">Failed to save override.</p>
+            ) : null}
+          </GlassCard>
+
+          <GlassCard className="p-5">
+            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Training Label Set</h2>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Save a full human label set for this conversation. These labels are used for scorer calibration and evaluation, not instant live fine-tuning.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ["overall", "Overall"],
+                ["accuracy", "Accuracy"],
+                ["hallucination", "Hallucination"],
+                ["resolution", "Resolution"],
+                ["escalation", "Escalation"],
+                ["tone", "Tone"],
+                ["sentiment", "Sentiment"],
+              ].map(([key, label]) => (
+                <div key={key}>
+                  <p className="mb-1 text-xs text-[var(--text-secondary)]">{label}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={trainingLabels[key as keyof typeof trainingLabels]}
+                    onChange={(event) =>
+                      setTrainingLabels((current) => ({
+                        ...current,
+                        [key]: event.target.value,
+                      }))
+                    }
+                    className="glass-input w-full px-3 py-2 text-sm"
+                    placeholder="Optional %"
+                  />
+                </div>
+              ))}
+            </div>
+            <textarea
+              value={labelNotes}
+              onChange={(event) => setLabelNotes(event.target.value)}
+              className="glass-input mt-3 min-h-[96px] w-full px-3 py-2 text-sm"
+              placeholder="Why are these labels correct? Capture groundedness, user intent, escalation quality, and any notes for calibration."
+            />
+            <GlassButton size="sm" className="mt-3 w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
+              {labelSetState === "saving" ? "Saving labels..." : "Save training labels"}
+            </GlassButton>
+            {labelSetState === "saved" ? (
+              <p className="mt-3 text-xs text-score-good">Training labels saved.</p>
+            ) : null}
+            {labelSetState === "error" ? (
+              <p className="mt-3 text-xs text-score-critical">Failed to save training labels.</p>
             ) : null}
           </GlassCard>
         </div>

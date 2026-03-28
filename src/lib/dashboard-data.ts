@@ -10,6 +10,7 @@ import type {
   WeeklyReportSummary,
 } from "@/lib/db/types";
 import { buildOrgRecommendations } from "@/lib/scoring/org-recommendations";
+import { isManualCalibrationConversation } from "@/lib/calibration";
 
 export interface DashboardStats {
   avg_score: number;
@@ -96,7 +97,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .limit(5),
     supabaseAdmin
       .from("conversations")
-      .select("created_at, quality_scores:quality_scores(overall_score)")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
@@ -109,7 +110,9 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .limit(5),
   ]);
 
-  const conversations = (conversationsRes.data || []) as DashboardConversationRow[];
+  const conversations = ((conversationsRes.data || []) as DashboardConversationRow[]).filter(
+    (conversation) => !isManualCalibrationConversation((conversation as { metadata?: Record<string, unknown> }).metadata || null)
+  );
   const alerts = (alertsRes.data || []) as Alert[];
   const patterns = (patternsRes.data || []) as FailurePattern[];
   const scored = conversations.filter(
@@ -143,6 +146,9 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
 
   const trendByDay: Record<string, number[]> = {};
   for (const conversation of trendRes.data || []) {
+    if (isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)) {
+      continue;
+    }
     const day = conversation.created_at.slice(0, 10);
     const qualityScore = getJoinedRecord(
       conversation.quality_scores as
@@ -206,13 +212,13 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       .gte("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
       .from("conversations")
-      .select("quality_scores:quality_scores(overall_score)")
+      .select("metadata, quality_scores:quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", fourteenDaysAgo.toISOString())
       .lt("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
       .from("conversations")
-      .select("created_at, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
@@ -232,8 +238,12 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       .limit(5),
   ]);
 
-  const thisWeek = thisWeekRes.data || [];
-  const lastWeek = lastWeekRes.data || [];
+  const thisWeek = (thisWeekRes.data || []).filter(
+    (conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)
+  );
+  const lastWeek = (lastWeekRes.data || []).filter(
+    (conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)
+  );
   const scored = thisWeek.filter(
     (conversation) =>
       getJoinedRecord(
@@ -382,6 +392,9 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
 
   const trendByDay: Record<string, { overall: number[]; accuracy: number[]; hallucination: number[] }> = {};
   for (const conversation of trendRes.data || []) {
+    if (isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)) {
+      continue;
+    }
     const day = conversation.created_at.slice(0, 10);
     const qualityScore = getJoinedRecord(
       conversation.quality_scores as
@@ -492,7 +505,7 @@ export async function loadBenchmarkStats(
 
   const { data, error } = await supabaseAdmin
     .from("conversations")
-    .select("quality_scores:quality_scores(overall_score)")
+    .select("quality_scores:quality_scores(overall_score), metadata")
     .eq("workspace_id", workspaceId)
     .gte("created_at", since.toISOString())
     .not("quality_scores", "is", null);
@@ -502,6 +515,7 @@ export async function loadBenchmarkStats(
   }
 
   const scores = (data || [])
+    .filter((conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null))
     .map((conversation) =>
       getJoinedRecord(
         conversation.quality_scores as

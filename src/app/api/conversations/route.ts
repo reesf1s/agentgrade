@@ -5,6 +5,7 @@ import { hasQuietPeriodElapsed, queueEligibleConversationScores } from "@/lib/sc
 import { scoreConversation } from "@/lib/scoring";
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
+import { isManualCalibrationConversation } from "@/lib/calibration";
 
 function shouldRefreshScore(
   conversation: { created_at?: string | null; ended_at?: string | null; metadata?: Record<string, unknown> | null },
@@ -108,7 +109,9 @@ export async function GET(request: NextRequest) {
 
     const displayedRescoreIds: string[] = [];
 
-    conversations = conversations.map((conversation) => {
+    conversations = conversations
+      .filter((conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null))
+      .map((conversation) => {
       const qualityScore = Array.isArray(conversation.quality_scores)
         ? conversation.quality_scores[0] || null
         : conversation.quality_scores;
@@ -151,7 +154,7 @@ export async function GET(request: NextRequest) {
                 ? "pending"
                 : "waiting_for_quiet_period",
       };
-    });
+      });
 
     after(async () => {
       await queueEligibleConversationScores(ctx.workspace.id);

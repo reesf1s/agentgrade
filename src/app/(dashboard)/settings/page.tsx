@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassInput } from "@/components/ui/glass-input";
-import { Plug, Bell, Users, CreditCard, BookOpen, Trash2, Copy, Check, RefreshCw } from "lucide-react";
+import { Plug, Bell, Users, CreditCard, BookOpen, Trash2, Copy, Check, RefreshCw, Brain } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +48,29 @@ interface BillingData {
   usage: number;
   limit: number | null;
   configured?: boolean;
+}
+
+interface CalibrationInfo {
+  scorer: {
+    evaluator_model: string;
+    evaluation_mode: string;
+    calibration_note: string;
+    scoring_model_version: string;
+    supported_dimensions: Array<{ key: string; label: string }>;
+    repo_eval_cases: number;
+    labeled_examples: number;
+    manual_calibration_conversations: number;
+  };
+  recent_labels: Array<{
+    id: string;
+    conversation_id: string;
+    customer_identifier?: string;
+    dimension: string;
+    override_score: number;
+    reason?: string;
+    created_at: string;
+    source: "pasted" | "existing";
+  }>;
 }
 
 // ─── Tab: Connections ─────────────────────────────────────────────────────────
@@ -838,6 +861,187 @@ function BillingTab() {
   );
 }
 
+function CalibrationTab() {
+  const [data, setData] = useState<CalibrationInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [state, setState] = useState<"idle" | "saved" | "error">("idle");
+  const [title, setTitle] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [notes, setNotes] = useState("");
+  const [labels, setLabels] = useState<Record<string, string>>({
+    overall: "",
+    accuracy: "",
+    hallucination: "",
+    resolution: "",
+    escalation: "",
+    tone: "",
+    sentiment: "",
+  });
+
+  async function load() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/calibration");
+      const payload = await response.json();
+      setData(payload);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function submitCalibrationExample() {
+    setSaving(true);
+    setState("idle");
+    try {
+      const response = await fetch("/api/calibration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          transcript,
+          notes,
+          labels,
+        }),
+      });
+
+      if (!response.ok) {
+        setState("error");
+        return;
+      }
+
+      setState("saved");
+      setTitle("");
+      setTranscript("");
+      setNotes("");
+      setLabels({
+        overall: "",
+        accuracy: "",
+        hallucination: "",
+        resolution: "",
+        escalation: "",
+        tone: "",
+        sentiment: "",
+      });
+      await load();
+    } catch (error) {
+      console.error(error);
+      setState("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <GlassCard className="p-6">
+        <p className="text-sm text-[var(--text-muted)]">Loading calibration tools...</p>
+      </GlassCard>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Scorer Model Info</h2>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-[var(--text-muted)]">Evaluator model</p>
+            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.evaluator_model}</p>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)]">Scoring model version</p>
+            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.scoring_model_version}</p>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)]">Repo eval cases</p>
+            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.repo_eval_cases}</p>
+          </div>
+          <div>
+            <p className="text-[var(--text-muted)]">Human labels captured</p>
+            <p className="font-medium text-[var(--text-primary)]">{data?.scorer.labeled_examples}</p>
+          </div>
+        </div>
+        <p className="mt-4 text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.calibration_note}</p>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Paste and Label a Conversation</h2>
+        <p className="mb-4 text-xs text-[var(--text-muted)]">
+          Paste a transcript with lines like <span className="font-mono">Customer:</span>, <span className="font-mono">AI Agent:</span>, <span className="font-mono">Human Agent:</span>, or <span className="font-mono">Tool:</span>.
+        </p>
+        <GlassInput label="Example title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Crestline health trend example" />
+        <div className="mt-3">
+          <textarea
+            value={transcript}
+            onChange={(event) => setTranscript(event.target.value)}
+            className="glass-input min-h-[220px] w-full px-3 py-2 text-sm"
+            placeholder={"Customer: What changed and when?\nAI Agent: Here's the timeline...\nTool: get_deal_health(...) => ..."}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {data?.scorer.supported_dimensions.map((dimension) => (
+            <div key={dimension.key}>
+              <p className="mb-1 text-xs text-[var(--text-secondary)]">{dimension.label}</p>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={labels[dimension.key] || ""}
+                onChange={(event) =>
+                  setLabels((current) => ({
+                    ...current,
+                    [dimension.key]: event.target.value,
+                  }))
+                }
+                className="glass-input w-full px-3 py-2 text-sm"
+                placeholder="Optional %"
+              />
+            </div>
+          ))}
+        </div>
+        <textarea
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          className="glass-input mt-3 min-h-[96px] w-full px-3 py-2 text-sm"
+          placeholder="Explain the correct judgment. Capture grounding, user intent, escalation quality, and any org policy context."
+        />
+        <GlassButton className="mt-3" onClick={submitCalibrationExample} disabled={saving}>
+          {saving ? "Saving..." : "Save calibration example"}
+        </GlassButton>
+        {state === "saved" ? <p className="mt-3 text-xs text-score-good">Calibration example saved.</p> : null}
+        {state === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save calibration example.</p> : null}
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent Human Labels</h2>
+        <div className="space-y-3">
+          {data?.recent_labels?.length ? data.recent_labels.map((label) => (
+            <div key={label.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{label.customer_identifier || label.conversation_id}</p>
+                <span className="text-xs capitalize text-[var(--text-muted)]">{label.source}</span>
+              </div>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                {label.dimension} · {(label.override_score * 100).toFixed(0)}%
+              </p>
+              {label.reason ? <p className="mt-2 text-xs text-[var(--text-muted)]">{label.reason}</p> : null}
+            </div>
+          )) : (
+            <p className="text-sm text-[var(--text-muted)]">No human labels yet.</p>
+          )}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -848,6 +1052,7 @@ export default function SettingsPage() {
     { id: "alerts", label: "Alert Thresholds", icon: Bell },
     { id: "team", label: "Team", icon: Users },
     { id: "knowledge", label: "Knowledge Base", icon: BookOpen },
+    { id: "calibration", label: "Calibration", icon: Brain },
     { id: "billing", label: "Billing", icon: CreditCard },
   ];
 
@@ -885,6 +1090,7 @@ export default function SettingsPage() {
           {activeTab === "alerts" && <AlertsTab />}
           {activeTab === "team" && <TeamTab />}
           {activeTab === "knowledge" && <KnowledgeTab />}
+          {activeTab === "calibration" && <CalibrationTab />}
           {activeTab === "billing" && <BillingTab />}
         </div>
       </div>

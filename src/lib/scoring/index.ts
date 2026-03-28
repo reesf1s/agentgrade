@@ -24,6 +24,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import type { Message, QualityScore } from "@/lib/db/types";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { SCORING_MODEL_VERSION } from "./version";
+import { isManualCalibrationConversation } from "@/lib/calibration";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false;
@@ -123,6 +124,9 @@ export async function scoreConversation(conversationId: string): Promise<{
   const conversation = convResult.data;
   const messages = compactReplayArtifacts((msgResult.data || []) as Message[]);
   const workspaceId = conversation.workspace_id as string;
+  const isManualCalibration = isManualCalibrationConversation(
+    (conversation.metadata as Record<string, unknown> | null) || null
+  );
 
   if (messages.length === 0) {
     throw new Error(`Conversation ${conversationId} has no messages`);
@@ -265,17 +269,21 @@ export async function scoreConversation(conversationId: string): Promise<{
   }
 
   // ── Check alert thresholds ──────────────────────────────────────
-  try {
-    await checkThresholds(workspaceId, scoreData);
-  } catch (e) {
-    console.warn("[scoring] Alert threshold check failed:", e);
+  if (!isManualCalibration) {
+    try {
+      await checkThresholds(workspaceId, scoreData);
+    } catch (e) {
+      console.warn("[scoring] Alert threshold check failed:", e);
+    }
   }
 
   // ── Pass 3: Pattern Detection ───────────────────────────────────
-  try {
-    await runPatternDetectionAsync(workspaceId);
-  } catch (e) {
-    console.warn("[scoring] Pattern detection failed:", e);
+  if (!isManualCalibration) {
+    try {
+      await runPatternDetectionAsync(workspaceId);
+    } catch (e) {
+      console.warn("[scoring] Pattern detection failed:", e);
+    }
   }
 
   console.log(
