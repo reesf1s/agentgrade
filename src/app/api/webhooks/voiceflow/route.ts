@@ -2,7 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
-import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
+import { deriveCompletionState, inferCompletionFromMessages, stampCompletionMetadata } from "@/lib/ingest/completion";
 import { normalizeVoiceflowPayload } from "@/lib/integrations/voiceflow";
 
 function hasScorableAgentTurn(messages: Array<{ role: "agent" | "customer" | "system" | "tool" }>) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const completion = deriveCompletionState(body);
+    const explicitCompletion = deriveCompletionState(body);
     const normalized = normalizeVoiceflowPayload(body);
 
     if (!normalized) {
@@ -57,6 +57,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const completion = explicitCompletion.hasExplicitSignal
+      ? explicitCompletion
+      : inferCompletionFromMessages(normalized.messages);
 
     const ingestionResult = await upsertConversationWithMessages(connection, {
       messages: normalized.messages,
@@ -87,13 +91,13 @@ export async function POST(request: NextRequest) {
           ? "Voiceflow conversation ingested. Scoring in progress."
           : completion.hasExplicitSignal && !completion.isFinal
             ? "Voiceflow conversation ingested. Waiting for the conversation to be marked complete before scoring."
-            : "Voiceflow conversation ingested. Waiting for the 10-minute quiet period before scoring."
+            : "Voiceflow conversation ingested. Stored as in-progress because the server inferred the session is still open."
         : ingestionResult.insertedMessages > 0
           ? shouldScore
             ? "Voiceflow conversation updated and queued for re-scoring."
             : completion.hasExplicitSignal && !completion.isFinal
               ? "Voiceflow conversation updated. Waiting for the conversation to be marked complete before scoring."
-              : "Voiceflow conversation updated. Waiting for the 10-minute quiet period before scoring."
+              : "Voiceflow conversation updated. Still waiting because the server inferred the session is open."
           : "Voiceflow conversation already up to date.",
     });
   } catch (error) {
@@ -110,7 +114,7 @@ export async function GET() {
       "Use this endpoint for Voiceflow custom actions or transcript webhooks.",
       "Send the running transcript after each assistant reply or when the session closes.",
       "To score the whole conversation only after it ends, include completed=true or status='completed' on the final send.",
-      "AgentGrade will append new turns for the same conversation_id and re-score automatically.",
+      "If you do not send a final flag, AgentGrade will infer completion from the transcript and re-score when the last turn looks terminal.",
     ],
     accepted_payload_shapes: [
       "{ messages: [{ role, content, timestamp? }] }",

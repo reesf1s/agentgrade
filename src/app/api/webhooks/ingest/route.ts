@@ -2,7 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
-import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
+import { deriveCompletionState, inferCompletionFromMessages, stampCompletionMetadata } from "@/lib/ingest/completion";
 import { normalizeIncomingMessages } from "@/lib/ingest/normalize-incoming";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const completion = deriveCompletionState(body);
+    const explicitCompletion = deriveCompletionState(body);
 
     // Validate messages
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
@@ -88,6 +88,9 @@ export async function POST(request: NextRequest) {
     }
 
     const messages = normalizeIncomingMessages(body.messages);
+    const completion = explicitCompletion.hasExplicitSignal
+      ? explicitCompletion
+      : inferCompletionFromMessages(messages);
 
     if (messages.length === 0) {
       return NextResponse.json(
@@ -125,13 +128,13 @@ export async function POST(request: NextRequest) {
           ? `Conversation ingested with ${messages.length} normalized messages. Scoring in progress.`
           : completion.hasExplicitSignal && !completion.isFinal
             ? `Conversation ingested with ${messages.length} normalized messages. Waiting for the conversation to be marked complete before scoring.`
-            : `Conversation ingested with ${messages.length} normalized messages. Waiting for the 10-minute quiet period before scoring.`
+            : `Conversation ingested with ${messages.length} normalized messages. Stored as in-progress because the server inferred the conversation is still open.`
         : ingestionResult.insertedMessages > 0
           ? shouldScore
             ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`
             : completion.hasExplicitSignal && !completion.isFinal
               ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the conversation to be marked complete before scoring.`
-              : `Conversation updated with ${ingestionResult.insertedMessages} new messages. Waiting for the 10-minute quiet period before scoring.`
+              : `Conversation updated with ${ingestionResult.insertedMessages} new messages. Still waiting because the server inferred the conversation is open.`
           : "Conversation already up to date.",
     });
   } catch (error) {
@@ -159,6 +162,7 @@ export async function GET() {
         completed: "Boolean. Set true on the final transcript send to score the whole conversation at the end.",
         is_final: "Boolean alias for completed",
         status: "String such as 'completed' or 'closed' to mark the conversation complete",
+        auto_completion: "If no explicit completion signal is sent, AgentGrade will infer completion from the transcript and only score when the last turn looks terminal.",
       },
     },
   });

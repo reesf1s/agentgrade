@@ -40,6 +40,8 @@ export interface CompletionState {
   isFinal: boolean;
   hasExplicitSignal: boolean;
   status?: string;
+  inferred?: boolean;
+  reason?: string;
 }
 
 export function deriveCompletionState(payload: unknown): CompletionState {
@@ -59,7 +61,10 @@ export function deriveCompletionState(payload: unknown): CompletionState {
 
   for (const signal of booleanSignals) {
     if (signal === true) {
-      return { isFinal: true, hasExplicitSignal: true, status: "completed" };
+      return { isFinal: true, hasExplicitSignal: true, status: "completed", reason: "explicit_boolean" };
+    }
+    if (signal === false) {
+      return { isFinal: false, hasExplicitSignal: true, status: "open", reason: "explicit_boolean" };
     }
   }
 
@@ -74,15 +79,66 @@ export function deriveCompletionState(payload: unknown): CompletionState {
   if (status) {
     const normalized = status.toLowerCase();
     if (FINAL_STATUSES.has(normalized)) {
-      return { isFinal: true, hasExplicitSignal: true, status: normalized };
+      return { isFinal: true, hasExplicitSignal: true, status: normalized, reason: "explicit_status" };
     }
 
     if (NON_FINAL_STATUSES.has(normalized)) {
-      return { isFinal: false, hasExplicitSignal: true, status: normalized };
+      return { isFinal: false, hasExplicitSignal: true, status: normalized, reason: "explicit_status" };
     }
   }
 
   return { isFinal: false, hasExplicitSignal: false, status };
+}
+
+function hasCloseOutQuestion(content: string) {
+  return /(anything else|want me to|would you like me to|shall i|if you'd like|let me know|need anything else|can i help with anything else)/i.test(
+    content
+  );
+}
+
+function hasOpenFollowUpQuestion(content: string) {
+  if (!/\?/.test(content)) return false;
+  return !hasCloseOutQuestion(content);
+}
+
+export function inferCompletionFromMessages(
+  messages: Array<{ role: string; content: string; metadata?: Record<string, unknown> }>
+): CompletionState {
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage) {
+    return { isFinal: false, hasExplicitSignal: false, inferred: false, reason: "no_messages" };
+  }
+
+  const scorableAgentTurn = messages.some((message) => message.role === "agent" || message.role === "human_agent");
+  if (!scorableAgentTurn) {
+    return { isFinal: false, hasExplicitSignal: false, inferred: false, reason: "no_agent_turn" };
+  }
+
+  if (lastMessage.role === "customer" || lastMessage.role === "tool" || lastMessage.role === "system") {
+    return { isFinal: false, hasExplicitSignal: false, inferred: true, reason: "awaiting_agent" };
+  }
+
+  const content = String(lastMessage.content || "").trim();
+  if (!content) {
+    return { isFinal: false, hasExplicitSignal: false, inferred: true, reason: "empty_agent_turn" };
+  }
+
+  const explicitStreamingState = String(lastMessage.metadata?.tool_state || "").toLowerCase();
+  if (explicitStreamingState === "partial" || explicitStreamingState === "streaming") {
+    return { isFinal: false, hasExplicitSignal: false, inferred: true, reason: "streaming" };
+  }
+
+  if (hasOpenFollowUpQuestion(content)) {
+    return { isFinal: false, hasExplicitSignal: false, inferred: true, reason: "open_question" };
+  }
+
+  return {
+    isFinal: true,
+    hasExplicitSignal: false,
+    inferred: true,
+    status: "completed",
+    reason: hasCloseOutQuestion(content) ? "close_out_question" : "agent_final_turn",
+  };
 }
 
 export function stampCompletionMetadata(
@@ -92,7 +148,9 @@ export function stampCompletionMetadata(
   return {
     ...(metadata || {}),
     ...(completion.status ? { conversation_status: completion.status } : {}),
-    ...(completion.hasExplicitSignal ? { is_final: completion.isFinal } : {}),
+    ...((completion.hasExplicitSignal || completion.inferred) ? { is_final: completion.isFinal } : {}),
+    ...(completion.inferred ? { completion_inferred: true } : {}),
+    ...(completion.reason ? { completion_reason: completion.reason } : {}),
   };
 }
 

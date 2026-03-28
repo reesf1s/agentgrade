@@ -1,1 +1,1 @@
-export const SCORING_MODEL_VERSION = "v2";
+export const SCORING_MODEL_VERSION = "v3";

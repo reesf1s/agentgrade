@@ -1,5 +1,5 @@
 /**
- * Pass 2: Deep Quality Evaluation — 1 Claude API call per conversation
+ * Pass 2: Deep Quality Evaluation — 1 model API call per conversation
  *
  * Single batched prompt evaluates ALL dimensions simultaneously.
  * Returns structured JSON with scores, claim verdicts, prompt improvement
@@ -9,7 +9,7 @@
  * Rate limit handling: exponential backoff with jitter (up to 3 retries).
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import type {
   Message,
   ClaimAnalysis,
@@ -18,14 +18,22 @@ import type {
   StructuralMetrics,
 } from "@/lib/db/types";
 import { applyScoringGuardrails } from "./score-postprocessing";
+import { buildDeterministicFallbackScore } from "./fallback";
+import { getScoringModel, getScoringProvider } from "./config";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// ─── Pricing (defaults tuned for gpt-5.4-mini; override via env if needed) ───
+const COST_PER_MILLION_INPUT_TOKENS = Number(process.env.SCORING_INPUT_COST_PER_MILLION || "0.6");
+const COST_PER_MILLION_OUTPUT_TOKENS = Number(process.env.SCORING_OUTPUT_COST_PER_MILLION || "2.4");
 
-// ─── Pricing (claude-sonnet-4-6, per million tokens) ───────────────
-const COST_PER_MILLION_INPUT_TOKENS = 3.0;   // $3.00 / 1M
-const COST_PER_MILLION_OUTPUT_TOKENS = 15.0; // $15.00 / 1M
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // ─── System Prompt ─────────────────────────────────────────────────
 const SCORING_SYSTEM_PROMPT = `You are AgentGrade's quality evaluation engine. You assess AI agent conversations with surgical precision.
@@ -207,9 +215,7 @@ export interface ScoringResult {
 
 // ─── Exponential Backoff Retry ──────────────────────────────────────
 /**
- * Retries an async operation with exponential backoff on rate limit errors.
- * Only retries on HTTP 429 (rate limit) and 529 (overloaded).
- * All other errors are thrown immediately.
+ * Retries an async operation with exponential backoff on transient provider errors.
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -223,18 +229,19 @@ async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
+      const status =
+        typeof error === "object" && error && "status" in error
+          ? Number((error as { status?: number }).status)
+          : undefined;
 
-      // Only retry on rate limit / overloaded responses
-      if (error instanceof Anthropic.APIError) {
-        if (error.status === 429 || error.status === 529) {
-          const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
-          console.warn(`Claude rate limited (attempt ${attempt + 1}/${maxRetries}), retrying in ${Math.round(delay)}ms`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
+      if ([429, 500, 502, 503, 504, 529].includes(status || 0)) {
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+        console.warn(
+          `Scoring model rate limited/unavailable (attempt ${attempt + 1}/${maxRetries}), retrying in ${Math.round(delay)}ms`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
       }
-
-      // Non-retriable error — throw immediately
       throw error;
     }
   }
@@ -249,17 +256,24 @@ function clamp(value: unknown, fallback = 0.5): number {
   return Math.max(0, Math.min(1, n));
 }
 
+function truncateText(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}…`;
+}
+
 // ─── Main Evaluation Function ───────────────────────────────────────
 /**
- * Calls Claude to evaluate a conversation across all quality dimensions.
+ * Calls the configured model to evaluate a conversation across all quality dimensions.
  * Returns structured scoring result. One API call per conversation.
  */
 export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringResult> {
   const { messages, structuralMetrics, knowledgeBaseContext } = input;
+  const model = getScoringModel();
+  const provider = getScoringProvider();
 
   // ── Build transcript ────────────────────────────────────────────
   const transcript = messages
-    .map((m, index) => `[TURN ${index + 1}][${m.role.toUpperCase()}]: ${m.content}`)
+    .map((m, index) => `[TURN ${index + 1}][${m.role.toUpperCase()}]: ${truncateText(m.content, 1200)}`)
     .join("\n\n");
 
   // ── Build user message ──────────────────────────────────────────
@@ -292,7 +306,7 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
     userMessage += `## Knowledge Base Context\n`;
     userMessage += `(Use this to verify agent claims and score accuracy/hallucination)\n\n`;
     knowledgeBaseContext.forEach((chunk, i) => {
-      userMessage += `[KB Doc ${i + 1}]:\n${chunk}\n\n`;
+      userMessage += `[KB Doc ${i + 1}]:\n${truncateText(chunk, 1800)}\n\n`;
     });
   } else {
     userMessage += `## Knowledge Base Context\nNone provided. Score accuracy and hallucination based on general plausibility and internal consistency.\n\n`;
@@ -300,18 +314,30 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
 
   userMessage += `## Required Output\n${SCORING_OUTPUT_SCHEMA}\n\nReturn ONLY the JSON object. No other text.`;
 
-  // ── Call Claude with retry ──────────────────────────────────────
+  if (!process.env.OPENAI_API_KEY) {
+    return applyScoringGuardrails(input, buildDeterministicFallbackScore(input, "missing_openai_api_key"));
+  }
+
+  const openai = getOpenAIClient();
+  if (!openai) {
+    return applyScoringGuardrails(input, buildDeterministicFallbackScore(input, "missing_openai_client"));
+  }
+
+  // ── Call model with retry ───────────────────────────────────────
   try {
     const response = await withRetry(() =>
-      anthropic.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2500,
-        system: SCORING_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
+      openai.responses.create({
+        model,
+        reasoning: { effort: "medium" },
+        text: { verbosity: "medium" },
+        input: [
+          { role: "system", content: SCORING_SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
       })
     );
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = response.output_text || "";
 
     // Parse JSON — handle occasional markdown fences from the model
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -322,14 +348,14 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
     const raw = JSON.parse(jsonMatch[0]);
 
     // ── Compute cost ──────────────────────────────────────────────
-    const inputTokens = response.usage.input_tokens;
-    const outputTokens = response.usage.output_tokens;
+    const inputTokens = response.usage?.input_tokens || 0;
+    const outputTokens = response.usage?.output_tokens || 0;
     const costUsd =
       (inputTokens / 1_000_000) * COST_PER_MILLION_INPUT_TOKENS +
       (outputTokens / 1_000_000) * COST_PER_MILLION_OUTPUT_TOKENS;
 
     console.log(
-      `[claude-scorer] tokens: ${inputTokens}in / ${outputTokens}out | cost: $${costUsd.toFixed(4)}`
+      `[scoring-model] provider=${provider} model=${model} | tokens: ${inputTokens}in / ${outputTokens}out | cost: $${costUsd.toFixed(4)}`
     );
 
     // ── Validate and sanitize scores ──────────────────────────────
@@ -351,31 +377,14 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         cost_usd: costUsd,
-        model: "claude-sonnet-4-6",
+        model: `${provider}:${model}`,
       },
     };
 
     return applyScoringGuardrails(input, result);
   } catch (error) {
-    console.error("[claude-scorer] Evaluation failed:", error);
-
-    // Return conservative default scores — flag for manual review
-    return {
-      overall_score: 0.5,
-      accuracy_score: 0.5,
-      hallucination_score: 0.5,
-      resolution_score: 0.5,
-      tone_score: 0.5,
-      sentiment_score: 0.5,
-      edge_case_score: 0.8,
-      escalation_score: 0.85,
-      claim_analysis: [],
-      flags: ["scoring_error"],
-      summary: "Automated scoring failed. Manual review recommended.",
-      confidence_level: "low",
-      prompt_improvements: [],
-      knowledge_gaps: [],
-    };
+    console.error("[scoring-model] Evaluation failed:", error);
+    return applyScoringGuardrails(input, buildDeterministicFallbackScore(input, "model_error"));
   }
 }
 

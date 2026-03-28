@@ -1,7 +1,6 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
-import { hasQuietPeriodElapsed, queueEligibleConversationScores } from "@/lib/scoring/pending";
 import { scoreConversation } from "@/lib/scoring";
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
@@ -118,11 +117,6 @@ export async function GET(request: NextRequest) {
 
       const metadata = (conversation.metadata as Record<string, unknown> | null) || null;
       const conversationIncomplete = isConversationExplicitlyIncomplete(metadata);
-      const quietPeriodElapsed = hasQuietPeriodElapsed({
-        ended_at: conversation.ended_at,
-        created_at: conversation.created_at,
-        metadata,
-      });
       const needsRefresh = shouldRefreshScore(conversation, qualityScore);
 
       const normalizedQualityScore = qualityScore
@@ -135,7 +129,7 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
-      if (needsRefresh && quietPeriodElapsed && displayedRescoreIds.length < 10) {
+      if (needsRefresh && !conversationIncomplete && displayedRescoreIds.length < 10) {
         displayedRescoreIds.push(conversation.id as string);
       }
 
@@ -145,20 +139,14 @@ export async function GET(request: NextRequest) {
         score_status: conversationIncomplete
           ? "waiting_for_completion"
           : needsRefresh
-            ? quietPeriodElapsed
-              ? "refreshing"
-              : "waiting_for_quiet_period"
+            ? "refreshing"
             : normalizedQualityScore
               ? "ready"
-              : quietPeriodElapsed
-                ? "pending"
-                : "waiting_for_quiet_period",
+              : "pending",
       };
       });
 
     after(async () => {
-      await queueEligibleConversationScores(ctx.workspace.id);
-
       for (const conversationId of displayedRescoreIds) {
         try {
           await scoreConversation(conversationId);

@@ -1,7 +1,6 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { loadDashboardData } from "@/lib/dashboard-data";
-import { queueEligibleConversationScores } from "@/lib/scoring/pending";
 
 /**
  * GET /api/dashboard
@@ -14,11 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspaceId = ctx.workspace.id;
-    after(async () => {
-      await queueEligibleConversationScores(workspaceId);
-    });
-    const dashboard = await loadDashboardData(workspaceId);
+    const dashboard = await loadDashboardData(ctx.workspace.id);
     return NextResponse.json(dashboard);
   } catch (error) {
     console.error("Dashboard API error:", error);

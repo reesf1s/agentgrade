@@ -1,4 +1,5 @@
 import type { Message } from "@/lib/db/types";
+import { getScoringModel, getScoringProvider } from "@/lib/scoring/config";
 
 export const CALIBRATION_DIMENSIONS = [
   { key: "overall", label: "Overall" },
@@ -11,7 +12,8 @@ export const CALIBRATION_DIMENSIONS = [
 ] as const;
 
 export const SCORER_MODEL_INFO = {
-  evaluator_model: "claude-sonnet-4-6",
+  evaluator_model: getScoringModel(),
+  evaluator_provider: getScoringProvider(),
   evaluation_mode: "rubric + guardrails + human calibration",
   calibration_note:
     "Human labels are stored as calibration data for scorer tuning, evaluation regressions, and future rubric updates. They do not live-fine-tune the foundation model in real time.",

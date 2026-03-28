@@ -4,7 +4,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { scoreConversation } from "@/lib/scoring";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
-import { hasQuietPeriodElapsed } from "@/lib/scoring/pending";
 import type { PromptImprovement, QualityScore } from "@/lib/db/types";
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 
@@ -116,12 +115,6 @@ export async function GET(
     const conversationIncomplete = isConversationExplicitlyIncomplete(
       (convRes.data.metadata as Record<string, unknown> | null) || null
     );
-    const quietPeriodElapsed = hasQuietPeriodElapsed({
-      ended_at: convRes.data.ended_at,
-      created_at: convRes.data.created_at,
-      metadata: (convRes.data.metadata as Record<string, unknown> | null) || null,
-    });
-
     const qualityScore = scoreRes.data
       ? {
           ...scoreRes.data,
@@ -137,7 +130,7 @@ export async function GET(
       ? false
       : isStaleQualityScore(sanitizedQualityScore, compactedMessages.length, latestMessageTimestamp);
 
-    if (hadReplayArtifacts || (scoreIsStale && quietPeriodElapsed)) {
+    if (hadReplayArtifacts || (scoreIsStale && !conversationIncomplete)) {
       after(async () => {
         try {
           await scoreConversation(id);
@@ -152,12 +145,9 @@ export async function GET(
         ...convRes.data,
         message_count: compactedMessages.length,
         messages: compactedMessages,
-        quality_score:
-          conversationIncomplete || (scoreIsStale && quietPeriodElapsed) ? null : sanitizedQualityScore,
+        quality_score: conversationIncomplete || scoreIsStale ? null : sanitizedQualityScore,
         score_status: conversationIncomplete
           ? "waiting_for_completion"
-          : scoreIsStale && !quietPeriodElapsed
-            ? "waiting_for_quiet_period"
           : scoreIsStale
             ? "refreshing"
             : sanitizedQualityScore
