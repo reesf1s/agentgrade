@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
 import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
+import { normalizeIncomingMessages } from "@/lib/ingest/normalize-incoming";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
 
@@ -72,13 +73,13 @@ export async function POST(request: NextRequest) {
     }
 
     for (const msg of body.messages) {
-      if (!msg.role || !msg.content) {
+      if (!msg.role || (!msg.content && !msg.parts && !msg.toolInvocations)) {
         return NextResponse.json(
-          { error: "Each message must have 'role' and 'content' fields" },
+          { error: "Each message must have 'role' and either 'content', 'parts', or 'toolInvocations'" },
           { status: 400 }
         );
       }
-      if (!VALID_ROLES.includes(msg.role)) {
+      if (!VALID_ROLES.includes(msg.role) && !["user", "assistant", "bot", "human", "support", "ai"].includes(msg.role)) {
         return NextResponse.json(
           { error: `Invalid role: ${msg.role}. Must be one of: ${VALID_ROLES.join(", ")}` },
           { status: 400 }
@@ -86,11 +87,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const messages = body.messages as Array<{
-      role: typeof VALID_ROLES[number];
-      content: string;
-      timestamp?: string;
-    }>;
+    const messages = normalizeIncomingMessages(body.messages);
+
+    if (messages.length === 0) {
+      return NextResponse.json(
+        { error: "No valid messages were found after normalization" },
+        { status: 400 }
+      );
+    }
 
     const ingestionResult = await upsertConversationWithMessages(connection, {
       messages,
@@ -118,10 +122,10 @@ export async function POST(request: NextRequest) {
       inserted_messages: ingestionResult.insertedMessages,
       message: ingestionResult.created
         ? shouldScore
-          ? `Conversation ingested with ${messages.length} messages. Scoring in progress.`
+          ? `Conversation ingested with ${messages.length} normalized messages. Scoring in progress.`
           : completion.hasExplicitSignal && !completion.isFinal
-            ? `Conversation ingested with ${messages.length} messages. Waiting for the conversation to be marked complete before scoring.`
-            : `Conversation ingested with ${messages.length} messages. Waiting for the 10-minute quiet period before scoring.`
+            ? `Conversation ingested with ${messages.length} normalized messages. Waiting for the conversation to be marked complete before scoring.`
+            : `Conversation ingested with ${messages.length} normalized messages. Waiting for the 10-minute quiet period before scoring.`
         : ingestionResult.insertedMessages > 0
           ? shouldScore
             ? `Conversation updated with ${ingestionResult.insertedMessages} new messages. Re-scoring in progress.`

@@ -1,7 +1,20 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
-import { queueEligibleConversationScores } from "@/lib/scoring/pending";
+import { hasQuietPeriodElapsed, queueEligibleConversationScores } from "@/lib/scoring/pending";
+import { scoreConversation } from "@/lib/scoring";
+import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
+import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
+
+function shouldRefreshScore(
+  conversation: { created_at?: string | null; ended_at?: string | null; metadata?: Record<string, unknown> | null },
+  qualityScore?: { flags?: string[] | null; scoring_model_version?: string | null } | null
+) {
+  if (!qualityScore) return false;
+  if ((qualityScore.flags || []).includes("scoring_error")) return true;
+  if (qualityScore.scoring_model_version !== SCORING_MODEL_VERSION) return true;
+  return false;
+}
 
 /**
  * GET /api/conversations
@@ -23,10 +36,6 @@ export async function GET(request: NextRequest) {
     if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    after(async () => {
-      await queueEligibleConversationScores(ctx.workspace.id);
-    });
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -97,10 +106,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const displayedRescoreIds: string[] = [];
+
     conversations = conversations.map((conversation) => {
       const qualityScore = Array.isArray(conversation.quality_scores)
         ? conversation.quality_scores[0] || null
         : conversation.quality_scores;
+
+      const metadata = (conversation.metadata as Record<string, unknown> | null) || null;
+      const conversationIncomplete = isConversationExplicitlyIncomplete(metadata);
+      const quietPeriodElapsed = hasQuietPeriodElapsed({
+        ended_at: conversation.ended_at,
+        created_at: conversation.created_at,
+        metadata,
+      });
+      const needsRefresh = shouldRefreshScore(conversation, qualityScore);
 
       const normalizedQualityScore = qualityScore
         ? {
@@ -112,10 +132,37 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
+      if (needsRefresh && quietPeriodElapsed && displayedRescoreIds.length < 10) {
+        displayedRescoreIds.push(conversation.id as string);
+      }
+
       return {
         ...conversation,
-        quality_scores: normalizedQualityScore,
+        quality_scores: needsRefresh ? null : normalizedQualityScore,
+        score_status: conversationIncomplete
+          ? "waiting_for_completion"
+          : needsRefresh
+            ? quietPeriodElapsed
+              ? "refreshing"
+              : "waiting_for_quiet_period"
+            : normalizedQualityScore
+              ? "ready"
+              : quietPeriodElapsed
+                ? "pending"
+                : "waiting_for_quiet_period",
       };
+    });
+
+    after(async () => {
+      await queueEligibleConversationScores(ctx.workspace.id);
+
+      for (const conversationId of displayedRescoreIds) {
+        try {
+          await scoreConversation(conversationId);
+        } catch (error) {
+          console.error(`Conversation list refresh failed for ${conversationId}:`, error);
+        }
+      }
     });
 
     return NextResponse.json({

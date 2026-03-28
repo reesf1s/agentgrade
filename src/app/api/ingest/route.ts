@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { scoreConversation } from "@/lib/scoring";
 import { upsertConversationWithMessages } from "@/lib/ingest/upsert-conversation";
 import { deriveCompletionState, stampCompletionMetadata } from "@/lib/ingest/completion";
+import { normalizeIncomingMessages } from "@/lib/ingest/normalize-incoming";
 
 const VALID_ROLES = ["agent", "customer", "human_agent", "system", "tool"] as const;
 type MessageRole = typeof VALID_ROLES[number];
@@ -66,13 +67,13 @@ export async function POST(request: NextRequest) {
     }
 
     for (const msg of body.messages) {
-      if (!msg.role || !msg.content) {
+      if (!msg.role || (!msg.content && !msg.parts && !msg.toolInvocations)) {
         return NextResponse.json(
-          { error: "Each message must have 'role' and 'content'" },
+          { error: "Each message must have 'role' and either 'content', 'parts', or 'toolInvocations'" },
           { status: 400 }
         );
       }
-      if (!VALID_ROLES.includes(msg.role)) {
+      if (!VALID_ROLES.includes(msg.role) && !["user", "assistant", "bot", "human", "support", "ai"].includes(msg.role)) {
         return NextResponse.json(
           { error: `Invalid role '${msg.role}'. Must be: ${VALID_ROLES.join(", ")}` },
           { status: 400 }
@@ -80,7 +81,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const messages = body.messages as Array<{ role: MessageRole; content: string; timestamp?: string }>;
+    const messages = normalizeIncomingMessages(body.messages);
+    if (messages.length === 0) {
+      return NextResponse.json(
+        { error: "No valid messages were found after normalization" },
+        { status: 400 }
+      );
+    }
     const externalId: string | null = body.conversation_id || null;
     const shouldScore = hasScorableAgentTurn(messages) && completion.isFinal;
 

@@ -22,6 +22,7 @@ interface ConversationRow {
     flags?: string[];
     confidence_level?: "high" | "medium" | "low";
   } | null;
+  score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion" | "waiting_for_quiet_period";
 }
 
 export default function ConversationsPage() {
@@ -58,6 +59,19 @@ export default function ConversationsPage() {
     const debounce = setTimeout(fetchConversations, 300);
     return () => clearTimeout(debounce);
   }, [fetchConversations]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const shouldPoll = conversations.some(
+      (conversation) => conversation.score_status === "pending" || conversation.score_status === "refreshing"
+    );
+
+    if (!shouldPoll) return;
+
+    const timer = setTimeout(fetchConversations, 2500);
+    return () => clearTimeout(timer);
+  }, [conversations, loading, fetchConversations]);
 
   return (
     <div className="max-w-6xl">
@@ -158,7 +172,13 @@ export default function ConversationsPage() {
                   {conv.quality_scores ? (
                     <ScoreBadge score={conv.quality_scores.overall_score} />
                   ) : (
-                    <span className="text-xs text-[var(--text-muted)]">Pending</span>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {conv.score_status === "refreshing"
+                        ? "Refreshing"
+                        : conv.score_status === "waiting_for_quiet_period"
+                          ? "Queued"
+                          : "Pending"}
+                    </span>
                   )}
                 </td>
                 <td className="text-xs capitalize text-[var(--text-secondary)]">
