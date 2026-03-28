@@ -71,7 +71,7 @@ export async function POST(
         current_behavior: fix.current_behavior,
         expected_impact: fix.expected_impact,
         instructions: [
-          "1. Open your agent's system prompt in your AI platform (e.g. OpenAI Playground, Anthropic Console)",
+          "1. Open your agent's system prompt in your AI platform (e.g. OpenAI Playground or your chosen model provider console)",
           "2. Apply the recommended change below",
           "3. Test the change with sample conversations",
           "4. Deploy the updated prompt to production",

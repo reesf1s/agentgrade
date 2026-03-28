@@ -3,7 +3,7 @@
  *
  * Handles document ingestion, chunking, embedding generation, and
  * pgvector semantic search. Used to provide relevant context to the
- * Claude scoring engine during evaluation.
+ * quality scoring engine during evaluation.
  *
  * Requires:
  *   OPENAI_API_KEY — for text-embedding-3-small (1536-dim vectors)

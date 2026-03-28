@@ -1,5 +1,5 @@
 import type { KnowledgeGap, Message, PromptImprovement } from "@/lib/db/types";
-import type { ScoringInput, ScoringResult } from "./claude-scorer";
+import type { ScoringInput, ScoringResult } from "./judge-scorer";
 
 function clamp(value: number): number {
   return Math.max(0, Math.min(1, value));

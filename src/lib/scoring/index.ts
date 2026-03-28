@@ -16,7 +16,7 @@
  */
 
 import { analyzeStructure } from "./structural-analyzer";
-import { evaluateWithClaude } from "./claude-scorer";
+import { evaluateWithJudge } from "./judge-scorer";
 import { detectPatterns } from "./pattern-detector";
 import { searchKnowledgeBase } from "@/lib/knowledge-base";
 import { checkThresholds } from "@/lib/alerts";
@@ -36,7 +36,7 @@ function isLegacyQualityScoresColumnError(error: { code?: string; message?: stri
 
 // Re-export individual passes for direct use by API routes
 export { analyzeStructure } from "./structural-analyzer";
-export { evaluateWithClaude, scoreConversation as evaluateMessages } from "./claude-scorer";
+export { evaluateWithJudge, scoreConversation as evaluateMessages } from "./judge-scorer";
 export { detectPatterns, aggregatePromptImprovements, aggregateKnowledgeGaps } from "./pattern-detector";
 
 function shouldUseDeterministicPass(messages: Message[]) {
@@ -71,8 +71,8 @@ export async function runScoringPipeline(
   // Pass 1: Structural Analysis (zero API calls)
   const structuralMetrics = analyzeStructure(compactMessages);
 
-  // Pass 2: Claude Evaluation (1 API call)
-  const claudeResult = shouldUseDeterministicPass(compactMessages)
+  // Pass 2: Model Evaluation (1 API call)
+  const evaluationResult = shouldUseDeterministicPass(compactMessages)
     ? buildDeterministicFallbackScore(
         {
           messages: compactMessages,
@@ -81,39 +81,39 @@ export async function runScoringPipeline(
         },
         "low_complexity_fast_path"
       )
-    : await evaluateWithClaude({
+    : await evaluateWithJudge({
         messages: compactMessages,
         structuralMetrics,
         knowledgeBaseContext: input.knowledgeBaseContext,
       });
 
   let adjustedScores = {
-    overall_score: claudeResult.overall_score,
-    accuracy_score: claudeResult.accuracy_score,
-    hallucination_score: claudeResult.hallucination_score,
-    resolution_score: claudeResult.resolution_score,
-    tone_score: claudeResult.tone_score,
-    sentiment_score: claudeResult.sentiment_score,
-    escalation_score: claudeResult.escalation_score,
+    overall_score: evaluationResult.overall_score,
+    accuracy_score: evaluationResult.accuracy_score,
+    hallucination_score: evaluationResult.hallucination_score,
+    resolution_score: evaluationResult.resolution_score,
+    tone_score: evaluationResult.tone_score,
+    sentiment_score: evaluationResult.sentiment_score,
+    escalation_score: evaluationResult.escalation_score,
   };
 
   let learnedCalibrationInfo: Record<string, unknown> | undefined;
 
   if (input.workspaceId) {
     const calibration = await applyLearnedCalibration(input.workspaceId, {
-      overall_score: claudeResult.overall_score,
-      accuracy_score: claudeResult.accuracy_score,
-      hallucination_score: claudeResult.hallucination_score,
-      resolution_score: claudeResult.resolution_score,
-      tone_score: claudeResult.tone_score,
-      sentiment_score: claudeResult.sentiment_score,
-      edge_case_score: claudeResult.edge_case_score,
-      escalation_score: claudeResult.escalation_score,
-      claim_analysis: claudeResult.claim_analysis,
-      flags: claudeResult.flags,
-      prompt_improvements: claudeResult.prompt_improvements,
-      knowledge_gaps: claudeResult.knowledge_gaps,
-      confidence_level: claudeResult.confidence_level,
+      overall_score: evaluationResult.overall_score,
+      accuracy_score: evaluationResult.accuracy_score,
+      hallucination_score: evaluationResult.hallucination_score,
+      resolution_score: evaluationResult.resolution_score,
+      tone_score: evaluationResult.tone_score,
+      sentiment_score: evaluationResult.sentiment_score,
+      edge_case_score: evaluationResult.edge_case_score,
+      escalation_score: evaluationResult.escalation_score,
+      claim_analysis: evaluationResult.claim_analysis,
+      flags: evaluationResult.flags,
+      prompt_improvements: evaluationResult.prompt_improvements,
+      knowledge_gaps: evaluationResult.knowledge_gaps,
+      confidence_level: evaluationResult.confidence_level,
       structural_metrics: structuralMetrics,
     });
 
@@ -128,22 +128,22 @@ export async function runScoringPipeline(
     resolution_score: adjustedScores.resolution_score,
     tone_score: adjustedScores.tone_score,
     sentiment_score: adjustedScores.sentiment_score,
-    edge_case_score: claudeResult.edge_case_score,
+    edge_case_score: evaluationResult.edge_case_score,
     escalation_score: adjustedScores.escalation_score,
     structural_metrics: {
       ...structuralMetrics,
-      confidence_level: claudeResult.confidence_level,
-      evaluation_rubric: claudeResult.rubric_scores,
-      overall_decision: claudeResult.overall_decision,
-      hard_fail: claudeResult.hard_fail,
+      confidence_level: evaluationResult.confidence_level,
+      evaluation_rubric: evaluationResult.rubric_scores,
+      overall_decision: evaluationResult.overall_decision,
+      hard_fail: evaluationResult.hard_fail,
       ...(learnedCalibrationInfo ? { learned_calibration: learnedCalibrationInfo } : {}),
     },
-    claim_analysis: claudeResult.claim_analysis,
-    flags: claudeResult.flags,
-    summary: claudeResult.summary,
-    confidence_level: claudeResult.confidence_level,
-    prompt_improvements: claudeResult.prompt_improvements,
-    knowledge_gaps: claudeResult.knowledge_gaps,
+    claim_analysis: evaluationResult.claim_analysis,
+    flags: evaluationResult.flags,
+    summary: evaluationResult.summary,
+    confidence_level: evaluationResult.confidence_level,
+    prompt_improvements: evaluationResult.prompt_improvements,
+    knowledge_gaps: evaluationResult.knowledge_gaps,
     scoring_model_version: SCORING_MODEL_VERSION,
   };
 }
@@ -157,7 +157,7 @@ export async function runScoringPipeline(
  * failure patterns.
  *
  * Returns the full score result and a flag indicating if scoring was partial
- * (i.e., Claude API failed and defaults were used).
+ * (i.e., the model API failed and defaults were used).
  */
 export async function scoreConversation(conversationId: string): Promise<{
   score: Omit<QualityScore, "id" | "scored_at">;
@@ -221,11 +221,11 @@ export async function scoreConversation(conversationId: string): Promise<{
   }
 
   // ── Pass 2: LLM Evaluation (1 API call) ─────────────────────────
-  let claudeResult;
+  let evaluationResult;
   let isPartial = false;
 
   try {
-    claudeResult = shouldUseDeterministicPass(messages)
+    evaluationResult = shouldUseDeterministicPass(messages)
       ? buildDeterministicFallbackScore(
           {
             messages,
@@ -234,16 +234,16 @@ export async function scoreConversation(conversationId: string): Promise<{
           },
           "low_complexity_fast_path"
         )
-      : await evaluateWithClaude({
+      : await evaluateWithJudge({
           messages,
           structuralMetrics,
           knowledgeBaseContext,
         });
   } catch (e) {
-    console.error(`[scoring] Claude evaluation failed for ${conversationId}:`, e);
+    console.error(`[scoring] Model evaluation failed for ${conversationId}:`, e);
     isPartial = true;
     // Use conservative defaults — flag for manual review
-    claudeResult = {
+    evaluationResult = {
       overall_score: 0.5,
       accuracy_score: 0.5,
       hallucination_score: 0.5,
@@ -264,27 +264,27 @@ export async function scoreConversation(conversationId: string): Promise<{
   // ── Build the final score object ────────────────────────────────
   const scoreData: Omit<QualityScore, "id" | "scored_at"> = {
     conversation_id: conversationId,
-    overall_score: claudeResult.overall_score,
-    accuracy_score: claudeResult.accuracy_score,
-    hallucination_score: claudeResult.hallucination_score,
-    resolution_score: claudeResult.resolution_score,
-    tone_score: claudeResult.tone_score,
-    sentiment_score: claudeResult.sentiment_score,
-    edge_case_score: claudeResult.edge_case_score,
-    escalation_score: claudeResult.escalation_score,
+    overall_score: evaluationResult.overall_score,
+    accuracy_score: evaluationResult.accuracy_score,
+    hallucination_score: evaluationResult.hallucination_score,
+    resolution_score: evaluationResult.resolution_score,
+    tone_score: evaluationResult.tone_score,
+    sentiment_score: evaluationResult.sentiment_score,
+    edge_case_score: evaluationResult.edge_case_score,
+    escalation_score: evaluationResult.escalation_score,
     structural_metrics: {
       ...structuralMetrics,
-      confidence_level: claudeResult.confidence_level,
-      evaluation_rubric: claudeResult.rubric_scores,
-      overall_decision: claudeResult.overall_decision,
-      hard_fail: claudeResult.hard_fail,
+      confidence_level: evaluationResult.confidence_level,
+      evaluation_rubric: evaluationResult.rubric_scores,
+      overall_decision: evaluationResult.overall_decision,
+      hard_fail: evaluationResult.hard_fail,
     },
-    claim_analysis: claudeResult.claim_analysis,
-    flags: claudeResult.flags,
-    summary: claudeResult.summary,
-    confidence_level: claudeResult.confidence_level,
-    prompt_improvements: claudeResult.prompt_improvements,
-    knowledge_gaps: claudeResult.knowledge_gaps,
+    claim_analysis: evaluationResult.claim_analysis,
+    flags: evaluationResult.flags,
+    summary: evaluationResult.summary,
+    confidence_level: evaluationResult.confidence_level,
+    prompt_improvements: evaluationResult.prompt_improvements,
+    knowledge_gaps: evaluationResult.knowledge_gaps,
     scoring_model_version: SCORING_MODEL_VERSION,
   };
 
@@ -333,14 +333,14 @@ export async function scoreConversation(conversationId: string): Promise<{
     sentiment_score: scoreData.sentiment_score,
     structural_metrics: {
       ...structuralMetrics,
-      confidence_level: claudeResult.confidence_level,
+      confidence_level: evaluationResult.confidence_level,
       learned_calibration: calibration.metadata,
     },
-    claim_analysis: claudeResult.claim_analysis,
-    flags: claudeResult.flags,
-    summary: claudeResult.summary,
-    prompt_improvements: claudeResult.prompt_improvements,
-    knowledge_gaps: claudeResult.knowledge_gaps,
+    claim_analysis: evaluationResult.claim_analysis,
+    flags: evaluationResult.flags,
+    summary: evaluationResult.summary,
+    prompt_improvements: evaluationResult.prompt_improvements,
+    knowledge_gaps: evaluationResult.knowledge_gaps,
     scoring_model_version: SCORING_MODEL_VERSION,
     scored_at: scoredAt,
   };

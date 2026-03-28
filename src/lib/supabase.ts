@@ -1,5 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentgradeSupabaseWarnings: {
+    publicEnv?: boolean;
+    serviceRole?: boolean;
+    urlMismatch?: boolean;
+  } | undefined;
+}
+
 function decodeProjectRefFromSupabaseKey(key: string | undefined): string | null {
   if (!key) {
     return null;
@@ -51,22 +60,21 @@ const supabaseUrl =
     : derivedSupabaseUrl || configuredSupabaseUrl || "https://agentgrade-missing-env.supabase.co";
 
 const adminKey = supabaseServiceKey || supabaseAnonKey;
-let hasWarnedAboutPublicEnv = false;
-let hasWarnedAboutServiceRole = false;
-let hasWarnedAboutUrlMismatch = false;
+const warningState = globalThis.__agentgradeSupabaseWarnings || {};
+globalThis.__agentgradeSupabaseWarnings = warningState;
 
-if (!hasWarnedAboutPublicEnv && (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
-  hasWarnedAboutPublicEnv = true;
+if (!warningState.publicEnv && (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
+  warningState.publicEnv = true;
   console.warn("[supabase] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are not fully configured.");
 }
 
-if (!hasWarnedAboutServiceRole && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  hasWarnedAboutServiceRole = true;
+if (!warningState.serviceRole && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  warningState.serviceRole = true;
   console.warn("[supabase] SUPABASE_SERVICE_ROLE_KEY is not configured. Server writes will use the anon key and may fail.");
 }
 
-if (!hasWarnedAboutUrlMismatch && configuredSupabaseUrl && derivedSupabaseUrl && !urlMatchesDerivedProject) {
-  hasWarnedAboutUrlMismatch = true;
+if (!warningState.urlMismatch && configuredSupabaseUrl && derivedSupabaseUrl && !urlMatchesDerivedProject) {
+  warningState.urlMismatch = true;
   console.warn(
     `[supabase] NEXT_PUBLIC_SUPABASE_URL does not match the Supabase project ref encoded in the API key. Using ${derivedSupabaseUrl} instead of ${configuredSupabaseUrl}.`
   );

@@ -146,7 +146,7 @@ If the issue is not knowledge but missing operational capability, use "suggested
 
 Return ONLY valid JSON. No markdown fences, no explanation text outside the JSON.`;
 
-// ─── Output Schema (shown to Claude as template) ───────────────────
+// ─── Output Schema (shown to the judge model as template) ──────────
 const SCORING_OUTPUT_SCHEMA = `{
   "overall_score": <float 0-1>,
   "accuracy_score": <float 0-1>,
@@ -295,7 +295,7 @@ function toZeroOneFromFivePoint(value: unknown, fallback = 0.6): number {
  * Calls the configured model to evaluate a conversation across all quality dimensions.
  * Returns structured scoring result. One API call per conversation.
  */
-export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringResult> {
+export async function evaluateWithJudge(input: ScoringInput): Promise<ScoringResult> {
   const { messages, structuralMetrics, knowledgeBaseContext } = input;
   const model = getScoringModel();
   const provider = getScoringProvider();
@@ -463,4 +463,4 @@ export async function evaluateWithClaude(input: ScoringInput): Promise<ScoringRe
 }
 
 // Backward-compatible alias (previously exported as scoreConversation)
-export { evaluateWithClaude as scoreConversation };
+export { evaluateWithJudge as scoreConversation };

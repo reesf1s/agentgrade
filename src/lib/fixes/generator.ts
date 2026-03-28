@@ -1,7 +1,7 @@
 /**
  * Suggested Fix Generator
  *
- * Uses Claude to generate production-ready fix content for each failure pattern type.
+ * Uses the production LLM stack to generate production-ready fix content for each failure pattern type.
  * Each pattern type gets a specialized prompt tuned to the specific failure mode:
  *
  *   knowledge_gap        → drafts a new KB article
@@ -15,13 +15,21 @@
  * failure_patterns.knowledge_base_suggestion fields.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { FailurePattern } from "@/lib/db/types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const FIX_GENERATION_MODEL = process.env.FIX_GENERATION_MODEL || process.env.SCORING_MODEL || "gpt-5.4-mini";
+
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // ─── Fix Generation Prompts ─────────────────────────────────────────
 // Each pattern type has a specialized system prompt that produces
@@ -31,6 +39,31 @@ const FIX_SYSTEM_PROMPT = `You are AgentGrade's fix recommendation engine.
 You analyze AI agent failure patterns and generate specific, actionable remediation content.
 Your output must be immediately usable — not generic advice, but concrete text the user can paste.
 Return ONLY valid JSON matching the requested schema.`;
+
+async function generateJson<T>(userMessage: string): Promise<T> {
+  const openai = getOpenAIClient();
+  if (!openai) {
+    throw new Error("OPENAI_API_KEY is not configured");
+  }
+
+  const response = await openai.responses.create({
+    model: FIX_GENERATION_MODEL,
+    reasoning: { effort: "medium" },
+    text: { verbosity: "medium" },
+    input: [
+      { role: "system", content: FIX_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
+  });
+
+  const text = response.output_text || "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`No JSON found in fix generation response: ${text.slice(0, 240)}`);
+  }
+
+  return JSON.parse(jsonMatch[0]) as T;
+}
 
 // ─── Type Definitions ───────────────────────────────────────────────
 export interface GeneratedFix {
@@ -44,7 +77,7 @@ export interface GeneratedFix {
 
 // ─── Fetch Affected Conversation Samples ───────────────────────────
 /**
- * Fetches up to 3 of the worst affected conversations to give Claude
+ * Fetches up to 3 of the worst affected conversations to give the model
  * enough context to generate a specific, grounded fix.
  */
 async function fetchAffectedSamples(
@@ -96,16 +129,11 @@ Return JSON:
   "summary": "<one sentence: what this article covers and why it matters>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    system: FIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const raw = await generateJson<{
+    kb_article_title?: string;
+    kb_article?: string;
+    summary?: string;
+  }>(userMessage);
 
   return {
     prompt_fix: null, // knowledge gaps need KB content, not prompt changes
@@ -137,16 +165,12 @@ Return JSON:
   "summary": "<one sentence: what was being fabricated and how this fix addresses it>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    system: FIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const raw = await generateJson<{
+    kb_article_title?: string;
+    kb_article?: string;
+    prompt_fix?: string;
+    summary?: string;
+  }>(userMessage);
 
   return {
     prompt_fix: raw.prompt_fix || pattern.prompt_fix || "Add anti-hallucination instructions.",
@@ -177,16 +201,10 @@ Return JSON:
   "summary": "<one sentence: what behavior change this prompt addition drives>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1000,
-    system: FIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const raw = await generateJson<{
+    prompt_fix?: string;
+    summary?: string;
+  }>(userMessage);
 
   return {
     prompt_fix: raw.prompt_fix || pattern.prompt_fix || "Improve opening message.",
@@ -215,16 +233,10 @@ Return JSON:
   "summary": "<one sentence: what tone problem this addresses and the expected improvement>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1000,
-    system: FIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const raw = await generateJson<{
+    prompt_fix?: string;
+    summary?: string;
+  }>(userMessage);
 
   return {
     prompt_fix: raw.prompt_fix || pattern.prompt_fix || "Strengthen tone guidelines.",
@@ -256,16 +268,12 @@ Return JSON:
   "summary": "<one sentence: what issue type this resolves and the key improvement>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    system: FIX_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const raw = await generateJson<{
+    kb_article_title?: string;
+    kb_article?: string;
+    prompt_fix?: string;
+    summary?: string;
+  }>(userMessage);
 
   return {
     prompt_fix: raw.prompt_fix || pattern.prompt_fix || "Follow the resolution playbook.",
@@ -277,7 +285,7 @@ Return JSON:
 
 // ─── Main Fix Generator ─────────────────────────────────────────────
 /**
- * Generates a specific, Claude-powered fix for a failure pattern.
+ * Generates a specific, model-generated fix for a failure pattern.
  * Fetches pattern details and affected conversation samples from DB,
  * then calls the appropriate specialized generator based on pattern_type.
  *
@@ -339,7 +347,7 @@ export async function generateFixForPattern(patternId: string): Promise<Generate
         fixContent = await generateKnowledgeGapFix(p, samples);
     }
   } catch (e) {
-    console.error(`[fix-generator] Claude call failed for pattern ${patternId}:`, e);
+    console.error(`[fix-generator] Model call failed for pattern ${patternId}:`, e);
 
     // Return a degraded fix using the pre-existing static recommendation
     fixContent = {
@@ -404,7 +412,7 @@ export async function generateFixesForWorkspace(
 
   const fixes: GeneratedFix[] = [];
 
-  // Process sequentially to avoid overwhelming the Claude API
+  // Process sequentially to avoid overwhelming the model API
   for (const pattern of patterns) {
     try {
       const fix = await generateFixForPattern(pattern.id as string);
