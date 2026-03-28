@@ -18,6 +18,7 @@ import {
 import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 import { getLearnedCalibrationSummary } from "@/lib/scoring/calibration-model";
 import { AGENTGRADE_MODEL_CARD, inferTrainingStage } from "@/lib/scoring/model-card";
+import { getTrainingInsights } from "@/lib/scoring/training-insights";
 
 function originalScoreForDimension(
   qualityScore: Record<string, unknown>,
@@ -66,7 +67,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [manualConversationsRes, overridesRes, learnedSummary] = await Promise.all([
+    const [manualConversationsRes, overridesRes, learnedSummary, trainingInsights] = await Promise.all([
       supabaseAdmin
         .from("conversations")
         .select("id, customer_identifier, created_at, metadata")
@@ -79,6 +80,7 @@ export async function GET() {
         .order("created_at", { ascending: false })
         .limit(200),
       getLearnedCalibrationSummary(ctx.workspace.id),
+      getTrainingInsights(ctx.workspace.id),
     ]);
 
     const manualConversations = (manualConversationsRes.data || []).filter((conversation) =>
@@ -159,6 +161,7 @@ export async function GET() {
         learned_calibration: learnedSummary,
         training_stage: trainingStage,
         model_card: AGENTGRADE_MODEL_CARD,
+        training_insights: trainingInsights,
       },
       recent_labels: recentLabels,
       manual_examples: manualConversations.slice(0, 10),

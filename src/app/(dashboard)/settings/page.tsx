@@ -107,7 +107,38 @@ interface CalibrationInfo {
       };
       strengths: string[];
       current_limitations: string[];
+      active_improvements: string[];
       path_to_proprietary_model: string[];
+    };
+    training_insights: {
+      review_queue: Array<{
+        conversation_id: string;
+        customer_identifier?: string;
+        platform?: string;
+        created_at: string;
+        overall_score: number;
+        confidence_level: "high" | "medium" | "low";
+        reason: string;
+        priority_score: number;
+      }>;
+      label_coverage: {
+        total_gold_set_conversations: number;
+        real_examples: number;
+        synthetic_examples: number;
+        private_examples: number;
+        shared_examples: number;
+        dimensions: Array<{
+          key: string;
+          label: string;
+          label_count: number;
+          healthy: boolean;
+        }>;
+      };
+      roadmap: {
+        next_workspace_label_milestone: number;
+        next_shared_label_milestone: number;
+        best_next_steps: string[];
+      };
     };
   };
   recent_labels: Array<{
@@ -1008,9 +1039,9 @@ function CalibrationTab() {
       <GlassCard className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">Scorer Model Info</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">How scoring learns</h2>
             <p className="text-xs leading-5 text-[var(--text-secondary)]">
-              AgentGrade now uses an LLM judge plus a learned calibration layer trained from human labels. The base evaluator is still API-backed, but score correction can become truly learned once enough labels exist.
+              AgentGrade starts with a base evaluator, then gets sharper as your team teaches it with reviewed conversations. The more good labels you add, the more the scorer behaves like your own private system instead of a generic model.
             </p>
           </div>
           <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
@@ -1074,7 +1105,116 @@ function CalibrationTab() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Model Card</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Teach the scorer faster</h2>
+        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
+          These are the best next labeling moves if you want the scorer to improve quickly without wasting review time.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Gold-set conversations</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+              {data?.scorer.training_insights.label_coverage.total_gold_set_conversations || 0}
+            </p>
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">
+              Real: {data?.scorer.training_insights.label_coverage.real_examples || 0} · Synthetic: {data?.scorer.training_insights.label_coverage.synthetic_examples || 0}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Next private milestone</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+              {data?.scorer.training_insights.roadmap.next_workspace_label_milestone || 30}
+            </p>
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">
+              Private labels needed for a stronger workspace-specific scorer
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Next shared milestone</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+              {data?.scorer.training_insights.roadmap.next_shared_label_milestone || 50}
+            </p>
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">
+              Shared anonymized labels needed to strengthen the cross-org model
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Best next steps</p>
+          <div className="mt-3 space-y-2">
+            {data?.scorer.training_insights.roadmap.best_next_steps.map((step) => (
+              <p key={step} className="text-xs leading-5 text-[var(--text-secondary)]">• {step}</p>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Review next</h2>
+        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
+          These conversations are the highest-value places to add labels right now.
+        </p>
+        <div className="space-y-3">
+          {data?.scorer.training_insights.review_queue.length ? data.scorer.training_insights.review_queue.map((item) => (
+            <div key={item.conversation_id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    {item.customer_identifier || item.conversation_id}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                    {item.platform || "custom"} · Score {(item.overall_score * 100).toFixed(0)}% · Confidence {item.confidence_level}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{item.reason}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    Priority {item.priority_score.toFixed(2)}
+                  </span>
+                  <GlassButton size="sm" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
+                    Review
+                  </GlassButton>
+                </div>
+              </div>
+            </div>
+          )) : (
+            <p className="text-sm text-[var(--text-muted)]">No unlabeled high-value conversations right now.</p>
+          )}
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Coverage health</h2>
+        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
+          A proprietary scorer only gets better if the training set is balanced. This shows where coverage is still thin.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Data mix</p>
+            <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
+              <p>Private examples: {data?.scorer.training_insights.label_coverage.private_examples || 0}</p>
+              <p>Shared examples: {data?.scorer.training_insights.label_coverage.shared_examples || 0}</p>
+              <p>Real examples: {data?.scorer.training_insights.label_coverage.real_examples || 0}</p>
+              <p>Synthetic examples: {data?.scorer.training_insights.label_coverage.synthetic_examples || 0}</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Coverage by score dimension</p>
+            <div className="mt-3 space-y-2">
+              {data?.scorer.training_insights.label_coverage.dimensions.map((dimension) => (
+                <div key={dimension.key} className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-secondary)]">{dimension.label}</span>
+                  <span className={dimension.healthy ? "score-good" : "score-warning"}>
+                    {dimension.label_count} labels
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">How the scorer works today</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">What runs in production</p>
@@ -1126,12 +1266,20 @@ function CalibrationTab() {
             </div>
           </div>
         </div>
+        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">How we are improving it</p>
+          <div className="mt-3 space-y-2">
+            {data?.scorer.model_card.active_improvements.map((item) => (
+              <p key={item} className="text-xs leading-5 text-[var(--text-secondary)]">• {item}</p>
+            ))}
+          </div>
+        </div>
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Path to a Proprietary Model</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Roadmap to a proprietary scorer</h2>
         <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
-          Today the product is best described as LLM-judged scoring plus learned calibration. The path to a truly proprietary scorer is to grow a trusted gold set, export anonymized supervised data, and then train dedicated ranking or regression models before considering foundation fine-tuning.
+          Today the system is an API-backed judge plus learned correction. The path to a more proprietary scorer is to grow a trusted review set, export safe supervised training data, and then train dedicated models before considering foundation fine-tuning.
         </p>
         <div className="space-y-3">
           {data?.scorer.model_card.path_to_proprietary_model.map((step, index) => (
@@ -1146,7 +1294,7 @@ function CalibrationTab() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Paste and Label a Gold-Set Conversation</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Add a practice conversation</h2>
         <p className="mb-4 text-xs text-[var(--text-muted)]">
           Paste a transcript with lines like <span className="font-mono">Customer:</span>, <span className="font-mono">AI Agent:</span>, <span className="font-mono">Human Agent:</span>, or <span className="font-mono">Tool:</span>.
         </p>
@@ -1215,7 +1363,7 @@ function CalibrationTab() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent Human Labels</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent teaching activity</h2>
         <div className="space-y-3">
           {data?.recent_labels?.length ? data.recent_labels.map((label) => (
             <div key={label.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
@@ -1253,14 +1401,18 @@ export default function SettingsPage() {
     { id: "alerts", label: "Alert Thresholds", icon: Bell },
     { id: "team", label: "Team", icon: Users },
     { id: "knowledge", label: "Knowledge Base", icon: BookOpen },
-    { id: "calibration", label: "Calibration", icon: Brain },
+    { id: "calibration", label: "Improve Scoring", icon: Brain },
     { id: "billing", label: "Billing", icon: CreditCard },
   ];
 
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">Workspace setup</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          Connect agents, teach the scorer, manage alerts, and keep your workspace healthy.
+        </p>
       </div>
 
       <div className="flex gap-6">

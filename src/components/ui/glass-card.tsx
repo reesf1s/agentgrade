@@ -39,8 +39,8 @@ interface StatCardProps {
 
 export function StatCard({ label, value, subtitle, scoreColor }: StatCardProps) {
   return (
-    <GlassCard className="glass-highlight p-5">
-      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--text-muted)]">
+    <GlassCard className="p-5">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
         {label}
       </p>
       <p

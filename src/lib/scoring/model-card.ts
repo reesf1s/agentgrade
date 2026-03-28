@@ -44,6 +44,12 @@ export const AGENTGRADE_MODEL_CARD = {
     "Calibration quality depends on label volume and label quality",
     "Global learning is only as strong as opted-in anonymized label coverage",
   ],
+  active_improvements: [
+    "High-value review queues push teams toward the most useful conversations to label first",
+    "Workspace-private calibration builds a stronger scorer for each customer without leaking their data",
+    "Optional shared learning uses anonymized score features so the global model improves without pooling raw transcript text",
+    "Coverage health checks highlight weak score dimensions before they become blind spots in production",
+  ],
   path_to_proprietary_model: [
     "Accumulate a high-quality gold set across task types, risk levels, and industries",
     "Track inter-rater agreement and benchmark scorer regressions continuously",

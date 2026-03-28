@@ -44,9 +44,9 @@ export const CALIBRATION_DIMENSIONS = [
 export const SCORER_MODEL_INFO = {
   evaluator_model: getScoringModel(),
   evaluator_provider: getScoringProvider(),
-  evaluation_mode: "LLM judge + guardrails + learned calibration",
+  evaluation_mode: "Base evaluator + guardrails + learned corrections",
   calibration_note:
-    "Human labels train a lightweight calibration model on top of the evaluator when enough examples exist. Workspace-private labels stay inside the org. Global contribution uses anonymized scorer features plus labels, not raw transcript text. The foundation model is not live fine-tuned in real time.",
+    "Human reviews help the scorer get smarter over time. Private labels stay inside your workspace. Shared learning uses anonymized scoring features and labels, not raw transcript text. The foundation model itself is not being live fine-tuned in real time.",
 };
 
 export function isManualCalibrationConversation(metadata?: Record<string, unknown> | null) {
