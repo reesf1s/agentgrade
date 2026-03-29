@@ -8,8 +8,8 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <Sidebar />
-      <main className="relative ml-[18.75rem] min-h-screen px-5 py-5 lg:px-7">
-        <div className="dashboard-topbar sticky top-5 z-30 mx-auto mb-5 flex max-w-7xl items-center justify-between rounded-[1.4rem] px-5 py-3">
+      <main className="relative min-h-screen px-4 pb-6 pt-20 lg:ml-[18.75rem] lg:px-7 lg:pb-8 lg:pt-5">
+        <div className="dashboard-topbar sticky top-4 z-30 mx-auto mb-5 hidden max-w-7xl items-center justify-between rounded-[1.4rem] px-5 py-3 lg:flex">
           <div>
             <p className="enterprise-kicker">
               AgentGrade

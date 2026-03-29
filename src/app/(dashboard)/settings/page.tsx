@@ -243,16 +243,78 @@ function ConnectionsTab() {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Agent Connections</h2>
-        <p className="mb-4 text-xs text-[var(--text-muted)]">
-          Connect as many bots as you need. Each connection gets its own bearer secret, webhook, and audit trail.
-        </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="enterprise-kicker">Connections</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              Connect an assistant in minutes
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              Add a webhook, test the connection, and start reviewing real conversations without engineering overhead.
+            </p>
+          </div>
+          <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+            Fastest setup path
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Intercom", platform: "intercom" },
+            { label: "Zendesk", platform: "zendesk" },
+            { label: "Voiceflow", platform: "voiceflow" },
+            { label: "Custom webhook", platform: "custom" },
+          ].map((option) => (
+            <button
+              key={option.platform}
+              className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-left transition-colors hover:bg-[var(--surface-hover)]"
+              onClick={() => {
+                window.location.href = `/onboarding?platform=${option.platform}`;
+              }}
+            >
+              <p className="text-sm font-medium text-[var(--text-primary)]">{option.label}</p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Connect and generate setup details</p>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Webhook endpoint</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                readOnly
+                value={webhookUrl}
+                className="glass-input flex-1 px-3 py-2 text-xs font-mono"
+              />
+              <GlassButton size="sm" onClick={copyWebhook}>
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </GlassButton>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+              Use this if you want to wire any chatbot manually. Each saved connection also gets its own secret and install snippet below.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = "/onboarding?platform=csv";
+            }}
+            className="rounded-2xl border-2 border-dashed border-[var(--border-subtle)] p-5 text-left transition-colors hover:border-[var(--border-strong)]"
+          >
+            <p className="text-sm font-medium text-[var(--text-primary)]">Upload past conversations</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              Drop in CSV or JSON if you want to score historical data before wiring a live integration.
+            </p>
+          </button>
+        </div>
+      </GlassCard>
 
+      <GlassCard className="p-6">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Connected assistants</h2>
         {loading ? (
           <p className="text-sm text-[var(--text-muted)]">Loading connections...</p>
         ) : connections.length === 0 ? (
           <div className="py-6 text-center text-sm text-[var(--text-muted)]">
-            No connections yet. Add one below to start ingesting conversations.
+            No live assistants connected yet. Use one of the setup options above to get started.
           </div>
         ) : (
           <div className="space-y-3 mb-6">
@@ -398,58 +460,6 @@ function ConnectionsTab() {
             ))}
           </div>
         )}
-
-        <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3 mt-2">Add new connection</h3>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { label: "Intercom", platform: "intercom" },
-            { label: "Zendesk", platform: "zendesk" },
-            { label: "Voiceflow", platform: "voiceflow" },
-            { label: "Custom Webhook", platform: "custom" },
-          ].map((option) => (
-            <button
-              key={option.platform}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-center transition-colors hover:bg-[var(--surface-hover)]"
-              onClick={() => {
-                window.location.href = `/onboarding?platform=${option.platform}`;
-              }}
-            >
-              <p className="text-sm font-medium text-[var(--text-primary)]">{option.label}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">Connect</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6">
-          <h3 className="text-xs font-medium text-[var(--text-secondary)] mb-3">Or upload conversations</h3>
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = "/onboarding?platform=csv";
-            }}
-            className="w-full rounded-xl border-2 border-dashed border-[var(--border-subtle)] p-8 text-center transition-colors hover:border-[var(--border-strong)]"
-          >
-            <p className="text-sm text-[var(--text-secondary)]">Drop CSV or JSON file here</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">Supports any conversation format</p>
-          </button>
-        </div>
-      </GlassCard>
-
-      <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Webhook URL</h2>
-        <p className="text-xs text-[var(--text-muted)] mb-3">
-          Send conversations to this URL from any platform
-        </p>
-        <div className="flex gap-2">
-          <input
-            readOnly
-            value={webhookUrl}
-            className="glass-input flex-1 px-3 py-2 text-xs font-mono"
-          />
-          <GlassButton size="sm" onClick={copyWebhook}>
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          </GlassButton>
-        </div>
       </GlassCard>
     </div>
   );
@@ -1400,23 +1410,24 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">Workspace setup</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Connect agents, teach the scorer, manage alerts, and keep your workspace healthy.
+      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+        <p className="enterprise-kicker">Setup</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Set up the workspace without hunting for settings</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+          Connect assistants, teach the scorer, manage alerts, and keep the workspace healthy from one place.
         </p>
       </div>
 
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-2">
+        <div className="sticky top-4 z-20 -mx-1 overflow-x-auto pb-1">
+          <div className="inline-flex min-w-full gap-2 rounded-[1.2rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-2 shadow-sm sm:min-w-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
+                className={`flex items-center gap-2.5 whitespace-nowrap px-3 py-2 rounded-xl text-sm transition-all ${
                   activeTab === tab.id
                     ? "bg-[var(--surface)] text-[var(--text-primary)] font-medium shadow-sm"
                     : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)]"
@@ -1427,6 +1438,7 @@ export default function SettingsPage() {
               </button>
             );
           })}
+          </div>
         </div>
 
         <div>
