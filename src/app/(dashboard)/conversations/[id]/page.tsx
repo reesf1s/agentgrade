@@ -126,16 +126,21 @@ export default function ConversationDetailPage() {
     /(grounding|tool_backed|verification|trace|unverified|ungrounded)/i.test(flag)
   ) || [];
   const groundingOnlyScore = isGroundingRiskOnlyScore(qs);
+  const lowConfidenceGroundingOnly = groundingOnlyScore && confidenceLevel === "low";
   const visiblePromptImprovements = groundingOnlyScore
     ? []
     : (qs?.prompt_improvements || []);
   const visibleKnowledgeGaps = groundingOnlyScore
     ? []
     : (qs?.knowledge_gaps || []);
-  const visibleClaimAnalysis = groundingOnlyScore
+  const visibleClaimAnalysis = lowConfidenceGroundingOnly
+    ? []
+    : groundingOnlyScore
     ? (qs?.claim_analysis || []).filter((claim) => claim.verdict !== "verified").slice(0, 3)
     : (qs?.claim_analysis || []);
-  const visibleFlags = groundingOnlyScore
+  const visibleFlags = lowConfidenceGroundingOnly
+    ? []
+    : groundingOnlyScore
     ? (qs?.flags || []).filter((flag) => !/(tool_backed|verification|trace|org_policy_gap|ungrounded|grounding_risk_review_recommended)/i.test(flag))
     : (qs?.flags || []);
 
@@ -260,7 +265,9 @@ export default function ConversationDetailPage() {
                 {conv.messages.map((msg) => {
                   const config = roleConfig[msg.role] || roleConfig.system;
                   const Icon = config.icon;
-                  const flaggedClaims: ClaimAnalysis[] = qs?.claim_analysis?.filter(
+                  const flaggedClaims: ClaimAnalysis[] = lowConfidenceGroundingOnly
+                    ? []
+                    : qs?.claim_analysis?.filter(
                     (ca) => ca.verdict !== "verified" && msg.content.toLowerCase().includes(ca.claim.toLowerCase().slice(0, 20))
                   ) || [];
 
@@ -389,7 +396,7 @@ export default function ConversationDetailPage() {
               <GlassCard className="rounded-[1.1rem] p-5">
                 <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
-                {groundingRiskFlags.length > 0 ? (
+                {groundingRiskFlags.length > 0 && !lowConfidenceGroundingOnly ? (
                   <div className="mt-4 rounded-xl bg-[var(--surface)] p-3">
                     <p className="text-xs text-[var(--text-muted)]">Evidence note</p>
                     <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
@@ -403,6 +410,11 @@ export default function ConversationDetailPage() {
                     <p className={`mt-1 text-sm font-medium capitalize ${confidenceTone}`}>
                       {confidenceLevel}
                     </p>
+                  </div>
+                ) : null}
+                {lowConfidenceGroundingOnly ? (
+                  <div className="mt-3 inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                    Evidence was limited in the transcript
                   </div>
                 ) : null}
                 {qs.structural_metrics?.learned_calibration?.applied ? (

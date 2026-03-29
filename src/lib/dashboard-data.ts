@@ -14,7 +14,7 @@ import { isManualCalibrationConversation } from "@/lib/calibration";
 import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
 import {
   filterPatternsWithUsableScores,
-  isAnalyticsEligibleScore,
+  isInsightEligibleScore,
 } from "@/lib/scoring/quality-score-status";
 
 export interface DashboardStats {
@@ -76,7 +76,7 @@ function getJoinedRecord<T>(value: T | T[] | null | undefined): T | null {
 async function loadUsableScoreMap(conversationIds: string[]) {
   const { data } = await supabaseAdmin
     .from("quality_scores")
-    .select("conversation_id, overall_score, flags")
+    .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
     .in("conversation_id", conversationIds);
 
   const map = new Map<string, boolean>();
@@ -84,7 +84,16 @@ async function loadUsableScoreMap(conversationIds: string[]) {
   for (const row of data || []) {
     map.set(
       row.conversation_id as string,
-      isAnalyticsEligibleScore(row as { overall_score?: number; flags?: string[] | null })
+      isInsightEligibleScore(
+        row as {
+          overall_score?: number;
+          flags?: string[] | null;
+          claim_analysis?: QualityScore["claim_analysis"];
+          confidence_level?: "high" | "medium" | "low";
+          scoring_model_version?: string | null;
+          structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+        }
+      )
     );
   }
 
@@ -120,7 +129,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .limit(5),
     supabaseAdmin
       .from("conversations")
-      .select("created_at, metadata, quality_scores:quality_scores(overall_score)")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
@@ -145,7 +154,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
   ).slice(0, 5);
   const scored = conversations.filter(
     (conversation) =>
-      isAnalyticsEligibleScore(getJoinedRecord(conversation.quality_scores))
+      isInsightEligibleScore(getJoinedRecord(conversation.quality_scores))
   );
 
   const avgScore =
@@ -184,7 +193,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
         | { overall_score?: number }[]
         | null
     );
-    if (isAnalyticsEligibleScore(qualityScore)) {
+    if (isInsightEligibleScore(qualityScore)) {
       if (!trendByDay[day]) trendByDay[day] = [];
       const safeQualityScore = qualityScore as { overall_score: number };
       const overallScore = safeQualityScore.overall_score;
@@ -223,7 +232,10 @@ export async function loadPatternsData(workspaceId: string): Promise<FailurePatt
     throw new Error(`Failed to fetch patterns: ${error.message}`);
   }
 
-  return dedupeFailurePatterns((data || []) as FailurePattern[]);
+  return filterPatternsWithUsableScores(
+    dedupeFailurePatterns((data || []) as FailurePattern[]),
+    loadUsableScoreMap
+  );
 }
 
 export async function loadReportData(workspaceId: string): Promise<ReportData> {
@@ -242,13 +254,13 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       .gte("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
       .from("conversations")
-      .select("metadata, quality_scores:quality_scores(overall_score)")
+      .select("metadata, quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", fourteenDaysAgo.toISOString())
       .lt("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
       .from("conversations")
-      .select("created_at, metadata, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
@@ -275,7 +287,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
     (conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)
   );
   const scored = thisWeek.filter((conversation) =>
-    isAnalyticsEligibleScore(
+    isInsightEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
           | { overall_score?: number; flags?: string[] | null }
@@ -301,7 +313,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       : 0;
 
   const lastWeekScored = lastWeek.filter((conversation) =>
-    isAnalyticsEligibleScore(
+    isInsightEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
           | { overall_score?: number; flags?: string[] | null }
@@ -443,7 +455,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
         | null
     );
 
-    if (isAnalyticsEligibleScore(qualityScore)) {
+    if (isInsightEligibleScore(qualityScore)) {
       if (!trendByDay[day]) {
         trendByDay[day] = { overall: [], accuracy: [], hallucination: [] };
       }
@@ -546,7 +558,7 @@ export async function loadBenchmarkStats(
 
   const { data, error } = await supabaseAdmin
     .from("conversations")
-    .select("quality_scores:quality_scores(overall_score), metadata")
+    .select("quality_scores:quality_scores(overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version), metadata")
     .eq("workspace_id", workspaceId)
     .gte("created_at", since.toISOString())
     .not("quality_scores", "is", null);
@@ -560,11 +572,27 @@ export async function loadBenchmarkStats(
     .map((conversation) =>
       getJoinedRecord(
         conversation.quality_scores as
-          | { overall_score?: number }
-          | { overall_score?: number }[]
+          | {
+              overall_score?: number;
+              flags?: string[] | null;
+              claim_analysis?: QualityScore["claim_analysis"];
+              confidence_level?: "high" | "medium" | "low";
+              scoring_model_version?: string | null;
+              structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+            }
+          | {
+              overall_score?: number;
+              flags?: string[] | null;
+              claim_analysis?: QualityScore["claim_analysis"];
+              confidence_level?: "high" | "medium" | "low";
+              scoring_model_version?: string | null;
+              structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+            }[]
           | null
-      )?.overall_score
+      )
     )
+    .filter((score): score is NonNullable<typeof score> => isInsightEligibleScore(score))
+    .map((score) => score.overall_score)
     .filter((score): score is number => score !== undefined);
 
   return {

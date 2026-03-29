@@ -14,7 +14,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Alert, AlertConfig, QualityScore } from "@/lib/db/types";
-import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
+import { isInsightEligibleScore } from "@/lib/scoring/quality-score-status";
 
 const ALERT_DEDUPE_WINDOW_HOURS = 6;
 
@@ -112,7 +112,7 @@ export async function checkThresholds(
   workspaceId: string,
   qualityScore: Partial<QualityScore>
 ): Promise<void> {
-  if (!isAnalyticsEligibleScore(qualityScore)) {
+  if (!isInsightEligibleScore(qualityScore)) {
     return;
   }
 

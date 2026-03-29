@@ -2,12 +2,42 @@ import { after, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { detectPatterns } from "@/lib/scoring";
-import type { FailurePattern } from "@/lib/db/types";
+import type { FailurePattern, QualityScore } from "@/lib/db/types";
 import {
   dedupeFailurePatterns,
 } from "@/lib/patterns/normalize";
-import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
+import {
+  filterPatternsWithUsableScores,
+  isInsightEligibleScore,
+} from "@/lib/scoring/quality-score-status";
 import { syncFailurePatterns } from "@/lib/patterns/store";
+
+async function loadUsableScoreMap(conversationIds: string[]) {
+  const { data } = await supabaseAdmin
+    .from("quality_scores")
+    .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
+    .in("conversation_id", conversationIds);
+
+  const map = new Map<string, boolean>();
+
+  for (const row of data || []) {
+    map.set(
+      row.conversation_id as string,
+      isInsightEligibleScore(
+        row as {
+          overall_score?: number;
+          flags?: string[] | null;
+          claim_analysis?: QualityScore["claim_analysis"];
+          confidence_level?: "high" | "medium" | "low";
+          scoring_model_version?: string | null;
+          structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+        }
+      )
+    );
+  }
+
+  return map;
+}
 
 /**
  * GET /api/patterns
@@ -34,7 +64,10 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch patterns" }, { status: 500 });
     }
 
-    const dedupedPatterns = dedupeFailurePatterns((patterns || []) as FailurePattern[]);
+    const dedupedPatterns = await filterPatternsWithUsableScores(
+      dedupeFailurePatterns((patterns || []) as FailurePattern[]),
+      loadUsableScoreMap
+    );
 
     if (!patterns || patterns.length === 0) {
       after(async () => {
@@ -86,7 +119,18 @@ async function detectAndStorePatterns(workspaceId: string) {
   if (!convs || convs.length < 3) return;
 
   const scoredConversations = convs
-    .filter((c) => isAnalyticsEligibleScore(c.quality_scores as { overall_score?: number; flags?: string[] | null } | null))
+    .filter((c) =>
+      isInsightEligibleScore(
+        c.quality_scores as {
+          overall_score?: number;
+          flags?: string[] | null;
+          claim_analysis?: QualityScore["claim_analysis"];
+          confidence_level?: "high" | "medium" | "low";
+          scoring_model_version?: string | null;
+          structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+        } | null
+      )
+    )
     .map((c) => {
       const qs = (c.quality_scores as unknown) as {
         overall_score: number;

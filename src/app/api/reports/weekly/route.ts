@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { PromptImprovement, KnowledgeGap, WeeklyReportSummary } from "@/lib/db/types";
-import { isAnalyticsEligibleScore } from "@/lib/scoring/quality-score-status";
+import { isInsightEligibleScore } from "@/lib/scoring/quality-score-status";
 
 /**
  * GET /api/reports/weekly
@@ -115,7 +115,7 @@ async function generateWeeklyReport(
 
     supabaseAdmin
       .from("conversations")
-      .select("quality_scores:quality_scores(overall_score)")
+      .select("quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorWeekStart.toISOString())
       .lt("created_at", weekStart.toISOString()),
@@ -123,7 +123,15 @@ async function generateWeeklyReport(
 
   const thisWeek = thisWeekRes.data || [];
   const scored = thisWeek.filter((c) =>
-    isAnalyticsEligibleScore(c.quality_scores as { overall_score?: number; flags?: string[] | null } | null)
+    isInsightEligibleScore(
+      c.quality_scores as {
+        overall_score?: number;
+        flags?: string[] | null;
+        confidence_level?: "high" | "medium" | "low";
+        scoring_model_version?: string | null;
+        structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+      } | null
+    )
   );
 
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
@@ -134,7 +142,15 @@ async function generateWeeklyReport(
   const avgResolution = avg(scored.map((c) => (c.quality_scores as { resolution_score?: number }).resolution_score ?? 0));
 
   const priorScored = (priorWeekRes.data || []).filter((c) =>
-    isAnalyticsEligibleScore(c.quality_scores as unknown as { overall_score?: number; flags?: string[] | null } | null)
+    isInsightEligibleScore(
+      c.quality_scores as unknown as {
+        overall_score?: number;
+        flags?: string[] | null;
+        confidence_level?: "high" | "medium" | "low";
+        scoring_model_version?: string | null;
+        structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+      } | null
+    )
   );
   const priorAvg = avg(priorScored.map((c) => (c.quality_scores as unknown as { overall_score: number }).overall_score));
 

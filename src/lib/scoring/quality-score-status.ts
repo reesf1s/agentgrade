@@ -1,9 +1,15 @@
 import type { FailurePattern, QualityScore } from "@/lib/db/types";
+import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 
 type ScoreLike = {
   overall_score?: number;
   flags?: string[] | null;
   claim_analysis?: QualityScore["claim_analysis"];
+  confidence_level?: "high" | "medium" | "low";
+  scoring_model_version?: string | null;
+  structural_metrics?: {
+    confidence_level?: "high" | "medium" | "low";
+  };
 };
 
 function normalizedFlags(score?: ScoreLike | null): string[] {
@@ -21,6 +27,10 @@ export function isAnalyticsEligibleScore(score?: ScoreLike | null): boolean {
   return true;
 }
 
+function normalizedConfidenceLevel(score?: ScoreLike | null) {
+  return score?.confidence_level || score?.structural_metrics?.confidence_level;
+}
+
 export function isGroundingRiskOnlyScore(score?: ScoreLike | null): boolean {
   if (!score) return false;
   const flags = normalizedFlags(score);
@@ -36,6 +46,20 @@ export function isGroundingRiskOnlyScore(score?: ScoreLike | null): boolean {
   );
 
   return groundingFlags.length > 0;
+}
+
+export function isInsightEligibleScore(score?: ScoreLike | null): boolean {
+  if (!isAnalyticsEligibleScore(score)) return false;
+  if (score?.scoring_model_version && score.scoring_model_version !== SCORING_MODEL_VERSION) {
+    return false;
+  }
+
+  const lowConfidence = normalizedConfidenceLevel(score) === "low";
+  if (lowConfidence && isGroundingRiskOnlyScore(score)) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function filterPatternsWithUsableScores(

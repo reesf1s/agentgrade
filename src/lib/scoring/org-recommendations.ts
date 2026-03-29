@@ -1,4 +1,5 @@
 import type { FailurePattern, OrgRecommendation, QualityScore } from "@/lib/db/types";
+import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
 
 interface ConversationWithScore {
   id: string;
@@ -58,6 +59,9 @@ export function buildOrgRecommendations(
 
   for (const conversation of conversations) {
     const score = conversation.quality_score;
+    if (isGroundingRiskOnlyScore(score) && score.confidence_level === "low") {
+      continue;
+    }
     const flags = score.flags || [];
     const promptSignals = (score.prompt_improvements || []).map((improvement) =>
       `${improvement.issue} ${improvement.recommended_prompt_change}`.toLowerCase()

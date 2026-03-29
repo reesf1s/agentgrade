@@ -2,9 +2,42 @@ import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { buildDerivedFixFromPattern } from "@/lib/fixes/derived";
+import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
+import {
+  filterPatternsWithUsableScores,
+  isInsightEligibleScore,
+} from "@/lib/scoring/quality-score-status";
+import type { FailurePattern, QualityScore } from "@/lib/db/types";
 
 function isMissingTableError(error: { code?: string } | null | undefined) {
   return error?.code === "PGRST205";
+}
+
+async function loadUsableScoreMap(conversationIds: string[]) {
+  const { data } = await supabaseAdmin
+    .from("quality_scores")
+    .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
+    .in("conversation_id", conversationIds);
+
+  const map = new Map<string, boolean>();
+
+  for (const row of data || []) {
+    map.set(
+      row.conversation_id as string,
+      isInsightEligibleScore(
+        row as {
+          overall_score?: number;
+          flags?: string[] | null;
+          claim_analysis?: QualityScore["claim_analysis"];
+          confidence_level?: "high" | "medium" | "low";
+          scoring_model_version?: string | null;
+          structural_metrics?: { confidence_level?: "high" | "medium" | "low" };
+        }
+      )
+    );
+  }
+
+  return map;
 }
 
 /**
@@ -37,7 +70,10 @@ export async function GET() {
         .order("occurrence_count", { ascending: false }),
     ]);
 
-    const patterns = patternsRes.data || [];
+    const patterns = await filterPatternsWithUsableScores(
+      dedupeFailurePatterns((patternsRes.data || []) as FailurePattern[]),
+      loadUsableScoreMap
+    );
     const fixes = isMissingTableError(fixesRes.error)
       ? patterns.map((pattern) => buildDerivedFixFromPattern(pattern, workspaceId))
       : fixesRes.data || [];

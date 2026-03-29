@@ -453,8 +453,17 @@ export function applyScoringGuardrails(
 
   if (hasOperationalRecordClaim(input.messages) && !hasTranscriptToolEvidence(input.messages)) {
     const unsupportedButHelpful = hasMissingToolEvidenceButHelpfulResponse(input.messages);
-    pushUniqueFlag(adjusted.flags, unsupportedButHelpful ? "limited_verification_trace" : "tool_backed_claim_without_evidence");
-    if (!unsupportedButHelpful) {
+    const evidenceLimitedOperationalAnswer =
+      unsupportedButHelpful &&
+      fabricatedClaims.length === 0 &&
+      contradictedClaims.length === 0;
+
+    pushUniqueFlag(
+      adjusted.flags,
+      evidenceLimitedOperationalAnswer ? "limited_verification_trace" : "tool_backed_claim_without_evidence"
+    );
+
+    if (!evidenceLimitedOperationalAnswer) {
       pushUniqueFlag(adjusted.flags, "org_policy_gap_tool_verification");
       pushPromptImprovement(adjusted.prompt_improvements, {
         issue: "Agent makes record-specific claims without visible lookup evidence",
@@ -476,23 +485,26 @@ export function applyScoringGuardrails(
       });
     }
 
-    if (unsupportedButHelpful && fabricatedClaims.length === 0 && contradictedClaims.length === 0) {
+    if (evidenceLimitedOperationalAnswer) {
       adjusted.hallucination_score = 1;
       adjusted.accuracy_score = Math.max(adjusted.accuracy_score, strongAdvisoryAnswer ? 0.84 : 0.76);
       adjusted.resolution_score = Math.max(adjusted.resolution_score, strongAdvisoryAnswer ? 0.84 : adjusted.resolution_score);
+      if (!hasNegativeAgentTone(input.messages)) {
+        adjusted.tone_score = Math.max(adjusted.tone_score, 0.84);
+      }
       adjusted.hard_fail = false;
       adjusted.overall_decision = strongAdvisoryAnswer ? "pass" : adjusted.overall_decision === "fail" ? "borderline" : adjusted.overall_decision;
       adjusted.flags = removeMatchingFlags(
         adjusted.flags,
-        /hard_fail_triggered|unsupported_crm_briefing|needed_escalation_for_data_access|potentially_fabricated|critical_time_sensitive_claim_ungrounded|specific_financial_figures_without_source|integration_missing_tool_trace|tool_backed_claim_without_evidence|org_policy_gap_tool_verification/i
+        /hard_fail_triggered|unsupported_crm_briefing|needed_escalation_for_data_access|potentially_fabricated|critical_time_sensitive_claim_ungrounded|specific_financial_figures_without_source|integration_missing_tool_trace|tool_backed_claim_without_evidence|org_policy_gap_tool_verification|limited_grounding_context/i
       );
       adjusted.prompt_improvements = removePromptImprovementsByPattern(
         adjusted.prompt_improvements,
-        /source attribution|timestamp|crm lookup tool|deal briefing access workflow|operational data.*source|tool capability to do so|record-specific claims without visible lookup evidence|live lookup first/i
+        /source attribution|timestamp|crm lookup tool|deal briefing access workflow|operational data.*source|tool capability to do so|record-specific claims without visible lookup evidence|live lookup first|escalate instead of guessing/i
       );
       adjusted.knowledge_gaps = removeKnowledgeGapsByPattern(
         adjusted.knowledge_gaps,
-        /operational tool verification policy|crm deal briefing access workflow|score vs ml win probability/i
+        /operational tool verification policy|crm deal briefing access workflow|score vs ml win probability|crm pipeline data access and tool integration/i
       );
 
       adjusted.summary = strongAdvisoryAnswer
