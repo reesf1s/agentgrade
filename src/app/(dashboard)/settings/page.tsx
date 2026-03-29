@@ -246,16 +246,17 @@ function ConnectionsTab() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="enterprise-kicker">Connections</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-              Connect an assistant in minutes
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Add a webhook, test the connection, and start reviewing real conversations without engineering overhead.
-            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Setup</h2>
           </div>
           <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
-            Fastest setup path
+            5 minutes
           </div>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+          <span className="operator-chip">✓ Conversations connected</span>
+          <span className="operator-chip">✓ Scoring active</span>
+          <span className="operator-chip">– Alerts optional</span>
+          <span className="operator-chip">▼ Advanced</span>
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
@@ -272,7 +273,7 @@ function ConnectionsTab() {
               }}
             >
               <p className="text-sm font-medium text-[var(--text-primary)]">{option.label}</p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">Connect and generate setup details</p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Connect</p>
             </button>
           ))}
         </div>
@@ -289,9 +290,6 @@ function ConnectionsTab() {
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </GlassButton>
             </div>
-            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
-              Use this if you want to wire any chatbot manually. Each saved connection also gets its own secret and install snippet below.
-            </p>
           </div>
           <button
             type="button"
@@ -301,9 +299,7 @@ function ConnectionsTab() {
             className="rounded-2xl border-2 border-dashed border-[var(--border-subtle)] p-5 text-left transition-colors hover:border-[var(--border-strong)]"
           >
             <p className="text-sm font-medium text-[var(--text-primary)]">Upload past conversations</p>
-            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-              Drop in CSV or JSON if you want to score historical data before wiring a live integration.
-            </p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">CSV or JSON</p>
           </button>
         </div>
       </GlassCard>

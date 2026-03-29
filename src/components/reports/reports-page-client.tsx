@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Brain,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowRight, Brain, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -17,9 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { GlassCard } from "@/components/ui/glass-card";
-import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
-import { scoreColor } from "@/lib/utils";
+import { SeverityBadge } from "@/components/ui/score-badge";
 import type { ReportData } from "@/lib/dashboard-data";
 
 export function ReportsPageClient({ report }: { report: ReportData }) {
@@ -30,20 +22,17 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
     trendDelta > 0.02
       ? {
           title: "Quality improved this week",
-          description: `Average quality moved up by ${(trendDelta * 100).toFixed(1)} points compared with the prior week.`,
           icon: TrendingUp,
           tone: "text-score-good",
         }
       : trendDelta < -0.02
         ? {
             title: "Quality slipped this week",
-            description: `Average quality fell by ${Math.abs(trendDelta * 100).toFixed(1)} points compared with the prior week.`,
             icon: TrendingDown,
             tone: "text-score-critical",
           }
         : {
             title: "Quality stayed steady",
-            description: "No material movement versus the prior week.",
             icon: TrendingUp,
             tone: "text-[var(--text-secondary)]",
           };
@@ -56,9 +45,9 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-eyebrow">Reports</p>
-            <h1 className="mt-2 page-title">Weekly quality summary.</h1>
-            <p className="mt-3 page-subtitle">
-              {report.week_start} to {report.week_end}. Scan what changed, what matters, and what to do next.
+            <h1 className="mt-2 page-title">This week’s quality memo.</h1>
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">
+              {report.week_start} to {report.week_end}
             </p>
           </div>
           <button className="glass-button glass-button-primary">Export PDF</button>
@@ -67,136 +56,49 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span className="text-[var(--text-primary)]">Scored: {summary?.total_scored ?? 0}</span>
-        <span className={`font-medium ${scoreColor(summary?.avg_overall_score ?? 0)}`}>
-          Avg: {Math.round((summary?.avg_overall_score ?? 0) * 100)}%
-        </span>
+        <span className="text-[var(--text-primary)]">Avg: {Math.round((summary?.avg_overall_score ?? 0) * 100)}%</span>
         <span className="text-[var(--text-primary)]">Risky: {summary?.hallucination_count ?? 0}</span>
         <span className="text-[var(--text-primary)]">Escalations: {summary?.escalation_count ?? 0}</span>
       </div>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-        <GlassCard className="rounded-[1.4rem] p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="section-label">Trend</p>
-              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Weekly quality trend</h2>
-            </div>
-            {summary?.avg_overall_score !== undefined ? (
-              <ScoreBadge score={summary.avg_overall_score} size="sm" />
-            ) : null}
+      <section className="space-y-5">
+        <div className="space-y-2 border-b border-[var(--divider)] pb-4 text-sm">
+          <p className="font-semibold text-[var(--text-primary)]">What changed this week</p>
+          <div className="flex items-center gap-2">
+            <TrendIcon className={`h-4 w-4 ${trendTone.tone}`} />
+            <span className="text-[var(--text-primary)]">{trendTone.title}</span>
           </div>
-
-          {trendData.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No trend data yet.</p>
-          ) : (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid stroke="var(--divider)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                    tickFormatter={(value) => value.slice(5)}
-                    axisLine={{ stroke: "var(--divider)" }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={[0.3, 1]}
-                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
-                    tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
-                    axisLine={{ stroke: "var(--divider)" }}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--panel)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "16px",
-                      fontSize: 12,
-                      boxShadow: "var(--glass-shadow)",
-                    }}
-                  />
-                  <Line type="monotone" dataKey="overall" stroke="var(--text-primary)" strokeWidth={2.4} dot={false} />
-                  <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={1.4} dot={false} opacity={0.45} />
-                  <Line type="monotone" dataKey="hallucination" stroke="#f59e0b" strokeWidth={1.4} dot={false} opacity={0.45} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </GlassCard>
-
-        <div className="space-y-4">
-          <GlassCard className="rounded-[1.4rem] p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <TrendIcon className={`h-4 w-4 ${trendTone.tone}`} />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">This week</h2>
-            </div>
-            <div className="mt-2 space-y-2 text-sm">
-              <p className="font-semibold text-[var(--text-primary)]">{trendTone.title}</p>
-              <p className="text-[var(--text-secondary)]">{trendTone.description}</p>
-              <p className="text-[var(--text-secondary)]">
-                {summary?.hallucination_count ? `! ${summary.hallucination_count} risky replies` : "→ No major issues"}
-              </p>
-            </div>
-          </GlassCard>
-
-          <GlassCard className="rounded-[1.4rem] p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Next moves</h2>
-            </div>
-            {report.organization_recommendations.length === 0 ? (
-              <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                No org-wide change stands out this week.
-              </p>
-            ) : (
-              <div className="stack-list">
-                {report.organization_recommendations.slice(0, 3).map((recommendation) => (
-                  <div key={recommendation.id} className="metric-card px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">{recommendation.title}</p>
-                      <SeverityBadge severity={recommendation.priority === "high" ? "high" : recommendation.priority === "medium" ? "medium" : "low"} />
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{recommendation.recommended_change}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
+          <p className="text-[var(--text-secondary)]">
+            {summary?.hallucination_count ? `${summary.hallucination_count} risky replies still need review.` : "No major issue stood out."}
+          </p>
         </div>
-      </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <GlassCard className="rounded-[1.4rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recurring issues</h2>
-          </div>
-          {report.patterns.length === 0 ? (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">No repeated issue stands out this week.</p>
+        <div className="space-y-2 border-b border-[var(--divider)] pb-4 text-sm">
+          <p className="font-semibold text-[var(--text-primary)]">Biggest risk</p>
+          {report.patterns[0] ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[var(--text-primary)]">{report.patterns[0].title}</span>
+                <SeverityBadge severity={report.patterns[0].severity} />
+              </div>
+              <p className="text-[var(--text-secondary)]">{report.patterns[0].description}</p>
+            </>
           ) : (
-            <div className="stack-list">
-              {report.patterns.map((pattern) => (
-                <Link
-                  key={pattern.id}
-                  href={pattern.affected_conversation_ids[0] ? `/conversations/${pattern.affected_conversation_ids[0]}` : "/patterns"}
-                  className="stack-row"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">{pattern.title}</p>
-                    <SeverityBadge severity={pattern.severity} />
-                  </div>
-                  <p className="text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
-                </Link>
-              ))}
-            </div>
+            <p className="text-[var(--text-secondary)]">No repeated issue is forming.</p>
           )}
-        </GlassCard>
+        </div>
 
-        <GlassCard className="rounded-[1.4rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
+        <div className="space-y-2 border-b border-[var(--divider)] pb-4 text-sm">
+          <p className="font-semibold text-[var(--text-primary)]">Best improvement opportunity</p>
+          <p className="text-[var(--text-secondary)]">
+            {report.organization_recommendations[0]?.recommended_change || "No org-wide change stands out this week."}
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="mb-2 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Lowest-scoring conversations</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Conversations worth reviewing</h2>
           </div>
           {summary?.top_failures?.length ? (
             <div className="stack-list">
@@ -205,20 +107,62 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{item.conversation_id.slice(0, 8)}</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.summary}</p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">{item.summary}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ScoreBadge score={item.score} size="sm" />
-                      <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
-                    </div>
+                    <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">No low-quality conversations in this window.</p>
+            <p className="text-sm text-[var(--text-secondary)]">Nothing worth reviewing right now.</p>
           )}
-        </GlassCard>
+        </div>
+      </section>
+
+      <section className="border-t border-[var(--divider)] pt-4">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Trend</p>
+          <span className="operator-chip">30 days</span>
+        </div>
+
+        {trendData.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">No trend data.</p>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData}>
+                <CartesianGrid stroke="var(--divider)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  tickFormatter={(value) => value.slice(5)}
+                  axisLine={{ stroke: "var(--divider)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0.3, 1]}
+                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                  axisLine={{ stroke: "var(--divider)" }}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--panel)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "16px",
+                    fontSize: 12,
+                    boxShadow: "var(--glass-shadow)",
+                  }}
+                />
+                <Line type="monotone" dataKey="overall" stroke="var(--text-primary)" strokeWidth={2.4} dot={false} />
+                <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={1.4} dot={false} opacity={0.45} />
+                <Line type="monotone" dataKey="hallucination" stroke="#f59e0b" strokeWidth={1.4} dot={false} opacity={0.45} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
     </div>
   );

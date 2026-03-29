@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, Filter, Search, ShieldCheck } from "lucide-react";
-import { GlassCard } from "@/components/ui/glass-card";
+import { Filter, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { formatDate } from "@/lib/utils";
 import { getQueueStateMap, setQueueState, type QueueWorkflowState } from "@/lib/review-workflow";
@@ -43,9 +42,9 @@ function statusLabel(conversation: ConversationRow) {
 function queueLabel(conversation: ConversationRow) {
   const score = conversation.quality_scores?.overall_score ?? null;
   if (score === null) return "Waiting";
-  if (score < 0.5) return "High priority";
-  if (score < 0.72) return "Review next";
-  return "Healthy";
+  if (score < 0.5) return "Review now";
+  if (score < 0.72) return "Quick pass";
+  return "Safe to close";
 }
 
 function priorityReason(conversation: ConversationRow) {
@@ -67,6 +66,14 @@ function priorityReason(conversation: ConversationRow) {
   if (score < 0.5) return "Needs review now";
   if (score < 0.72) return "Needs a quick pass";
   return "Likely safe";
+}
+
+function groupLabel(conversation: ConversationRow) {
+  const score = conversation.quality_scores?.overall_score;
+  if (score === undefined || score === null) return "Quick pass";
+  if (score < 0.65) return "Review now";
+  if (score < 0.82) return "Quick pass";
+  return "Safe to close";
 }
 
 export default function ConversationsPage() {
@@ -167,17 +174,23 @@ export default function ConversationsPage() {
     return sorted;
   }, [conversations, sortPreset]);
 
+  const groupedConversations = useMemo(() => {
+    const groups: Record<string, ConversationRow[]> = {
+      "Review now": [],
+      "Quick pass": [],
+      "Safe to close": [],
+    };
+
+    for (const conversation of sortedConversations) {
+      groups[groupLabel(conversation)].push(conversation);
+    }
+
+    return groups;
+  }, [sortedConversations]);
+
   function updateQueueState(conversationId: string, state: QueueWorkflowState) {
     setQueueState(conversationId, state);
     setQueueStates((current) => ({ ...current, [conversationId]: state }));
-  }
-
-  function rowWorkflowState(conversationId: string, score?: number | null): QueueWorkflowState {
-    const saved = queueStates[conversationId];
-    if (saved) return saved;
-    if (score === null || score === undefined) return "new";
-    if (score < 0.65) return "needs_review";
-    return "safe";
   }
 
   return (
@@ -210,7 +223,7 @@ export default function ConversationsPage() {
         </div>
       </section>
 
-      <GlassCard className="rounded-[1.2rem] p-3.5 sm:p-4">
+      <section className="space-y-3 border-b border-[var(--divider)] pb-4">
         <div className="flex flex-wrap items-center gap-2">
           {[
             ["review", "Needs review now"],
@@ -232,7 +245,7 @@ export default function ConversationsPage() {
           ))}
         </div>
 
-        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(0,0.55fr))_minmax(0,0.8fr)]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(180px,0.7fr)_minmax(160px,0.7fr)]">
           <label className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
@@ -244,148 +257,124 @@ export default function ConversationsPage() {
             />
           </label>
 
-          <label className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3">
-            <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-            <select
-              value={platform}
-              onChange={(event) => setPlatform(event.target.value)}
-              className="w-full bg-transparent py-2.5 text-sm text-[var(--text-primary)] outline-none"
-            >
-              <option value="all">All platforms</option>
-              <option value="intercom">Intercom</option>
-              <option value="zendesk">Zendesk</option>
-              <option value="voiceflow">Voiceflow</option>
-              <option value="custom">Custom</option>
-              <option value="csv">CSV / JSON</option>
-            </select>
-          </label>
-
           <select
             value={scoreFilter}
             onChange={(event) => setScoreFilter(event.target.value)}
             className="glass-input px-3 py-2.5 text-sm"
           >
-            <option value="all">All states</option>
+            <option value="all">Needs review now</option>
             <option value="critical">Needs review</option>
             <option value="warning">Watch</option>
-            <option value="good">Healthy</option>
+            <option value="good">Likely safe</option>
           </select>
 
-          <select
-            value={escalated}
-            onChange={(event) => setEscalated(event.target.value)}
-            className="glass-input px-3 py-2.5 text-sm"
-          >
-            <option value="all">All escalation states</option>
-            <option value="true">Escalated</option>
-            <option value="false">Not escalated</option>
-          </select>
+          <details className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2.5">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+              <Filter className="h-4 w-4 text-[var(--text-muted)]" />
+              Refine
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <select
+                value={platform}
+                onChange={(event) => setPlatform(event.target.value)}
+                className="glass-input px-3 py-2.5 text-sm"
+              >
+                <option value="all">All platforms</option>
+                <option value="intercom">Intercom</option>
+                <option value="zendesk">Zendesk</option>
+                <option value="voiceflow">Voiceflow</option>
+                <option value="custom">Custom</option>
+                <option value="csv">CSV / JSON</option>
+              </select>
 
-          <input
-            type="text"
-            placeholder="Filter by issue"
-            value={flag}
-            onChange={(event) => setFlag(event.target.value)}
-            className="glass-input px-3 py-2.5 text-sm"
-          />
-        </div>
-      </GlassCard>
+              <select
+                value={escalated}
+                onChange={(event) => setEscalated(event.target.value)}
+                className="glass-input px-3 py-2.5 text-sm"
+              >
+                <option value="all">All escalation states</option>
+                <option value="true">Escalated</option>
+                <option value="false">Not escalated</option>
+              </select>
 
-      <div className="space-y-3">
-        {sortedConversations.map((conversation) => (
-          <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
-            <div className="stack-row group">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="stack-row-meta">
-                  <span className="operator-chip">
-                    {rowWorkflowState(conversation.id, conversation.quality_scores?.overall_score).replaceAll("_", " ")}
-                  </span>
-                  <span className="operator-chip">{priorityReason(conversation)}</span>
-                  <span className="operator-chip">{conversation.quality_scores?.confidence_level || "pending"}</span>
-                </div>
-                <div
-                  className="flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                >
-                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "reviewed")}>
-                    Mark reviewed
-                  </button>
-                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "safe")}>
-                    Mark safe
-                  </button>
-                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "escalated")}>
-                    Escalate
-                  </button>
-                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "snoozed")}>
-                    Snooze
-                  </button>
-                </div>
-              </div>
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.65fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] xl:items-center">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                      {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
-                    </p>
-                    {conversation.was_escalated ? (
-                      <span className="operator-chip score-bg-warning score-warning">Escalated</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 max-w-3xl text-sm text-[var(--text-secondary)]">
-                    {conversation.quality_scores?.flags?.slice(0, 2).map((flag) => flag.replaceAll("_", " ")).join(" • ") || priorityReason(conversation)}
-                  </p>
-                  <div className="mt-2 stack-row-meta">
-                    <span className="operator-chip capitalize">{conversation.platform}</span>
-                    <span className="operator-chip">{statusLabel(conversation)}</span>
-                    <span className="operator-chip">{formatDate(conversation.created_at)}</span>
-                  </div>
-                </div>
-
-                <div className="metric-card px-4 py-3">
-                  <p className="section-label">Priority</p>
-                  <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                    {conversation.quality_scores?.overall_score !== undefined && conversation.quality_scores.overall_score < 0.5 ? (
-                      <AlertTriangle className="h-4 w-4 text-score-critical" />
-                    ) : conversation.quality_scores ? (
-                      <ShieldCheck className="h-4 w-4 text-score-good" />
-                    ) : (
-                      <Clock3 className="h-4 w-4 text-[var(--text-muted)]" />
-                    )}
-                    <span>{queueLabel(conversation)}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    {rowWorkflowState(conversation.id, conversation.quality_scores?.overall_score).replaceAll("_", " ")}
-                  </p>
-                </div>
-
-                <div className="metric-card px-4 py-3">
-                  <p className="section-label">Score</p>
-                  <div className="mt-2">
-                    {conversation.quality_scores ? (
-                      <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
-                    ) : (
-                      <span className="text-sm text-[var(--text-muted)]">Pending</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="metric-card px-4 py-3">
-                  <p className="section-label">Next</p>
-                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">Open review</p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Read the transcript and make a call.</p>
-                </div>
-              </div>
+              <input
+                type="text"
+                placeholder="Issue"
+                value={flag}
+                onChange={(event) => setFlag(event.target.value)}
+                className="glass-input px-3 py-2.5 text-sm sm:col-span-2"
+              />
             </div>
-          </Link>
-        ))}
+          </details>
+        </div>
+      </section>
+
+      <div className="space-y-6">
+        {Object.entries(groupedConversations).map(([groupName, items]) =>
+          items.length > 0 ? (
+            <section key={groupName} className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{groupName}</h2>
+                <span className="text-xs text-[var(--text-muted)]">{items.length}</span>
+              </div>
+
+              <div className="space-y-1">
+                {items.map((conversation) => (
+                  <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
+                    <div className="stack-row group">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                            {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                            Why it surfaced: {priorityReason(conversation)}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                            Suggested action: {queueLabel(conversation)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {statusLabel(conversation)} · {formatDate(conversation.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="operator-chip">{conversation.quality_scores?.confidence_level || "pending"}</span>
+                          {conversation.quality_scores ? <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" /> : null}
+                        </div>
+                      </div>
+
+                      <div
+                        className="mt-2 flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                      >
+                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "safe")}>
+                          Safe
+                        </button>
+                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "needs_review")}>
+                          Watch
+                        </button>
+                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "escalated")}>
+                          Escalate
+                        </button>
+                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "snoozed")}>
+                          Snooze
+                        </button>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null
+        )}
 
         {!loading && conversations.length === 0 ? (
-          <GlassCard className="p-10 text-center">
+          <div className="py-10 text-center">
             <p className="text-sm text-[var(--text-muted)]">No conversations match these filters.</p>
-          </GlassCard>
+          </div>
         ) : null}
       </div>
     </div>

@@ -4,12 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowLeft,
   Bot,
-  CheckCircle2,
   Headphones,
-  ShieldAlert,
   Sparkles,
   User,
   X,
@@ -213,7 +210,7 @@ function getEvidenceLabel(score?: QualityScore | null, groundingOnly = false) {
 function getDisplaySummary(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return "Scoring in progress.";
   if (groundingOnly) {
-    return "The answer was useful and internally coherent. A few operational details should be checked against source systems before reuse.";
+    return "Useful answer. Check record details before reuse.";
   }
   return score.summary || "No summary available.";
 }
@@ -482,31 +479,30 @@ export default function ConversationDetailPage() {
             Advanced
           </button>
         </div>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+        <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
           {groundingOnly ? "Useful answer — verify record details." : displaySummary}
         </p>
       </section>
 
       <section className="border-b border-[var(--divider)] pb-3 text-sm">
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-6">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
-            <span className="text-[var(--text-secondary)]">Worked:</span>
-            <span className="text-[var(--text-primary)]">
-              {strengths.slice(0, 2).join(", ") || "Useful answer"}
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <ShieldAlert className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
+        <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-center xl:gap-5">
+          {strengths.length > 0 ? (
+            <div className="flex min-w-0 items-start gap-2">
+              <span className="text-[var(--text-secondary)]">Worked:</span>
+              <span className="truncate text-[var(--text-primary)]">{strengths[0]}</span>
+            </div>
+          ) : null}
+          <div className="flex min-w-0 items-start gap-2">
             <span className="text-[var(--text-secondary)]">Check:</span>
-            <span className="text-[var(--text-primary)]">
+            <span className="truncate text-[var(--text-primary)]">
               {reviewGroups.map((group) => group.title).join(", ") || "Nothing major"}
             </span>
           </div>
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
+          <div className="flex min-w-0 items-start gap-2">
             <span className="text-[var(--text-secondary)]">Risk:</span>
-            <span className="text-[var(--text-primary)]">{riskLine}</span>
+            <span className="truncate text-[var(--text-primary)]">
+              {groundingOnly ? "Moderate — verify before reuse." : riskLine}
+            </span>
           </div>
         </div>
       </section>
@@ -534,14 +530,14 @@ export default function ConversationDetailPage() {
 
                 return (
                   <div key={message.id} className={`flex ${config.shell.includes("ml-auto") ? "justify-end" : config.shell.includes("mx-auto") ? "justify-center" : "justify-start"}`}>
-                    <div className={`transcript-bubble max-w-[94%] px-4 py-3.5 sm:max-w-[84%] ${config.shell}`}>
+                    <div className={`transcript-bubble max-w-[96%] px-3.5 py-3 sm:max-w-[88%] ${config.shell}`}>
                       <div className="mb-2 flex items-center gap-2">
                         <Icon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                         <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                           {config.label}
                         </span>
                       </div>
-                      <p className="text-sm leading-7 text-[var(--text-primary)] whitespace-pre-wrap">
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]">
                         {preview}
                       </p>
                       {collapsible ? (
@@ -584,6 +580,7 @@ export default function ConversationDetailPage() {
           </div>
 
           <div className="border-b border-[var(--divider)] pb-3 xl:sticky xl:top-20">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Next action</p>
             <div className="flex flex-wrap gap-2">
               {[
                 ["safe", "Safe"],
@@ -633,11 +630,11 @@ export default function ConversationDetailPage() {
               {advancedClaimGroups.length > 0 ? (
                 <div className="details-panel-content space-y-3">
                   {advancedClaimGroups.map((group) => (
-                    <div key={group.title} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
+                    <div key={group.title} className="compact-list-item">
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
-                      <div className="mt-3 space-y-3">
+                      <div className="mt-2 space-y-2">
                         {group.items.map((claim) => (
-                          <div key={`${group.title}-${claim.claim}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
+                          <div key={`${group.title}-${claim.claim}`} className="border-b border-[var(--divider)] pb-2 last:border-b-0 last:pb-0">
                             <p className="text-sm text-[var(--text-primary)]">{claim.claim}</p>
                             <p className="mt-1 text-xs capitalize text-[var(--text-muted)]">{claim.verdict}</p>
                           </div>
@@ -678,7 +675,6 @@ export default function ConversationDetailPage() {
 
               <div className="compact-list-item">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Correct the score</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Override this review if your team thinks the judgment is off.</p>
                 <div className="mt-3 space-y-3">
                   {showOverrideForm ? (
                     <>
@@ -730,7 +726,6 @@ export default function ConversationDetailPage() {
 
               <div className="compact-list-item">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Train the scorer</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Save a human label set only when this conversation is genuinely useful for training.</p>
                 <div className="mt-3 space-y-3">
                   {showTrainingForm ? (
                     <>

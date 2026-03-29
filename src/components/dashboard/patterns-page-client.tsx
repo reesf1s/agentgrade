@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowRight, Check, RefreshCw, X } from "lucide-react";
+import { ArrowRight, Check, RefreshCw, X } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
-import { GlassCard } from "@/components/ui/glass-card";
 import { SeverityBadge } from "@/components/ui/score-badge";
 import type { FailurePattern } from "@/lib/db/types";
 import { getIssueStateMap, setIssueState, type IssueWorkflowState } from "@/lib/review-workflow";
@@ -21,16 +20,9 @@ function issueState(pattern: FailurePattern, savedState?: IssueWorkflowState) {
     return labels[savedState];
   }
   if (pattern.is_resolved) return "Resolved";
-  if (pattern.severity === "critical" || pattern.severity === "high") return "Action needed";
-  if (pattern.affected_conversation_ids.length >= 6) return "Watching";
+  if (pattern.severity === "critical" || pattern.severity === "high") return "Actioning";
+  if (pattern.affected_conversation_ids.length >= 6) return "Monitoring";
   return "New";
-}
-
-function issueStateTone(pattern: FailurePattern, savedState?: IssueWorkflowState) {
-  const state = issueState(pattern, savedState);
-  if (state === "Resolved") return "score-bg-good score-good";
-  if (state === "Actioning" || state === "Action needed") return "score-bg-warning score-warning";
-  return "";
 }
 
 function nextAction(pattern: FailurePattern) {
@@ -38,8 +30,14 @@ function nextAction(pattern: FailurePattern) {
     pattern.recommendation ||
     pattern.prompt_fix ||
     pattern.knowledge_base_suggestion ||
-    "Review a few examples and decide whether this belongs in prompt, workflow, or source coverage."
+    "Review examples and decide whether this belongs in prompt, workflow, or source coverage."
   );
+}
+
+function leverageLabel(pattern: FailurePattern) {
+  if (pattern.severity === "critical" || pattern.affected_conversation_ids.length >= 6) return "High";
+  if (pattern.severity === "high" || pattern.affected_conversation_ids.length >= 3) return "Medium";
+  return "Low";
 }
 
 export function PatternsPageClient({ initialPatterns }: { initialPatterns: FailurePattern[] }) {
@@ -91,10 +89,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-eyebrow">Issues</p>
-            <h1 className="mt-2 page-title">Repeated problems, grouped into one fixable list.</h1>
-            <p className="mt-3 page-subtitle">
-              This page should only surface repeated issues that are clear enough to matter and actionable enough to fix.
-            </p>
+            <h1 className="mt-2 page-title">The work worth fixing.</h1>
           </div>
           <GlassButton onClick={refreshPatterns} disabled={refreshing} className="inline-flex items-center gap-2">
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -104,146 +99,61 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       </section>
 
       {patterns.length === 0 ? (
-        <GlassCard className="rounded-[1.4rem] p-10 text-center">
-          <p className="text-sm text-[var(--text-muted)]">
-            No repeated issue is standing out yet. Once enough usable scored conversations land, AgentGrade will group them here.
-          </p>
-        </GlassCard>
+        <div className="py-10 text-center">
+          <p className="text-sm text-[var(--text-muted)]">No repeated issue is standing out yet.</p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {patterns.map((pattern) => (
-            <GlassCard key={pattern.id} className="rounded-[1.2rem] p-4 sm:p-5">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
-                <div>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                            pattern.severity === "critical"
-                              ? "score-bg-critical"
-                              : pattern.severity === "high"
-                                ? "score-bg-warning"
-                                : "bg-[var(--surface-soft)]"
-                          }`}
-                        >
-                          <AlertTriangle
-                            className={`h-4 w-4 ${
-                              pattern.severity === "critical"
-                                ? "score-critical"
-                                : pattern.severity === "high"
-                                  ? "score-warning"
-                                  : "text-[var(--text-secondary)]"
-                            }`}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                            {pattern.title}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <SeverityBadge severity={pattern.severity} />
-                            <select
-                              value={(issueStates[pattern.id] || "").toString()}
-                              onChange={(event) => updateIssueWorkflowState(pattern.id, event.target.value as IssueWorkflowState)}
-                              className="glass-input px-3 py-1 text-xs"
-                            >
-                              <option value="">State</option>
-                              <option value="new">New</option>
-                              <option value="monitoring">Monitoring</option>
-                              <option value="actioning">Actioning</option>
-                              <option value="quieted">Quieted</option>
-                              <option value="resolved">Resolved</option>
-                            </select>
-                            <span className="operator-chip">
-                              {pattern.affected_conversation_ids.length} conversations
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <GlassButton
-                      size="sm"
-                      onClick={() => resolvePattern(pattern.id)}
-                      disabled={resolving === pattern.id}
-                      className="inline-flex items-center gap-2"
+            <div key={pattern.id} className="stack-row py-4">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={(issueStates[pattern.id] || "").toString()}
+                      onChange={(event) => updateIssueWorkflowState(pattern.id, event.target.value as IssueWorkflowState)}
+                      className="glass-input px-3 py-1 text-xs"
                     >
-                      <Check className="h-4 w-4" />
-                      {resolving === pattern.id ? "Resolving..." : "Mark resolved"}
-                    </GlassButton>
+                      <option value="">New</option>
+                      <option value="new">New</option>
+                      <option value="monitoring">Monitoring</option>
+                      <option value="actioning">Actioning</option>
+                      <option value="quieted">Quieted</option>
+                      <option value="resolved">Resolved</option>
+                    </select>
+                    <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{pattern.title}</p>
                   </div>
-
-                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                    <div className="px-1">
-                      <p className="section-label">Why it matters</p>
-                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.description}</p>
-                    </div>
-                    <div className="px-1">
-                      <p className="section-label">What to do next</p>
-                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{nextAction(pattern)}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "actioning")}>
-                          Create fix
-                        </button>
-                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "monitoring")}>
-                          Monitor
-                        </button>
-                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "quieted")}>
-                          Quiet for now
-                        </button>
-                      </div>
-                    </div>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    Appeared in {pattern.affected_conversation_ids.length} conversations this week.
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{pattern.description}</p>
+                  <p className="mt-2 text-sm text-[var(--text-primary)]">Suggested fix: {nextAction(pattern)}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <SeverityBadge severity={pattern.severity} />
+                    <span className="operator-chip">Frequency: {pattern.affected_conversation_ids.length}</span>
+                    <span className="operator-chip">Leverage: {leverageLabel(pattern)}</span>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="px-1">
-                    <p className="section-label">Recommended next action</p>
-                    <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(pattern)}</p>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPattern(pattern)}
-                      className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]"
-                    >
-                      Open issue detail
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {pattern.prompt_fix ? (
-                    <div className="px-1">
-                      <p className="section-label">Prompt change</p>
-                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
-                    </div>
-                  ) : null}
-
-                  {pattern.knowledge_base_suggestion ? (
-                    <div className="px-1">
-                      <p className="section-label">Knowledge update</p>
-                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.knowledge_base_suggestion}</p>
-                    </div>
-                  ) : null}
-
-                  {pattern.affected_conversation_ids.length > 0 ? (
-                    <div className="metric-card px-4 py-4">
-                      <p className="section-label">Examples</p>
-                      <div className="mt-3 space-y-2">
-                        {pattern.affected_conversation_ids.slice(0, 4).map((conversationId) => (
-                          <Link
-                            key={conversationId}
-                            href={`/conversations/${conversationId}`}
-                            className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                          >
-                            <span>{conversationId.slice(0, 8)}</span>
-                            <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="operator-chip" onClick={() => setSelectedPattern(pattern)}>
+                    Open issue
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "actioning")}>
+                    Mark in progress
+                  </button>
+                  <GlassButton
+                    size="sm"
+                    onClick={() => resolvePattern(pattern.id)}
+                    disabled={resolving === pattern.id}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    {resolving === pattern.id ? "Resolving..." : "Resolve"}
+                  </GlassButton>
                 </div>
               </div>
-            </GlassCard>
+            </div>
           ))}
         </div>
       )}
@@ -265,8 +175,8 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <SeverityBadge severity={selectedPattern.severity} />
-                  <span className={`operator-chip ${issueStateTone(selectedPattern, issueStates[selectedPattern.id])}`}>{issueState(selectedPattern, issueStates[selectedPattern.id])}</span>
-                  <span className="operator-chip">{selectedPattern.affected_conversation_ids.length} examples</span>
+                  <span className="operator-chip">{issueState(selectedPattern, issueStates[selectedPattern.id])}</span>
+                  <span className="operator-chip">Leverage: {leverageLabel(selectedPattern)}</span>
                 </div>
               </div>
               <button type="button" onClick={() => setSelectedPattern(null)} className="operator-chip">
@@ -274,72 +184,51 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 Close
               </button>
             </div>
+
             <div className="drawer-body space-y-4">
-              <div className="compact-list">
-                <div className="compact-list-item">
-                  <p className="section-label">Why it matters</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.description}</p>
+              <div className="compact-list-item">
+                <p className="section-label">What is happening</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.description}</p>
+              </div>
+
+              <div className="compact-list-item">
+                <p className="section-label">Recommended action</p>
+                <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(selectedPattern)}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "actioning")}>
+                    Track fix
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "quieted")}>
+                    Recheck next week
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "resolved")}>
+                    Mark resolved
+                  </button>
                 </div>
-                <div className="compact-list-item">
-                  <p className="section-label">Recommended next action</p>
-                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(selectedPattern)}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "actioning")}>
-                      Track fix
-                    </button>
-                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "quieted")}>
-                      Recheck next week
-                    </button>
-                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "resolved")}>
-                      Mark resolved
-                    </button>
-                  </div>
+              </div>
+
+              <div className="compact-list-item">
+                <p className="section-label">Examples</p>
+                <div className="mt-2 space-y-2">
+                  {selectedPattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
+                    <Link
+                      key={conversationId}
+                      href={`/conversations/${conversationId}`}
+                      className="flex items-center justify-between text-sm text-[var(--text-primary)]"
+                    >
+                      <span>{conversationId.slice(0, 8)}</span>
+                      <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
+                    </Link>
+                  ))}
                 </div>
               </div>
 
               <div className="compact-list-item">
                 <p className="section-label">Current state</p>
-                <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
-                  {issueState(selectedPattern, issueStates[selectedPattern.id])}
-                </p>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {selectedPattern.severity === "critical" || selectedPattern.severity === "high"
-                    ? "This issue is active enough to warrant a tracked response."
-                    : "Keep this issue visible until it quiets down or proves safe to ignore."}
+                  {issueState(selectedPattern, issueStates[selectedPattern.id])} · Severity {selectedPattern.severity} · Frequency {selectedPattern.affected_conversation_ids.length}
                 </p>
               </div>
-
-              {selectedPattern.prompt_fix ? (
-                <div className="compact-list-item">
-                  <p className="section-label">Prompt change</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.prompt_fix}</p>
-                </div>
-              ) : null}
-
-              {selectedPattern.knowledge_base_suggestion ? (
-                <div className="compact-list-item">
-                  <p className="section-label">Knowledge update</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.knowledge_base_suggestion}</p>
-                </div>
-              ) : null}
-
-              {selectedPattern.affected_conversation_ids.length > 0 ? (
-                <div className="compact-list-item">
-                  <p className="section-label">Example conversations</p>
-                  <div className="mt-3 space-y-1">
-                    {selectedPattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
-                      <Link
-                        key={conversationId}
-                        href={`/conversations/${conversationId}`}
-                        className="flex items-center justify-between px-1 py-1.5 text-sm text-[var(--text-primary)]"
-                      >
-                        <span>{conversationId.slice(0, 8)}</span>
-                        <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </aside>
         </>
