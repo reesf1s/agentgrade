@@ -52,55 +52,11 @@ function deriveStrengths(messages: Message[], score?: QualityScore | null) {
 }
 
 function deriveChecks(score?: QualityScore | null, evidenceLimited = false) {
-  const rawClaims = (score?.claim_analysis || []).filter((claim) => claim.verdict !== "verified");
-
   if (evidenceLimited) {
-    const groupedChecks: Array<{
-      label: string;
-      claim: string;
-      verdict: "unverifiable" | "fabricated" | "contradicted";
-    }> = [];
-
-    const hasMetricClaim = rawClaims.some((claim) => /\b(%|hours?|hrs?|metrics?|signals?|accuracy|score)\b/i.test(claim.claim));
-    const hasDateClaim = rawClaims.some((claim) => /\b(date|due|overdue|march|april|today|tomorrow|deadline|week)\b/i.test(claim.claim));
-    const hasPeopleClaim = rawClaims.some((claim) => /\b(contact|partner|director|coo|decision-maker|champion|amelia|thomas|charles)\b/i.test(claim.claim));
-
-    if (hasMetricClaim) {
-      groupedChecks.push({
-        label: "Check the numbers",
-        claim: "Confirm any quoted metrics, scores, or performance claims before sharing them internally or with a customer.",
-        verdict: "unverifiable",
-      });
-    }
-
-    if (hasDateClaim) {
-      groupedChecks.push({
-        label: "Check timing",
-        claim: "Confirm dates, due dates, and anything marked overdue in the source system before acting on it.",
-        verdict: "unverifiable",
-      });
-    }
-
-    if (hasPeopleClaim) {
-      groupedChecks.push({
-        label: "Check deal details",
-        claim: "Double-check names, roles, and internal deal notes before treating the briefing as final.",
-        verdict: "unverifiable",
-      });
-    }
-
-    if (groupedChecks.length > 0) {
-      return groupedChecks.slice(0, 3);
-    }
-
-    return [
-      {
-        label: "Check source details",
-        claim: "Use the answer as a working draft, then confirm the record-level details in the source system.",
-        verdict: "unverifiable",
-      },
-    ];
+    return [];
   }
+
+  const rawClaims = (score?.claim_analysis || []).filter((claim) => claim.verdict !== "verified");
 
   return rawClaims.slice(0, 3).map((claim) => ({
     label:
@@ -124,6 +80,7 @@ export default function ConversationDetailPage() {
   const [overrideScore, setOverrideScore] = useState("50");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [labelSetState, setLabelSetState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [labelNotes, setLabelNotes] = useState("");
   const [labelShareScope, setLabelShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
@@ -244,16 +201,20 @@ export default function ConversationDetailPage() {
   const visibleKnowledgeGaps = groundingOnlyScore
     ? []
     : (qs?.knowledge_gaps || []);
-  const visibleClaimAnalysis = lowConfidenceGroundingOnly
+  const visibleClaimAnalysis = groundingOnlyScore
     ? []
-    : groundingOnlyScore
-    ? (qs?.claim_analysis || []).filter((claim) => claim.verdict !== "verified").slice(0, 3)
     : (qs?.claim_analysis || []);
-  const visibleFlags = lowConfidenceGroundingOnly
+  const visibleFlags = groundingOnlyScore
     ? []
-    : groundingOnlyScore
-    ? (qs?.flags || []).filter((flag) => !/(tool_backed|verification|trace|org_policy_gap|ungrounded|grounding_risk_review_recommended)/i.test(flag))
     : (qs?.flags || []);
+  const displaySummary = !qs
+    ? "Scoring in progress."
+    : groundingOnlyScore
+      ? (qs.overall_score || 0) >= 0.75
+        ? "The agent gave a strong, useful answer with a clear recommendation and good structure."
+        : "The answer was directionally useful, but it still needs a human sense-check before anyone relies on it."
+      : qs.summary || "No summary.";
+  const evidencePillLabel = groundingOnlyScore ? "Evidence limited" : groundingRiskFlags.length > 0 ? "Evidence to review" : null;
 
   const roleConfig = {
     customer: { icon: User, label: "Customer", bg: "bg-[var(--surface-soft)] border border-[var(--border-subtle)]", align: "mr-auto" },
@@ -350,9 +311,14 @@ export default function ConversationDetailPage() {
                   {confidenceLevel} confidence
                 </span>
               ) : null}
+              {evidencePillLabel ? (
+                <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                  {evidencePillLabel}
+                </span>
+              ) : null}
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Overall</p>
               <div className="mt-2">{qs && <ScoreBadge score={qs.overall_score} size="lg" label="overall" />}</div>
@@ -360,12 +326,6 @@ export default function ConversationDetailPage() {
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Assessment</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{assessmentHeading}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Evidence</p>
-              <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                {groundingRiskFlags.length > 0 ? "Evidence limited" : "Clear enough"}
-              </p>
             </div>
           </div>
         </div>
@@ -489,30 +449,30 @@ export default function ConversationDetailPage() {
         <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
           {qs ? (
             <>
-              <GlassCard className="rounded-[1rem] p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                    {lowConfidenceGroundingOnly ? "Double-check before using" : "What to check"}
-                  </h2>
-                </div>
-                {checks.length === 0 ? (
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    Nothing important stands out for manual checking.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {checks.map((item, index) => (
-                      <div key={`${item.claim}-${index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                          {item.label}
-                        </p>
-                        <p className="mt-2 text-sm leading-5 text-[var(--text-primary)]">{item.claim}</p>
-                      </div>
-                    ))}
+              {!groundingOnlyScore ? (
+                <GlassCard className="rounded-[1rem] p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
+                    <h2 className="text-sm font-semibold text-[var(--text-primary)]">What to check</h2>
                   </div>
-                )}
-              </GlassCard>
+                  {checks.length === 0 ? (
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Nothing important stands out for manual checking.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {checks.map((item, index) => (
+                        <div key={`${item.claim}-${index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                            {item.label}
+                          </p>
+                          <p className="mt-2 text-sm leading-5 text-[var(--text-primary)]">{item.claim}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </GlassCard>
+              ) : null}
 
               <GlassCard className="rounded-[1rem] p-5">
                 <div className="mb-4 flex items-center gap-2">
@@ -567,7 +527,7 @@ export default function ConversationDetailPage() {
 
               <GlassCard className="rounded-[1rem] p-5">
                 <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Assessment</h2>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{displaySummary}</p>
                 {confidenceLevel ? (
                   <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3">
                     <p className="text-xs text-[var(--text-muted)]">Confidence</p>
@@ -576,9 +536,9 @@ export default function ConversationDetailPage() {
                     </p>
                   </div>
                 ) : null}
-                {lowConfidenceGroundingOnly ? (
+                {evidencePillLabel ? (
                   <div className="mt-3 inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-                    Evidence was limited in the transcript
+                    {evidencePillLabel}
                   </div>
                 ) : null}
                 {qs.structural_metrics?.learned_calibration?.applied ? (
@@ -708,87 +668,100 @@ export default function ConversationDetailPage() {
           <GlassCard className="rounded-[1rem] p-5">
             <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Train the scorer</h2>
             <p className="text-xs text-[var(--text-muted)] mb-4">
-              Save a full human label set for this conversation. AgentGrade uses these labels to evaluate scoring regressions and train a lightweight calibration model on top of the base evaluator.
+              Save a human label set for this conversation when you want it to improve future scoring.
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <GlassSelect
-                label="Example type"
-                value={labelExampleKind}
-                onChange={(event) => setLabelExampleKind(event.target.value as "real" | "synthetic")}
-                options={[
-                  { value: "real", label: "Real customer conversation" },
-                  { value: "synthetic", label: "Synthetic or fake test case" },
-                ]}
-              />
-              <GlassSelect
-                label="Training scope"
-                value={labelShareScope}
-                onChange={(event) => setLabelShareScope(event.target.value as "workspace_private" | "global_anonymous")}
-                options={[
-                  { value: "workspace_private", label: "Private to this workspace" },
-                  { value: "global_anonymous", label: "Contribute anonymized features globally" },
-                ]}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                ["overall", "Overall"],
-                ["accuracy", "Accuracy"],
-                ["hallucination", "Hallucination"],
-                ["resolution", "Resolution"],
-                ["escalation", "Escalation"],
-                ["tone", "Tone"],
-                ["sentiment", "Sentiment"],
-              ].map(([key, label]) => (
-                <div key={key}>
-                  <p className="mb-1 text-xs text-[var(--text-secondary)]">{label}</p>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={trainingLabels[key as keyof typeof trainingLabels]}
-                    onChange={(event) =>
-                      setTrainingLabels((current) => ({
-                        ...current,
-                        [key]: event.target.value,
-                      }))
-                    }
-                    className="glass-input w-full px-3 py-2 text-sm"
-                    placeholder="Optional %"
+            {showTrainingForm ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <GlassSelect
+                    label="Example type"
+                    value={labelExampleKind}
+                    onChange={(event) => setLabelExampleKind(event.target.value as "real" | "synthetic")}
+                    options={[
+                      { value: "real", label: "Real customer conversation" },
+                      { value: "synthetic", label: "Synthetic or fake test case" },
+                    ]}
+                  />
+                  <GlassSelect
+                    label="Training scope"
+                    value={labelShareScope}
+                    onChange={(event) => setLabelShareScope(event.target.value as "workspace_private" | "global_anonymous")}
+                    options={[
+                      { value: "workspace_private", label: "Private to this workspace" },
+                      { value: "global_anonymous", label: "Contribute anonymized features globally" },
+                    ]}
                   />
                 </div>
-              ))}
-            </div>
-            <GlassButton
-              size="sm"
-              variant="ghost"
-              className="mt-3 w-full"
-              onClick={() =>
-                setTrainingLabels({
-                  overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
-                  accuracy: qs?.accuracy_score !== undefined ? String(Math.round(qs.accuracy_score * 100)) : "",
-                  hallucination: qs?.hallucination_score !== undefined ? String(Math.round(qs.hallucination_score * 100)) : "",
-                  resolution: qs?.resolution_score !== undefined ? String(Math.round(qs.resolution_score * 100)) : "",
-                  escalation: qs?.escalation_score !== undefined ? String(Math.round(qs.escalation_score * 100)) : "",
-                  tone: qs?.tone_score !== undefined ? String(Math.round(qs.tone_score * 100)) : "",
-                  sentiment: qs?.sentiment_score !== undefined ? String(Math.round(qs.sentiment_score * 100)) : "",
-                })
-              }
-            >
-              Start from current scores
-            </GlassButton>
-            <GlassTextarea
-              value={labelNotes}
-              onChange={(event) => setLabelNotes(event.target.value)}
-              className="mt-3 min-h-[96px]"
-              placeholder="Why are these labels correct? Capture groundedness, user intent, escalation quality, and any notes for calibration."
-            />
-            <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
-              Global sharing uses anonymized score features and your labels, not raw transcript text.
-            </p>
-            <GlassButton size="sm" className="mt-3 w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
-              {labelSetState === "saving" ? "Saving labels..." : "Save gold-set labels"}
-            </GlassButton>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ["overall", "Overall"],
+                    ["accuracy", "Accuracy"],
+                    ["hallucination", "Hallucination"],
+                    ["resolution", "Resolution"],
+                    ["escalation", "Escalation"],
+                    ["tone", "Tone"],
+                    ["sentiment", "Sentiment"],
+                  ].map(([key, label]) => (
+                    <div key={key}>
+                      <p className="mb-1 text-xs text-[var(--text-secondary)]">{label}</p>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={trainingLabels[key as keyof typeof trainingLabels]}
+                        onChange={(event) =>
+                          setTrainingLabels((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
+                        className="glass-input w-full px-3 py-2 text-sm"
+                        placeholder="Optional %"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <GlassButton
+                  size="sm"
+                  variant="ghost"
+                  className="mt-3 w-full"
+                  onClick={() =>
+                    setTrainingLabels({
+                      overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
+                      accuracy: qs?.accuracy_score !== undefined ? String(Math.round(qs.accuracy_score * 100)) : "",
+                      hallucination: qs?.hallucination_score !== undefined ? String(Math.round(qs.hallucination_score * 100)) : "",
+                      resolution: qs?.resolution_score !== undefined ? String(Math.round(qs.resolution_score * 100)) : "",
+                      escalation: qs?.escalation_score !== undefined ? String(Math.round(qs.escalation_score * 100)) : "",
+                      tone: qs?.tone_score !== undefined ? String(Math.round(qs.tone_score * 100)) : "",
+                      sentiment: qs?.sentiment_score !== undefined ? String(Math.round(qs.sentiment_score * 100)) : "",
+                    })
+                  }
+                >
+                  Start from current scores
+                </GlassButton>
+                <GlassTextarea
+                  value={labelNotes}
+                  onChange={(event) => setLabelNotes(event.target.value)}
+                  className="mt-3 min-h-[96px]"
+                  placeholder="Why are these labels correct? Capture groundedness, user intent, escalation quality, and any notes for calibration."
+                />
+                <p className="mt-2 text-[11px] leading-5 text-[var(--text-muted)]">
+                  Global sharing uses anonymized score features and your labels, not raw transcript text.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <GlassButton size="sm" className="w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
+                    {labelSetState === "saving" ? "Saving labels..." : "Save gold-set labels"}
+                  </GlassButton>
+                  <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowTrainingForm(false)}>
+                    Cancel
+                  </GlassButton>
+                </div>
+              </>
+            ) : (
+              <GlassButton size="sm" className="w-full" onClick={() => setShowTrainingForm(true)}>
+                Add Human Label
+              </GlassButton>
+            )}
             {labelSetState === "saved" ? (
               <p className="mt-3 text-xs text-score-good">Gold-set labels saved.</p>
             ) : null}

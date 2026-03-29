@@ -514,8 +514,8 @@ export function applyScoringGuardrails(
       );
 
       adjusted.summary = strongAdvisoryAnswer
-        ? "The agent delivered a strong, useful answer. The main follow-up is to confirm a few record-level details before treating it as fully reliable."
-        : "The answer was directionally useful, but a few record-level details still need confirmation before it should be trusted fully.";
+        ? "The agent delivered a strong, useful answer with clear structure and good next-step guidance."
+        : "The answer was useful overall, but a human should sense-check the specific record details before relying on it fully.";
     }
   }
 
