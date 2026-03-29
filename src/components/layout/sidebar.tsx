@@ -184,9 +184,7 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-[var(--border-subtle)] px-2 pt-4">
-          <p className="text-xs leading-5 text-[var(--text-secondary)]">
-            Review fast. Ignore noise. Ship one clear fix at a time.
-          </p>
+          <p className="text-xs text-[var(--text-secondary)]">Review fast. Fix clearly.</p>
         </div>
       </aside>
     </>

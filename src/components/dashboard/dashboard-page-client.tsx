@@ -70,143 +70,86 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="metric-card px-4 py-4">
-            <p className="section-label">Needs attention</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{reviewNow.length}</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Conversations worth opening now</p>
-          </div>
-          <div className="metric-card px-4 py-4">
-            <p className="section-label">Workspace quality</p>
-            <p className={`mt-2 text-3xl font-semibold tracking-[-0.06em] ${scoreColor(avgScore)}`}>
-              {percentage(avgScore)}
-            </p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Average score in the current view</p>
-          </div>
-          <div className="metric-card px-4 py-4">
-            <p className="section-label">Quiet health</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{safeCount}</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Healthy reviews safe to ignore</p>
-          </div>
-          <div className="metric-card px-4 py-4">
-            <p className="section-label">Reviewed</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{reviewed}</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Conversations shaping the workspace trend</p>
-          </div>
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <span className="font-medium text-[var(--text-primary)]">Needs attention: {reviewNow.length}</span>
+          <span className={`font-medium ${scoreColor(avgScore)}`}>Quality: {percentage(avgScore)}</span>
+          <span className="text-[var(--text-primary)]">Quiet: {safeCount}</span>
+          <span className="text-[var(--text-primary)]">Reviewed: {reviewed}</span>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-        <GlassCard className="rounded-[1.4rem] p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="section-label">Needs attention this week</p>
-              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Top conversations to look at next</h2>
-            </div>
+      <section className="space-y-6">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Needs attention this week</p>
             <Link href="/conversations" className="text-sm font-medium text-[var(--text-primary)]">
-              View all
+              Resolve queue
             </Link>
           </div>
 
           {reviewNow.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-soft)] p-5">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Nothing urgent is surfacing right now.</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                The queue looks calm. Use issues for slower-moving patterns instead of one-off firefighting.
-              </p>
-            </div>
+            <p className="text-sm text-[var(--text-secondary)]">Nothing urgent this week.</p>
           ) : (
             <div className="stack-list">
               {reviewNow.slice(0, 4).map((conversation) => (
                 <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="stack-row">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                         {conversation.customer_identifier || "Unknown conversation"}
                       </p>
-                      <p className="mt-1.5 text-sm leading-6 text-[var(--text-secondary)]">
-                        {conversation.quality_scores?.summary || "This conversation needs a closer review before similar responses scale."}
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {conversation.quality_scores?.summary || "Needs review"}
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="operator-chip capitalize">{conversation.platform}</span>
-                        <span className="operator-chip">{formatDate(conversation.created_at)}</span>
-                      </div>
                     </div>
-                    {conversation.quality_scores ? (
-                      <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
-                    ) : null}
+                    {conversation.quality_scores ? <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" /> : null}
                   </div>
                 </Link>
               ))}
             </div>
           )}
-        </GlassCard>
+        </div>
 
         <div className="space-y-4">
-          <GlassCard className="rounded-[1.4rem] p-5">
-            <div className="mb-3 flex items-center gap-2">
+          <div className="border-b border-[var(--divider)] pb-3">
+            <div className="mb-2 flex items-center gap-2">
               {trendDelta < -0.02 ? (
                 <TrendingDown className="h-4 w-4 text-score-critical" />
               ) : (
                 <TrendingUp className="h-4 w-4 text-score-good" />
               )}
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Changed this week</h2>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Changed this week</p>
             </div>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
-              {trendDelta < -0.02
-                ? "Quality has slipped recently."
-                : trendDelta > 0.02
-                  ? "Quality is moving in the right direction."
-                  : "Quality is broadly steady."}
+            <p className="text-sm text-[var(--text-primary)]">
+              {trendDelta < -0.02 ? "Quality: down" : trendDelta > 0.02 ? "Quality: up" : "Quality: steady"}
             </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {trendDelta < -0.02
-                ? "Use the review queue and issues page together to find what changed before this becomes a recurring problem."
-                : trendDelta > 0.02
-                  ? "The current changes look positive. Focus on making the strongest answer patterns repeatable."
-                  : "No dramatic movement is showing up yet. Look for repeated issues rather than isolated conversations."}
-            </p>
-          </GlassCard>
+          </div>
 
-          <GlassCard className="rounded-[1.4rem] p-5">
-            <div className="mb-3 flex items-center gap-2">
+          <div className="border-b border-[var(--divider)] pb-3">
+            <div className="mb-2 flex items-center gap-2">
               <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Repeated issue this week</h2>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Repeated issue this week</p>
             </div>
             {criticalPattern ? (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{criticalPattern.title}</p>
-                  <SeverityBadge severity={criticalPattern.severity} />
-                </div>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{criticalPattern.description}</p>
-                <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">
-                  Next: {criticalPattern.recommendation || criticalPattern.prompt_fix || criticalPattern.knowledge_base_suggestion || "Open the issue and choose one fix path."}
-                </p>
-                <Link href="/patterns" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-                  Open issue
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-medium text-[var(--text-primary)]">{criticalPattern.title}</span>
+                <SeverityBadge severity={criticalPattern.severity} />
+                <span className="text-[var(--text-secondary)]">
+                  {criticalPattern.recommendation || "Open issue"}
+                </span>
+              </div>
             ) : (
-              <>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Quiet issues</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Nothing repeated strongly enough to count as a real operating issue right now.
-                </p>
-              </>
+              <p className="text-sm text-[var(--text-secondary)]">No major issue.</p>
             )}
-          </GlassCard>
+          </div>
 
-          <GlassCard className="rounded-[1.4rem] p-5">
-            <div className="mb-3 flex items-center gap-2">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Quiet this week</h2>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Quiet this week</p>
             </div>
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
-              Low-evidence reviews and failed scoring states are kept out of the workspace rollups, so this page only reflects conversations the platform considers usable.
-            </p>
-          </GlassCard>
+            <p className="text-sm text-[var(--text-secondary)]">Low-evidence and failed scores stay out of rollups.</p>
+          </div>
         </div>
       </section>
 

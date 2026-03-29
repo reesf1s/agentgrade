@@ -112,8 +112,8 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       ) : (
         <div className="space-y-4">
           {patterns.map((pattern) => (
-            <GlassCard key={pattern.id} className="rounded-[1.4rem] p-5 sm:p-6">
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
+            <GlassCard key={pattern.id} className="rounded-[1.2rem] p-4 sm:p-5">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
                 <div>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -138,12 +138,23 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                           />
                         </div>
                         <div>
-                          <p className="text-lg font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                          <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                             {pattern.title}
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <SeverityBadge severity={pattern.severity} />
-                            <span className={`operator-chip ${issueStateTone(pattern, issueStates[pattern.id])}`}>{issueState(pattern, issueStates[pattern.id])}</span>
+                            <select
+                              value={(issueStates[pattern.id] || "").toString()}
+                              onChange={(event) => updateIssueWorkflowState(pattern.id, event.target.value as IssueWorkflowState)}
+                              className="glass-input px-3 py-1 text-xs"
+                            >
+                              <option value="">State</option>
+                              <option value="new">New</option>
+                              <option value="monitoring">Monitoring</option>
+                              <option value="actioning">Actioning</option>
+                              <option value="quieted">Quieted</option>
+                              <option value="resolved">Resolved</option>
+                            </select>
                             <span className="operator-chip">
                               {pattern.affected_conversation_ids.length} conversations
                             </span>
@@ -163,13 +174,13 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                   </div>
 
                   <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                    <div className="metric-card px-4 py-4">
+                    <div className="px-1">
                       <p className="section-label">Why it matters</p>
-                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.description}</p>
                     </div>
-                    <div className="metric-card px-4 py-4">
+                    <div className="px-1">
                       <p className="section-label">What to do next</p>
-                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{nextAction(pattern)}</p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{nextAction(pattern)}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "actioning")}>
                           Create fix
@@ -186,9 +197,9 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </div>
 
                 <div className="space-y-3">
-                  <div className="metric-card px-4 py-4">
+                  <div className="px-1">
                     <p className="section-label">Recommended next action</p>
-                    <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{nextAction(pattern)}</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(pattern)}</p>
                     <button
                       type="button"
                       onClick={() => setSelectedPattern(pattern)}
@@ -200,16 +211,16 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                   </div>
 
                   {pattern.prompt_fix ? (
-                    <div className="metric-card px-4 py-4">
+                    <div className="px-1">
                       <p className="section-label">Prompt change</p>
-                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
                     </div>
                   ) : null}
 
                   {pattern.knowledge_base_suggestion ? (
-                    <div className="metric-card px-4 py-4">
+                    <div className="px-1">
                       <p className="section-label">Knowledge update</p>
-                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.knowledge_base_suggestion}</p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.knowledge_base_suggestion}</p>
                     </div>
                   ) : null}
 
@@ -315,12 +326,12 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
               {selectedPattern.affected_conversation_ids.length > 0 ? (
                 <div className="compact-list-item">
                   <p className="section-label">Example conversations</p>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 space-y-1">
                     {selectedPattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
                       <Link
                         key={conversationId}
                         href={`/conversations/${conversationId}`}
-                        className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                        className="flex items-center justify-between px-1 py-1.5 text-sm text-[var(--text-primary)]"
                       >
                         <span>{conversationId.slice(0, 8)}</span>
                         <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />

@@ -1363,35 +1363,35 @@ export default function SettingsPage() {
       id: "connections",
       step: "01",
       label: "Connect data",
-      description: "Bring in conversations.",
+      description: "Recommended",
       icon: Plug,
     },
     {
       id: "knowledge",
       step: "02",
       label: "Add context",
-      description: "Upload docs and help content.",
+      description: "Recommended",
       icon: BookOpen,
     },
     {
       id: "alerts",
       step: "03",
       label: "Alerts",
-      description: "Choose when the team gets notified.",
+      description: "Optional",
       icon: Bell,
     },
     {
       id: "calibration",
       step: "04",
       label: "Training",
-      description: "Label examples and sharpen scoring.",
+      description: "Optional",
       icon: Brain,
     },
     {
       id: "workspace",
       step: "05",
       label: "Workspace",
-      description: "Manage team access and billing.",
+      description: "Advanced",
       icon: Users,
     },
   ];
@@ -1400,12 +1400,21 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      <GlassCard className="rounded-[1.5rem] p-5 sm:p-6">
+      <GlassCard className="rounded-[1.3rem] p-4 sm:p-5">
         <p className="page-eyebrow">Setup</p>
-        <h1 className="mt-2 page-title">Set up the workspace in one pass.</h1>
-        <p className="mt-3 page-subtitle">
-          Connect data, add context, tune notifications, then label the examples that matter.
-        </p>
+        <h1 className="mt-2 page-title">Setup checklist.</h1>
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          {tabs.map((tab) => (
+            <button
+              key={`summary-${tab.id}`}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`operator-chip ${activeTab === tab.id ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""}`}
+            >
+              {activeTab === tab.id ? "▼" : tab.id === "connections" || tab.id === "knowledge" ? "✓" : "–"} {tab.label}
+            </button>
+          ))}
+        </div>
       </GlassCard>
 
       <div className="flex flex-wrap gap-2">
@@ -1418,16 +1427,13 @@ export default function SettingsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-xl border px-4 py-3 text-left transition-all ${
+              className={`rounded-xl px-4 py-2.5 text-left transition-all ${
                 isActive
-                  ? "border-[var(--border-strong)] bg-[var(--panel)] shadow-sm"
-                  : "border-[var(--border-subtle)] bg-[var(--surface-soft)] hover:bg-[var(--panel)]"
+                  ? "bg-[var(--panel)] shadow-sm"
+                  : "bg-[var(--surface-soft)] hover:bg-[var(--panel)]"
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                  {tab.step}
-                </span>
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-subtle)]">
                   <Icon className="h-4 w-4 text-[var(--text-primary)]" />
                 </div>
@@ -1441,16 +1447,12 @@ export default function SettingsPage() {
         })}
       </div>
 
-      <GlassCard className="rounded-[1.4rem] p-5">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <GlassCard className="rounded-[1.2rem] p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="section-label">Current step</p>
-            <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-              {activeTabConfig.label}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">{activeTabConfig.description}</p>
+            <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{activeTabConfig.label}</p>
           </div>
-          <span className="operator-chip">Step {activeTabConfig.step} of {tabs.length}</span>
+          <span className="operator-chip">{activeTabConfig.description}</span>
         </div>
 
         <div>

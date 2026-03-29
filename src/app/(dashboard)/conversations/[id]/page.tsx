@@ -190,40 +190,6 @@ function getAssessmentLabel(score?: QualityScore | null, groundingOnly = false) 
   return "Broken";
 }
 
-function getOperatorTakeaway(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "The first score is still being prepared.";
-  if (groundingOnly && (score.overall_score || 0) >= 0.74) {
-    return "Useful answer overall. Treat the operational details as a working brief and spot-check source-backed fields before reuse.";
-  }
-  if (groundingOnly) {
-    return "Some value is here, but the answer relies on record-level details that should be checked before anyone acts on it.";
-  }
-  if ((score.overall_score || 0) >= 0.82) {
-    return "This conversation looks healthy and repeatable.";
-  }
-  if ((score.overall_score || 0) >= 0.65) {
-    return "There is usable value here, but a few quality risks still need attention.";
-  }
-  if ((score.overall_score || 0) >= 0.45) {
-    return "Review this before similar responses are allowed to scale.";
-  }
-  return "This needs intervention. The answer could mislead users or operators if it repeats.";
-}
-
-function getPrimaryAction(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "Wait for scoring to finish.";
-  if (groundingOnly) {
-    return "Primary action: spot-check the record details before sharing or acting on this answer.";
-  }
-  if ((score.overall_score || 0) >= 0.82) {
-    return "Primary action: keep this pattern and look for similar answers worth standardising.";
-  }
-  if ((score.overall_score || 0) >= 0.65) {
-    return "Primary action: tighten the weak spots before responses like this are used widely.";
-  }
-  return "Primary action: review prompt, workflow, or escalation handling before this repeats.";
-}
-
 function getRiskLine(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return "Risk is still being calculated.";
   if (groundingOnly) {
@@ -463,8 +429,6 @@ export default function ConversationDetailPage() {
   const confidenceLevel = qs?.confidence_level ?? qs?.structural_metrics?.confidence_level;
   const evidenceLabel = getEvidenceLabel(qs, groundingOnly);
   const assessmentLabel = getAssessmentLabel(qs, groundingOnly);
-  const operatorTakeaway = getOperatorTakeaway(qs, groundingOnly);
-  const primaryAction = getPrimaryAction(qs, groundingOnly);
   const riskLine = getRiskLine(qs, groundingOnly);
   const displaySummary = getDisplaySummary(qs, groundingOnly);
   const strengths = deriveStrengths(conv.messages, qs);
@@ -497,125 +461,73 @@ export default function ConversationDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to review queue
       </Link>
 
-      <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,0.7fr)]">
-          <div className="space-y-4">
-            <div className="review-topline">
-              <div>
-                <p className="page-eyebrow">Conversation review</p>
-                <h1 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.2rem]">
-                  {conv.customer_identifier || "Unknown customer"}
-                </h1>
-              </div>
-              <div className="review-action-strip">
-                <span className="operator-chip">{reviewDisposition ? reviewDisposition.replaceAll("_", " ") : actionState}</span>
-                {nextConversationId ? (
-                  <Link href={`/conversations/${nextConversationId}`} className="glass-button">
-                    Open next
-                  </Link>
-                ) : null}
-                <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
-                  Advanced review
-                </button>
-              </div>
-            </div>
-
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {conv.platform} · {conv.message_count} messages
-              {conv.was_escalated ? " · escalated" : ""}
+      <section className="glass-static rounded-[1.25rem] px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              {conv.customer_identifier || "Unknown customer"}
             </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="operator-chip capitalize">{conv.platform}</span>
-              {conv.was_escalated ? (
-                <span className="operator-chip score-bg-warning score-warning">Escalated</span>
-              ) : null}
-              {confidenceLevel ? (
-                <span className="operator-chip capitalize">{confidenceLevel} confidence</span>
-              ) : null}
-              {evidenceLabel ? <span className="operator-chip">{evidenceLabel}</span> : null}
-              {conv.score_status === "refreshing" && qs ? (
-                <span className="operator-chip operator-chip-quiet">Stored score</span>
-              ) : null}
-            </div>
-
-            <div className="space-y-2.5">
-              <p className="text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{assessmentLabel}</p>
-              <p className="max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">{operatorTakeaway}</p>
-              <p className="text-sm font-medium text-[var(--text-primary)]">{primaryAction}</p>
-            </div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {conv.platform} · {conv.message_count} messages · {new Date(conv.created_at).toLocaleDateString("en-GB")}
+            </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {qs ? <ScoreBadge score={qs.overall_score} size="sm" /> : <span className="operator-chip">Pending</span>}
+            <span className="operator-chip">{assessmentLabel}</span>
+            {confidenceLevel ? <span className="operator-chip capitalize">{confidenceLevel}</span> : null}
+            <span className="operator-chip">{reviewDisposition ? reviewDisposition.replaceAll("_", " ") : actionState}</span>
+            {nextConversationId ? (
+              <Link href={`/conversations/${nextConversationId}`} className="glass-button">
+                Open next
+              </Link>
+            ) : null}
+            <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
+              Advanced
+            </button>
+          </div>
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Score</p>
-              <div className="mt-3">{qs ? <ScoreBadge score={qs.overall_score} size="lg" /> : <span className="text-sm text-[var(--text-muted)]">Pending</span>}</div>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Takeaway</p>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{displaySummary}</p>
-            </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium text-[var(--text-primary)]">{assessmentLabel}</span>
+          <span className="text-[var(--text-secondary)]">—</span>
+          <span className="text-[var(--text-secondary)]">
+            {groundingOnly ? "Useful answer, check record details before reuse." : displaySummary}
+          </span>
+        </div>
+      </section>
+
+      <section className="border-b border-[var(--divider)] pb-3 text-sm">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-6">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
+            <span className="text-[var(--text-secondary)]">Worked:</span>
+            <span className="text-[var(--text-primary)]">
+              {strengths.slice(0, 2).join(", ") || "Useful answer"}
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
+            <span className="text-[var(--text-secondary)]">Check:</span>
+            <span className="text-[var(--text-primary)]">
+              {reviewGroups.map((group) => group.title).join(", ") || "Nothing major"}
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-[var(--text-secondary)]" />
+            <span className="text-[var(--text-secondary)]">Risk:</span>
+            <span className="text-[var(--text-primary)]">{riskLine}</span>
           </div>
         </div>
       </section>
 
-      <section className="review-summary-grid">
-        <GlassCard className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">What worked</h2>
-          </div>
-          {strengths.length > 0 ? (
-            <div className="space-y-2">
-              {strengths.map((strength) => (
-                <div key={strength} className="flex gap-2 text-sm text-[var(--text-primary)]"><span className="mt-1 h-1.5 w-1.5 rounded-full bg-current/60" /> <span>{strength}</span></div>
-              ))}
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,0.75fr)]">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Transcript</p>
+            <div className="flex flex-wrap gap-2">
+              {evidenceLabel ? <span className="operator-chip">{evidenceLabel}</span> : null}
+              {conv.was_escalated ? <span className="operator-chip score-bg-warning score-warning">Escalated</span> : null}
             </div>
-          ) : (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
-              No strong positives were pulled out automatically.
-            </p>
-          )}
-        </GlassCard>
-
-        <GlassCard className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">What needs checking</h2>
-          </div>
-          {reviewGroups.length > 0 ? (
-            <div className="space-y-2">
-              {reviewGroups.map((group) => (
-                <div key={group.title} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{group.body}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
-              Nothing important stands out for manual checking.
-            </p>
-          )}
-        </GlassCard>
-
-        <GlassCard className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Risk</h2>
-          </div>
-          <p className="text-sm leading-7 text-[var(--text-secondary)]">{riskLine}</p>
-        </GlassCard>
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.92fr)]">
-        <GlassCard className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="section-label">Transcript</p>
-              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Read the conversation</h2>
-            </div>
-            <span className="operator-chip">{conv.message_count} messages</span>
           </div>
 
           {conv.messages.length === 0 ? (
@@ -656,35 +568,18 @@ export default function ConversationDetailPage() {
               })}
             </div>
           )}
-        </GlassCard>
+        </div>
 
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
-          <GlassCard className="p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Score breakdown</h2>
-            </div>
+          <div className="border-b border-[var(--divider)] pb-3">
+            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">Scores</p>
             {qs ? (
-              <div className="score-strip">
+              <div className="flex flex-wrap gap-2 text-sm">
                 {scoreRows.map(({ label, score }) => (
-                  <div key={label} className="score-strip-row">
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between gap-3">
-                        <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-                        <span className={`text-sm font-semibold ${scoreColor(score || 0)}`}>
-                          {formatScore(score || 0)}%
-                        </span>
-                      </div>
-                      <div className="score-strip-bar">
-                        <div
-                          className={`score-strip-fill ${
-                            (score || 0) >= 0.75 ? "bg-score-good" : (score || 0) >= 0.5 ? "bg-score-warning" : "bg-score-critical"
-                          }`}
-                          style={{ width: `${Math.max(6, (score || 0) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <span key={label} className="operator-chip">
+                    {label === "Hallucination" ? "Hall" : label === "Resolution" ? "Res" : label.slice(0, 4)}
+                    <span className={`font-semibold ${scoreColor(score || 0)}`}>{formatScore(score || 0)}%</span>
+                  </span>
                 ))}
               </div>
             ) : (
@@ -696,26 +591,16 @@ export default function ConversationDetailPage() {
                     : "Scoring in progress."}
               </p>
             )}
-          </GlassCard>
+          </div>
 
-          <GlassCard className="p-5">
-            <p className="section-label">Next best action</p>
-            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{actionState}</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              {actionState === "No action needed"
-                ? "This review looks stable. Keep it as a strong example."
-                : actionState === "Review before reuse"
-                  ? "Check the source-backed details before this answer is reused."
-                  : actionState === "Mark for follow-up"
-                    ? "A light follow-up is enough. Tighten the weak spots and move on."
-                    : "This pattern is worth escalating or fixing before it repeats."}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+          <div className="border-b border-[var(--divider)] pb-3 xl:sticky xl:top-24">
+            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">Disposition</p>
+            <div className="flex flex-wrap gap-2">
               {[
                 ["safe", "Safe"],
                 ["watch", "Watch"],
-                ["action_needed", "Action needed"],
-                ["escalate_issue", "Escalate to issue"],
+                ["action_needed", "Action"],
+                ["escalate_issue", "Escalate"],
                 ["ignore", "Ignore"],
               ].map(([value, label]) => (
                 <button
@@ -730,7 +615,7 @@ export default function ConversationDetailPage() {
                 </button>
               ))}
             </div>
-          </GlassCard>
+          </div>
         </div>
       </section>
 

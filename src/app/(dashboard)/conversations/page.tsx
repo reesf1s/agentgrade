@@ -48,21 +48,6 @@ function queueLabel(conversation: ConversationRow) {
   return "Healthy";
 }
 
-function queueReason(conversation: ConversationRow) {
-  if (!conversation.quality_scores) {
-    return conversation.score_status === "waiting_for_completion"
-      ? "This conversation is still open, so the review is waiting for the final transcript."
-      : "Scoring is still running for this conversation.";
-  }
-
-  const score = conversation.quality_scores.overall_score;
-  const summary = conversation.quality_scores.summary;
-  if (summary) return summary;
-  if (score < 0.5) return "This conversation needs a closer look before similar answers are allowed to scale.";
-  if (score < 0.72) return "There is some value here, but parts of the answer still need attention.";
-  return "This conversation looks healthy and does not need urgent attention.";
-}
-
 function priorityReason(conversation: ConversationRow) {
   if (!conversation.quality_scores) {
     return conversation.score_status === "waiting_for_completion"
@@ -225,7 +210,14 @@ export default function ConversationsPage() {
             </div>
           </div>
         </div>
-        <div className="mt-4 h-1.5 rounded-full bg-[var(--surface)]">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <span>{stats.reviewNext} to review</span>
+          <span>•</span>
+          <span>{conversations.filter((conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.5).length} high risk</span>
+          <span>•</span>
+          <span>~{Math.max(1, stats.reviewNext)} min</span>
+        </div>
+        <div className="mt-3 h-1.5 rounded-full bg-[var(--surface)]">
           <div
             className="h-full rounded-full bg-[var(--text-primary)]"
             style={{ width: `${total > 0 ? Math.min(100, (stats.reviewed / total) * 100) : 0}%` }}
@@ -317,16 +309,17 @@ export default function ConversationsPage() {
       <div className="space-y-3">
         {sortedConversations.map((conversation) => (
           <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
-            <div className="stack-row">
+            <div className="stack-row group">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="stack-row-meta">
                   <span className="operator-chip">
                     {rowWorkflowState(conversation.id, conversation.quality_scores?.overall_score).replaceAll("_", " ")}
                   </span>
                   <span className="operator-chip">{priorityReason(conversation)}</span>
+                  <span className="operator-chip">{conversation.quality_scores?.confidence_level || "pending"}</span>
                 </div>
                 <div
-                  className="flex flex-wrap gap-2"
+                  className="flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -352,17 +345,23 @@ export default function ConversationsPage() {
                     <p className="truncate text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                       {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
                     </p>
-                    {conversation.was_escalated ? (
-                      <span className="operator-chip score-bg-warning score-warning">Escalated</span>
-                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {conversation.was_escalated ? (
+                        <span className="operator-chip score-bg-warning score-warning">Escalated</span>
+                      ) : null}
+                      {conversation.quality_scores?.flags?.slice(0, 2).map((flag) => (
+                        <span key={flag} className="operator-chip">
+                          {flag.replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
-                    {queueReason(conversation)}
+                  <p className="mt-1 max-w-3xl text-sm text-[var(--text-secondary)]">
+                    {priorityReason(conversation)} · {formatDate(conversation.created_at)}
                   </p>
-                  <div className="mt-3 stack-row-meta">
+                  <div className="mt-2 stack-row-meta">
                     <span className="operator-chip capitalize">{conversation.platform}</span>
                     <span className="operator-chip">{statusLabel(conversation)}</span>
-                    <span className="operator-chip">{formatDate(conversation.created_at)}</span>
                   </div>
                 </div>
 

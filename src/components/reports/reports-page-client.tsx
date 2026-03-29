@@ -17,7 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { GlassCard, StatCard } from "@/components/ui/glass-card";
+import { GlassCard } from "@/components/ui/glass-card";
 import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
 import { scoreColor } from "@/lib/utils";
 import type { ReportData } from "@/lib/dashboard-data";
@@ -65,30 +65,13 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Scored"
-          value={summary?.total_scored ?? 0}
-          subtitle={`${summary?.total_conversations ?? 0} total conversations`}
-        />
-        <StatCard
-          label="Average quality"
-          value={`${Math.round((summary?.avg_overall_score ?? 0) * 100)}%`}
-          subtitle={`${summary?.score_trend > 0 ? "+" : ""}${(summary?.score_trend * 100).toFixed(1)} points vs prior week`}
-          scoreColor={scoreColor(summary?.avg_overall_score ?? 0)}
-        />
-        <StatCard
-          label="Risky replies"
-          value={summary?.hallucination_count ?? 0}
-          subtitle="Recent usable reviews with weak hallucination prevention"
-          scoreColor={(summary?.hallucination_count ?? 0) > 5 ? "score-critical" : "score-warning"}
-        />
-        <StatCard
-          label="Escalations"
-          value={summary?.escalation_count ?? 0}
-          subtitle="Needed a human handoff"
-          scoreColor={(summary?.escalation_count ?? 0) > 10 ? "score-warning" : "score-good"}
-        />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <span className="text-[var(--text-primary)]">Scored: {summary?.total_scored ?? 0}</span>
+        <span className={`font-medium ${scoreColor(summary?.avg_overall_score ?? 0)}`}>
+          Avg: {Math.round((summary?.avg_overall_score ?? 0) * 100)}%
+        </span>
+        <span className="text-[var(--text-primary)]">Risky: {summary?.hallucination_count ?? 0}</span>
+        <span className="text-[var(--text-primary)]">Escalations: {summary?.escalation_count ?? 0}</span>
       </div>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
@@ -104,9 +87,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           </div>
 
           {trendData.length === 0 ? (
-            <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-soft)] text-sm text-[var(--text-muted)]">
-              No trend data yet.
-            </div>
+            <p className="text-sm text-[var(--text-muted)]">No trend data yet.</p>
           ) : (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -150,8 +131,13 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
               <TrendIcon className={`h-4 w-4 ${trendTone.tone}`} />
               <h2 className="text-sm font-semibold text-[var(--text-primary)]">This week</h2>
             </div>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">{trendTone.title}</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{trendTone.description}</p>
+            <div className="mt-2 space-y-2 text-sm">
+              <p className="font-semibold text-[var(--text-primary)]">{trendTone.title}</p>
+              <p className="text-[var(--text-secondary)]">{trendTone.description}</p>
+              <p className="text-[var(--text-secondary)]">
+                {summary?.hallucination_count ? `! ${summary.hallucination_count} risky replies` : "→ No major issues"}
+              </p>
+            </div>
           </GlassCard>
 
           <GlassCard className="rounded-[1.4rem] p-5">
