@@ -41,14 +41,14 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
   }
 
   return (
-    <div className="max-w-5xl">
-      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
-        <div className="flex items-end justify-between gap-4">
+    <div className="max-w-[88rem] pb-10">
+      <div className="mb-6 rounded-[1.1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="enterprise-kicker">Insights</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Recurring issues worth fixing once</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Fix repeated failures once</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            The most common breakdowns across your conversations, grouped so the same issue only appears once.
+            Repeated failure modes grouped into clean operational themes.
           </p>
         </div>
         <GlassButton onClick={refreshPatterns} disabled={refreshing}>
@@ -58,7 +58,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       </div>
 
       {patterns.length === 0 ? (
-        <GlassCard className="p-12 text-center">
+        <GlassCard className="rounded-[1rem] p-12 text-center">
           <p className="text-sm text-[var(--text-muted)]">
             No failure patterns detected yet. Patterns emerge after scoring multiple conversations.
           </p>
@@ -66,7 +66,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       ) : (
         <div className="space-y-4">
           {patterns.map((pattern) => (
-          <GlassCard key={pattern.id} className="p-6">
+          <GlassCard key={pattern.id} className="rounded-[1rem] p-5">
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -112,7 +112,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
               <p className="mb-4 text-sm leading-relaxed text-[var(--text-secondary)]">{pattern.description}</p>
 
               {pattern.affected_conversation_ids.length > 0 && (
-                <div className="mb-3 rounded-xl bg-[rgba(0,0,0,0.02)] p-4">
+                <div className="mb-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
                     <span className="text-xs font-medium text-[var(--text-primary)]">Example conversations</span>
@@ -122,7 +122,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                       <Link
                         key={conversationId}
                         href={`/conversations/${conversationId}`}
-                        className="rounded-full bg-white px-3 py-1 text-xs text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+                        className="rounded-full border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-1 text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-soft)]"
                       >
                         {conversationId.slice(0, 8)}
                       </Link>
@@ -132,7 +132,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
               )}
 
               {pattern.prompt_fix && (
-                <div className="mb-3 rounded-xl bg-[rgba(0,0,0,0.02)] p-4">
+                <div className="mb-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <Brain className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
                     <span className="text-xs font-medium text-[var(--text-primary)]">Recommended Prompt Fix</span>
@@ -142,7 +142,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
               )}
 
               {pattern.knowledge_base_suggestion && (
-                <div className="rounded-xl bg-[rgba(0,0,0,0.02)] p-4">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <BookOpen className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
                     <span className="text-xs font-medium text-[var(--text-primary)]">Knowledge Base Suggestion</span>

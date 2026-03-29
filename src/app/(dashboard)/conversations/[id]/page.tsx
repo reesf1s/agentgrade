@@ -6,7 +6,7 @@ import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { scoreColor, formatScore } from "@/lib/utils";
-import { ArrowLeft, AlertTriangle, Brain, BookOpen, User, Bot, Headphones } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Brain, BookOpen, CheckCircle2, Bot, Headphones, ShieldAlert, User } from "lucide-react";
 import Link from "next/link";
 import type { Message, QualityScore, ClaimAnalysis } from "@/lib/db/types";
 import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
@@ -21,6 +21,66 @@ interface ConversationDetail {
   messages: Message[];
   quality_score: QualityScore | null;
   score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion" | "waiting_for_quiet_period";
+}
+
+function hasStructuredAnswer(messages: Message[]) {
+  return messages.some(
+    (message) =>
+      message.role === "agent" &&
+      (/##|###|\|/.test(message.content) ||
+        /priority|next step|what to do next|snapshot|risk|todo|summary|briefing/i.test(message.content))
+  );
+}
+
+function deriveStrengths(messages: Message[], score?: QualityScore | null) {
+  const strengths: string[] = [];
+
+  if ((score?.resolution_score || 0) >= 0.78) {
+    strengths.push("The answer moved the user toward a clear next step.");
+  }
+  if ((score?.tone_score || 0) >= 0.85) {
+    strengths.push("The tone stayed professional and easy to trust.");
+  }
+  if (hasStructuredAnswer(messages)) {
+    strengths.push("The answer was structured in a way a rep or operator could scan quickly.");
+  }
+  if ((score?.overall_score || 0) >= 0.78) {
+    strengths.push("Directionally, the response looked useful enough to act as a working draft.");
+  }
+
+  return strengths.slice(0, 3);
+}
+
+function deriveChecks(score?: QualityScore | null, evidenceLimited = false) {
+  const claims = (score?.claim_analysis || [])
+    .filter((claim) => claim.verdict !== "verified")
+    .slice(0, evidenceLimited ? 2 : 3)
+    .map((claim) => ({
+      label:
+        claim.verdict === "fabricated"
+          ? "Likely wrong"
+          : claim.verdict === "contradicted"
+            ? "Conflicts with evidence"
+            : "Needs confirmation",
+      claim: claim.claim,
+      verdict: claim.verdict,
+    }));
+
+  if (claims.length > 0) {
+    return claims;
+  }
+
+  if (evidenceLimited) {
+    return [
+      {
+        label: "Needs confirmation",
+        claim: "Record-level facts were not directly traceable in the transcript.",
+        verdict: "unverifiable" as const,
+      },
+    ];
+  }
+
+  return [];
 }
 
 export default function ConversationDetailPage() {
@@ -127,6 +187,26 @@ export default function ConversationDetailPage() {
   ) || [];
   const groundingOnlyScore = isGroundingRiskOnlyScore(qs);
   const lowConfidenceGroundingOnly = groundingOnlyScore && confidenceLevel === "low";
+  const strengths = deriveStrengths(conv.messages, qs);
+  const checks = deriveChecks(qs, lowConfidenceGroundingOnly);
+  const assessmentHeading = !qs
+    ? "Scoring in progress"
+    : lowConfidenceGroundingOnly
+      ? "Useful answer, limited evidence"
+      : (qs.overall_score || 0) >= 0.75
+        ? "Strong answer"
+        : (qs.overall_score || 0) >= 0.5
+          ? "Mixed answer"
+          : "High-risk answer";
+  const operatorGuidance = !qs
+    ? "Wait for the first score to finish."
+    : lowConfidenceGroundingOnly
+      ? "Use the response as a working brief, but verify the record-level facts before anyone acts on it."
+      : (qs.overall_score || 0) >= 0.75
+        ? "This conversation looks healthy. Focus on repeatability, not firefighting."
+        : (qs.overall_score || 0) >= 0.5
+          ? "There is some value here, but parts of the response need tightening before you trust it at scale."
+          : "Treat this as a real quality problem. The assistant missed the mark in a way that could affect users.";
   const visiblePromptImprovements = groundingOnlyScore
     ? []
     : (qs?.prompt_improvements || []);
@@ -209,36 +289,49 @@ export default function ConversationDetailPage() {
   }
 
   return (
-    <div className="max-w-6xl">
-      <Link href="/conversations" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6">
+    <div className="max-w-[88rem] pb-10">
+      <Link href="/conversations" className="mb-5 inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
         <ArrowLeft className="w-4 h-4" /> Back to conversations
       </Link>
 
-      <div className="mb-6 rounded-[1.25rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+      <div className="mb-6 rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--text-muted)]">
-              Conversation review
-            </p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+            <p className="enterprise-kicker">Conversation review</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
               {conv.customer_identifier || "Unknown"}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
               {conv.platform} · {conv.message_count} messages
               {conv.was_escalated && " · Escalated"}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs text-[var(--text-secondary)] capitalize">
+                {conv.platform}
+              </span>
+              {conv.was_escalated ? (
+                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                  Escalated
+                </span>
+              ) : null}
+              {confidenceLevel ? (
+                <span className={`rounded-full border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium capitalize ${confidenceTone}`}>
+                  {confidenceLevel} confidence
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Overall</p>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Overall</p>
               <div className="mt-2">{qs && <ScoreBadge score={qs.overall_score} size="lg" label="overall" />}</div>
             </div>
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Confidence</p>
-              <p className={`mt-2 text-sm font-semibold capitalize ${confidenceTone}`}>{confidenceLevel || "Pending"}</p>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Assessment</p>
+              <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{assessmentHeading}</p>
             </div>
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Evidence</p>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Evidence</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
                 {groundingRiskFlags.length > 0 ? "Evidence limited" : "Clear enough"}
               </p>
@@ -247,17 +340,21 @@ export default function ConversationDetailPage() {
         </div>
       </div>
 
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Assessment view</h2>
-        </div>
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.95fr)]">
+        <div className="space-y-4">
+          <GlassCard className="rounded-[1rem] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Operator takeaway</h2>
+            </div>
+            <p className="text-base font-semibold text-[var(--text-primary)]">{assessmentHeading}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {operatorGuidance}
+            </p>
+          </GlassCard>
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Conversation Transcript */}
-        <div className="col-span-2 space-y-4">
-          <GlassCard className="rounded-[1.1rem] p-6">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-5">Conversation</h2>
+          <GlassCard className="rounded-[1rem] p-5">
+            <h2 className="mb-5 text-sm font-semibold text-[var(--text-primary)]">Transcript</h2>
             {conv.messages.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">No messages found.</p>
             ) : (
@@ -358,12 +455,54 @@ export default function ConversationDetailPage() {
           )}
         </div>
 
-        {/* Score Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
           {qs ? (
             <>
-              <GlassCard className="rounded-[1.1rem] p-5">
-                <h2 className="text-sm font-medium text-[var(--text-primary)] mb-4">Quality Scores</h2>
+              <GlassCard className="rounded-[1rem] p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">What to check</h2>
+                </div>
+                {checks.length === 0 ? (
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Nothing important stands out for manual checking.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {checks.map((item, index) => (
+                      <div key={`${item.claim}-${index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                          {item.label}
+                        </p>
+                        <p className="mt-2 text-sm leading-5 text-[var(--text-primary)]">{item.claim}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GlassCard>
+
+              <GlassCard className="rounded-[1rem] p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">What worked</h2>
+                </div>
+                {strengths.length === 0 ? (
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    No clear positive signals were extracted automatically.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {strengths.map((strength) => (
+                      <div key={strength} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)]">
+                        {strength}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GlassCard>
+
+              <GlassCard className="rounded-[1rem] p-5">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Quality scores</h2>
                 <div className="space-y-4">
                   {[
                     { label: "Overall", score: qs.overall_score },
@@ -393,17 +532,9 @@ export default function ConversationDetailPage() {
                 </div>
               </GlassCard>
 
-              <GlassCard className="rounded-[1.1rem] p-5">
-                <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Summary</h2>
+              <GlassCard className="rounded-[1rem] p-5">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Assessment</h2>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{qs.summary || "No summary."}</p>
-                {groundingRiskFlags.length > 0 && !lowConfidenceGroundingOnly ? (
-                  <div className="mt-4 rounded-xl bg-[var(--surface)] p-3">
-                    <p className="text-xs text-[var(--text-muted)]">Evidence note</p>
-                    <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
-                      The answer may still be useful, but some record-level claims were not directly traceable in the transcript.
-                    </p>
-                  </div>
-                ) : null}
                 {confidenceLevel ? (
                   <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3">
                     <p className="text-xs text-[var(--text-muted)]">Confidence</p>
@@ -428,9 +559,9 @@ export default function ConversationDetailPage() {
               </GlassCard>
 
               {visibleFlags.length > 0 && (
-                <GlassCard className="rounded-[1.1rem] p-5">
-                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">
-                    {groundingOnlyScore ? "Review notes" : "Flags"}
+                <GlassCard className="rounded-[1rem] p-5">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                    Review notes
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {visibleFlags.map((flag, i) => (
@@ -449,10 +580,10 @@ export default function ConversationDetailPage() {
                 </GlassCard>
               )}
 
-              {visibleClaimAnalysis.length > 0 && (
-                <GlassCard className="rounded-[1.1rem] p-5">
-                  <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">
-                    {groundingOnlyScore ? "Claims that need checking" : "Claim verification"}
+              {visibleClaimAnalysis.length > 0 && !lowConfidenceGroundingOnly ? (
+                <GlassCard className="rounded-[1rem] p-5">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                    Claim checks
                   </h2>
                   <div className="space-y-2.5">
                     {visibleClaimAnalysis.map((ca, i) => {
@@ -470,16 +601,11 @@ export default function ConversationDetailPage() {
                       );
                     })}
                   </div>
-                  {groundingOnlyScore ? (
-                    <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
-                      These claims were not disproven. They just could not be verified from the transcript alone.
-                    </p>
-                  ) : null}
                 </GlassCard>
-              )}
+              ) : null}
             </>
           ) : (
-            <GlassCard className="rounded-[1.1rem] p-5">
+            <GlassCard className="rounded-[1rem] p-5">
               <p className="text-sm text-[var(--text-muted)]">
                 {conv.score_status === "waiting_for_completion"
                   ? "Waiting for the conversation to finish before scoring..."
@@ -490,8 +616,8 @@ export default function ConversationDetailPage() {
             </GlassCard>
           )}
 
-          <GlassCard className="rounded-[1.1rem] p-5">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Override Score</h2>
+          <GlassCard className="rounded-[1rem] p-5">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Correct the score</h2>
             <p className="text-xs text-[var(--text-muted)] mb-3">
               Disagree with the assessment? Override a score to calibrate the model.
             </p>
@@ -546,8 +672,8 @@ export default function ConversationDetailPage() {
             ) : null}
           </GlassCard>
 
-          <GlassCard className="rounded-[1.1rem] p-5">
-            <h2 className="text-sm font-medium text-[var(--text-primary)] mb-3">Gold-Set Label</h2>
+          <GlassCard className="rounded-[1rem] p-5">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Train the scorer</h2>
             <p className="text-xs text-[var(--text-muted)] mb-4">
               Save a full human label set for this conversation. AgentGrade uses these labels to evaluate scoring regressions and train a lightweight calibration model on top of the base evaluator.
             </p>

@@ -23,7 +23,7 @@ export default function DashboardLayout({
             Live workspace
           </div>
         </div>
-        <div className="dashboard-shell mx-auto max-w-[88rem] p-4 md:p-6">{children}</div>
+        <div className="mx-auto max-w-[88rem]">{children}</div>
       </main>
     </div>
   );

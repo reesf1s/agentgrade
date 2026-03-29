@@ -282,33 +282,33 @@ function downgradeUnsupportedOperationalFabrication(
   };
 }
 
-function buildDefaultSummary(result: ScoringResult, confidence: { level: "high" | "medium" | "low"; reasons: string[] }) {
+function buildDefaultSummary(result: ScoringResult) {
   const strongResolution = result.resolution_score >= 0.75;
   const strongGrounding = result.hallucination_score >= 0.8 && result.accuracy_score >= 0.75;
   const weakResolution = result.resolution_score < 0.45;
   const weakGrounding = result.hallucination_score < 0.55 || result.accuracy_score < 0.55;
 
   if (strongResolution && strongGrounding) {
-    return `The agent gave a strong, actionable answer that appears directionally correct. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the available evidence was sufficient"}.`;
+    return "The agent gave a strong, actionable answer that looks ready to use.";
   }
 
   if (strongResolution && !strongGrounding) {
-    return `The agent gave a strong, decision-useful answer and moved the user toward a sensible next step, but some claims were only weakly grounded in the available evidence. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "verification context was limited"}.`;
+    return "The agent gave a strong, decision-useful answer. A few record-level details should be confirmed before anyone acts on them.";
   }
 
   if (weakResolution && weakGrounding) {
-    return `The response did not reliably move the user toward a safe or correct outcome. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "multiple quality signals were weak"}.`;
+    return "The response did not move the user toward a reliable outcome and needs attention.";
   }
 
   if (weakResolution) {
-    return `The answer had some useful content, but it did not fully resolve the user's request. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the transcript left important uncertainty"}.`;
+    return "The answer contained some useful material, but it did not fully resolve the user's request.";
   }
 
   if (weakGrounding) {
-    return `The answer was partially helpful, but key claims were not grounded strongly enough to treat as fully reliable. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "evidence for verification was limited"}.`;
+    return "The answer was partially helpful, but some important claims need confirmation before they can be trusted.";
   }
 
-  return `The response was broadly serviceable with some remaining quality tradeoffs. Confidence is ${confidence.level} because ${confidence.reasons[0]?.toLowerCase() || "the evidence was mixed"}.`;
+  return "The response was broadly serviceable, with a few quality tradeoffs still worth reviewing.";
 }
 
 function deriveConfidenceLevel(
@@ -508,8 +508,8 @@ export function applyScoringGuardrails(
       );
 
       adjusted.summary = strongAdvisoryAnswer
-        ? "The agent delivered a strong, actionable answer that appears useful and internally coherent. The main limitation is that the transcript did not include the lookup evidence needed to verify some record-level details, so this should be treated as a low-confidence review rather than a hallucination failure."
-        : "The answer was directionally useful, but some record-level details could not be checked from the transcript alone. Treat it as helpful output with limited verification evidence.";
+        ? "The agent delivered a strong, useful answer. The main follow-up is to confirm a few record-level details before treating it as fully reliable."
+        : "The answer was directionally useful, but a few record-level details still need confirmation before it should be trusted fully.";
     }
   }
 
@@ -622,7 +622,7 @@ export function applyScoringGuardrails(
 
   adjusted.summary =
     adjusted.summary ||
-    buildDefaultSummary(adjusted, confidence);
+    buildDefaultSummary(adjusted);
 
   return adjusted;
 }
