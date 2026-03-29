@@ -19,7 +19,7 @@ export function isScoringErrorScore(score?: ScoreLike | null): boolean {
   return normalizedFlags(score).includes("scoring_error");
 }
 
-export function isAnalyticsEligibleScore(score?: ScoreLike | null): boolean {
+export function hasRenderableScore(score?: ScoreLike | null): boolean {
   if (!score) return false;
   if (typeof score.overall_score !== "number") return false;
   if (isScoringErrorScore(score)) return false;
@@ -47,15 +47,18 @@ export function isGroundingRiskOnlyScore(score?: ScoreLike | null): boolean {
   return groundingFlags.length > 0;
 }
 
-export function isInsightEligibleScore(score?: ScoreLike | null): boolean {
-  if (!isAnalyticsEligibleScore(score)) return false;
-
-  const lowConfidence = normalizedConfidenceLevel(score) === "low";
-  if (lowConfidence && isGroundingRiskOnlyScore(score)) {
-    return false;
-  }
-
+export function isAggregateEligibleScore(score?: ScoreLike | null): boolean {
+  if (!hasRenderableScore(score)) return false;
+  if (isGroundingRiskOnlyScore(score)) return false;
   return true;
+}
+
+export function isInsightEligibleScore(score?: ScoreLike | null): boolean {
+  return isAggregateEligibleScore(score);
+}
+
+export function hasLowConfidence(score?: ScoreLike | null): boolean {
+  return normalizedConfidenceLevel(score) === "low";
 }
 
 export async function filterPatternsWithUsableScores(

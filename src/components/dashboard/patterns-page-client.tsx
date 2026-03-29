@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, BookOpen, Brain, Check, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, RefreshCw } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SeverityBadge } from "@/components/ui/score-badge";
@@ -42,46 +42,44 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
   return (
     <div className="space-y-6 pb-10">
-      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="enterprise-kicker">Issues</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
-              Turn repeated failures into one clear fix.
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Similar breakdowns are grouped into operating issues so you can fix the root cause once instead of chasing one conversation at a time.
+      <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="page-eyebrow">Issues</p>
+            <h1 className="mt-2 page-title">Repeated problems, grouped into one fixable list.</h1>
+            <p className="mt-3 page-subtitle">
+              This page should only surface repeated issues that are clear enough to matter and actionable enough to fix.
             </p>
           </div>
           <GlassButton onClick={refreshPatterns} disabled={refreshing} className="inline-flex items-center gap-2">
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing issues..." : "Refresh issues"}
+            {refreshing ? "Refreshing..." : "Refresh issues"}
           </GlassButton>
         </div>
-      </GlassCard>
+      </section>
 
       {patterns.length === 0 ? (
-        <GlassCard className="rounded-[1.25rem] p-12 text-center">
+        <GlassCard className="rounded-[1.4rem] p-10 text-center">
           <p className="text-sm text-[var(--text-muted)]">
-            No recurring issue is standing out yet. Once enough scored conversations land, AgentGrade will group repeated failures here.
+            No repeated issue is standing out yet. Once enough usable scored conversations land, AgentGrade will group them here.
           </p>
         </GlassCard>
       ) : (
         <div className="space-y-4">
           {patterns.map((pattern) => (
-            <GlassCard key={pattern.id} className="rounded-[1.25rem] p-5">
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+            <GlassCard key={pattern.id} className="rounded-[1.4rem] p-5 sm:p-6">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
                 <div>
-                  <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <div className="mb-2 flex items-center gap-3">
+                      <div className="flex items-center gap-3">
                         <div
                           className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                             pattern.severity === "critical"
                               ? "score-bg-critical"
                               : pattern.severity === "high"
                                 ? "score-bg-warning"
-                                : "bg-[var(--surface)]"
+                                : "bg-[var(--surface-soft)]"
                           }`}
                         >
                           <AlertTriangle
@@ -95,13 +93,13 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                           />
                         </div>
                         <div>
-                          <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                          <p className="text-lg font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
                             {pattern.title}
                           </p>
-                          <div className="mt-1 flex items-center gap-2">
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <SeverityBadge severity={pattern.severity} />
-                            <span className="text-xs text-[var(--text-muted)]">
-                              Seen across {pattern.affected_conversation_ids.length} conversations
+                            <span className="operator-chip">
+                              {pattern.affected_conversation_ids.length} conversations
                             </span>
                           </div>
                         </div>
@@ -118,19 +116,15 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     </GlassButton>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                        What is happening
-                      </p>
+                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                    <div className="metric-card px-4 py-4">
+                      <p className="section-label">What is happening</p>
                       <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
                     </div>
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                        Best next fix
-                      </p>
+                    <div className="metric-card px-4 py-4">
+                      <p className="section-label">What to do next</p>
                       <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                        {pattern.recommendation || pattern.prompt_fix || pattern.knowledge_base_suggestion || "Review this issue and decide whether the fix belongs in prompting, workflow, or documentation."}
+                        {pattern.recommendation || pattern.prompt_fix || pattern.knowledge_base_suggestion || "Review this issue and decide whether the fix belongs in workflow, prompting, or coverage."}
                       </p>
                     </div>
                   </div>
@@ -138,38 +132,31 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
                 <div className="space-y-3">
                   {pattern.prompt_fix ? (
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                      <div className="mb-2 flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Prompt change</p>
-                      </div>
-                      <p className="text-sm leading-6 text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
+                    <div className="metric-card px-4 py-4">
+                      <p className="section-label">Prompt change</p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
                     </div>
                   ) : null}
 
                   {pattern.knowledge_base_suggestion ? (
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                      <div className="mb-2 flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Knowledge update</p>
-                      </div>
-                      <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                        {pattern.knowledge_base_suggestion}
-                      </p>
+                    <div className="metric-card px-4 py-4">
+                      <p className="section-label">Knowledge update</p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.knowledge_base_suggestion}</p>
                     </div>
                   ) : null}
 
                   {pattern.affected_conversation_ids.length > 0 ? (
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Example conversations</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {pattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
+                    <div className="metric-card px-4 py-4">
+                      <p className="section-label">Examples</p>
+                      <div className="mt-3 space-y-2">
+                        {pattern.affected_conversation_ids.slice(0, 4).map((conversationId) => (
                           <Link
                             key={conversationId}
                             href={`/conversations/${conversationId}`}
-                            className="rounded-full border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-1 text-xs font-medium text-[var(--text-primary)]"
+                            className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text-primary)]"
                           >
-                            {conversationId.slice(0, 8)}
+                            <span>{conversationId.slice(0, 8)}</span>
+                            <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
                           </Link>
                         ))}
                       </div>

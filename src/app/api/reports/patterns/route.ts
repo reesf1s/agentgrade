@@ -5,7 +5,7 @@ import { buildDerivedFixFromPattern } from "@/lib/fixes/derived";
 import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
 import {
   filterPatternsWithUsableScores,
-  isInsightEligibleScore,
+  isAggregateEligibleScore,
 } from "@/lib/scoring/quality-score-status";
 import type { FailurePattern, QualityScore } from "@/lib/db/types";
 
@@ -24,7 +24,7 @@ async function loadUsableScoreMap(conversationIds: string[]) {
   for (const row of data || []) {
     map.set(
       row.conversation_id as string,
-      isInsightEligibleScore(
+      isAggregateEligibleScore(
         row as {
           overall_score?: number;
           flags?: string[] | null;

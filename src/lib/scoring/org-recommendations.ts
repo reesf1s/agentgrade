@@ -59,7 +59,7 @@ export function buildOrgRecommendations(
 
   for (const conversation of conversations) {
     const score = conversation.quality_score;
-    if (isGroundingRiskOnlyScore(score) && score.confidence_level === "low") {
+    if (isGroundingRiskOnlyScore(score)) {
       continue;
     }
     const flags = score.flags || [];

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { PromptImprovement, KnowledgeGap, WeeklyReportSummary } from "@/lib/db/types";
-import { isInsightEligibleScore } from "@/lib/scoring/quality-score-status";
+import { isAggregateEligibleScore } from "@/lib/scoring/quality-score-status";
 
 /**
  * GET /api/reports/weekly
@@ -123,7 +123,7 @@ async function generateWeeklyReport(
 
   const thisWeek = thisWeekRes.data || [];
   const scored = thisWeek.filter((c) =>
-    isInsightEligibleScore(
+    isAggregateEligibleScore(
       c.quality_scores as {
         overall_score?: number;
         flags?: string[] | null;
@@ -142,7 +142,7 @@ async function generateWeeklyReport(
   const avgResolution = avg(scored.map((c) => (c.quality_scores as { resolution_score?: number }).resolution_score ?? 0));
 
   const priorScored = (priorWeekRes.data || []).filter((c) =>
-    isInsightEligibleScore(
+    isAggregateEligibleScore(
       c.quality_scores as unknown as {
         overall_score?: number;
         flags?: string[] | null;

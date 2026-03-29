@@ -8,7 +8,7 @@ import {
 } from "@/lib/patterns/normalize";
 import {
   filterPatternsWithUsableScores,
-  isInsightEligibleScore,
+  isAggregateEligibleScore,
 } from "@/lib/scoring/quality-score-status";
 import { syncFailurePatterns } from "@/lib/patterns/store";
 
@@ -23,7 +23,7 @@ async function loadUsableScoreMap(conversationIds: string[]) {
   for (const row of data || []) {
     map.set(
       row.conversation_id as string,
-      isInsightEligibleScore(
+      isAggregateEligibleScore(
         row as {
           overall_score?: number;
           flags?: string[] | null;
@@ -120,7 +120,7 @@ async function detectAndStorePatterns(workspaceId: string) {
 
   const scoredConversations = convs
     .filter((c) =>
-      isInsightEligibleScore(
+      isAggregateEligibleScore(
         c.quality_scores as {
           overall_score?: number;
           flags?: string[] | null;

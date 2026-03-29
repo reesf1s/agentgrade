@@ -14,7 +14,7 @@ import { isManualCalibrationConversation } from "@/lib/calibration";
 import { dedupeFailurePatterns } from "@/lib/patterns/normalize";
 import {
   filterPatternsWithUsableScores,
-  isInsightEligibleScore,
+  isAggregateEligibleScore,
 } from "@/lib/scoring/quality-score-status";
 
 export interface DashboardStats {
@@ -34,6 +34,7 @@ export interface DashboardConversationRow {
     overall_score: number;
     hallucination_score?: number;
     flags?: string[];
+    summary?: string;
   } | null;
 }
 
@@ -84,7 +85,7 @@ async function loadUsableScoreMap(conversationIds: string[]) {
   for (const row of data || []) {
     map.set(
       row.conversation_id as string,
-      isInsightEligibleScore(
+      isAggregateEligibleScore(
         row as {
           overall_score?: number;
           flags?: string[] | null;
@@ -142,9 +143,17 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
       .limit(25),
   ]);
 
-  const conversations = ((conversationsRes.data || []) as DashboardConversationRow[]).filter(
-    (conversation) => !isManualCalibrationConversation((conversation as { metadata?: Record<string, unknown> }).metadata || null)
-  );
+  const conversations = ((conversationsRes.data || []) as DashboardConversationRow[])
+    .filter(
+      (conversation) => !isManualCalibrationConversation((conversation as { metadata?: Record<string, unknown> }).metadata || null)
+    )
+    .map((conversation) => {
+      const qualityScore = getJoinedRecord(conversation.quality_scores);
+      return {
+        ...conversation,
+        quality_scores: isAggregateEligibleScore(qualityScore) ? qualityScore : null,
+      };
+    });
   const alerts = (alertsRes.data || []) as Alert[];
   const patterns = (
     await filterPatternsWithUsableScores(
@@ -153,8 +162,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
     )
   ).slice(0, 5);
   const scored = conversations.filter(
-    (conversation) =>
-      isInsightEligibleScore(getJoinedRecord(conversation.quality_scores))
+    (conversation) => isAggregateEligibleScore(getJoinedRecord(conversation.quality_scores))
   );
 
   const avgScore =
@@ -193,7 +201,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
         | { overall_score?: number }[]
         | null
     );
-    if (isInsightEligibleScore(qualityScore)) {
+    if (isAggregateEligibleScore(qualityScore)) {
       if (!trendByDay[day]) trendByDay[day] = [];
       const safeQualityScore = qualityScore as { overall_score: number };
       const overallScore = safeQualityScore.overall_score;
@@ -287,7 +295,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
     (conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null)
   );
   const scored = thisWeek.filter((conversation) =>
-    isInsightEligibleScore(
+    isAggregateEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
           | { overall_score?: number; flags?: string[] | null }
@@ -313,7 +321,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
       : 0;
 
   const lastWeekScored = lastWeek.filter((conversation) =>
-    isInsightEligibleScore(
+    isAggregateEligibleScore(
       getJoinedRecord(
         conversation.quality_scores as
           | { overall_score?: number; flags?: string[] | null }
@@ -455,7 +463,7 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
         | null
     );
 
-    if (isInsightEligibleScore(qualityScore)) {
+    if (isAggregateEligibleScore(qualityScore)) {
       if (!trendByDay[day]) {
         trendByDay[day] = { overall: [], accuracy: [], hallucination: [] };
       }
@@ -591,7 +599,7 @@ export async function loadBenchmarkStats(
           | null
       )
     )
-    .filter((score): score is NonNullable<typeof score> => isInsightEligibleScore(score))
+    .filter((score): score is NonNullable<typeof score> => isAggregateEligibleScore(score))
     .map((score) => score.overall_score)
     .filter((score): score is number => score !== undefined);
 

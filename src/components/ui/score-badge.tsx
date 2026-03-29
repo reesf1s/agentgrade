@@ -35,9 +35,9 @@ interface SeverityBadgeProps {
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
   const styles = {
-    low: "bg-gray-100 text-gray-600",
+    low: "border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-secondary)]",
     medium: "score-bg-warning score-warning",
-    high: "bg-orange-100 text-orange-700",
+    high: "score-bg-warning score-warning",
     critical: "score-bg-critical score-critical",
   };
 

@@ -27,7 +27,7 @@ import { SCORING_MODEL_VERSION } from "./version";
 import { isManualCalibrationConversation } from "@/lib/calibration";
 import { applyLearnedCalibration } from "./calibration-model";
 import { buildDeterministicFallbackScore } from "./fallback";
-import { isInsightEligibleScore } from "./quality-score-status";
+import { isAggregateEligibleScore } from "./quality-score-status";
 import { syncFailurePatterns } from "@/lib/patterns/store";
 
 function isLegacyQualityScoresColumnError(error: { code?: string; message?: string } | null | undefined) {
@@ -477,7 +477,7 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
   // Shape into the format detectPatterns expects
   const scoredConversations = convs
     .filter((c) =>
-      isInsightEligibleScore(
+      isAggregateEligibleScore(
         c.quality_scores as unknown as {
           overall_score?: number;
           flags?: string[] | null;

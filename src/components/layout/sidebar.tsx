@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
-import { UserButton } from "@clerk/nextjs";
 import {
   BarChart3,
   FileBarChart,
@@ -16,7 +15,6 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const navSections = [
@@ -59,7 +57,7 @@ function NavLink({
       className={cn(
         "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
         isActive
-          ? "bg-[var(--surface)] text-[var(--text-primary)]"
+          ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-sm"
           : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]"
       )}
     >
@@ -102,31 +100,26 @@ export function Sidebar() {
   return (
     <>
       <div className="fixed left-4 right-4 top-4 z-50 lg:hidden">
-        <div className="dashboard-topbar flex items-center justify-between rounded-[1.1rem] px-4 py-3">
+        <div className="workspace-toolbar flex items-center justify-between px-4 py-3">
           <Link href="/dashboard" prefetch className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--sidebar-accent)] text-[var(--text-primary)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
               <Zap className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <p className="page-eyebrow">
                 AgentGrade
               </p>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Quality operations</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Review loop</p>
             </div>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] p-1.5">
-              <ThemeToggle />
-            </div>
-            <button
-              type="button"
-              onClick={() => setMobileOpen((current) => !current)}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] p-2 text-[var(--text-primary)]"
-              aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-            >
-              {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen((current) => !current)}
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-2 text-[var(--text-primary)]"
+            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          >
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
       </div>
 
@@ -141,56 +134,34 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-[var(--border-subtle)] bg-[var(--panel)] px-4 py-4 shadow-2xl transition-transform duration-200 lg:left-5 lg:top-5 lg:h-[calc(100vh-2.5rem)] lg:w-[15.5rem] lg:rounded-[1.35rem] lg:border lg:shadow-none lg:glass-sidebar",
+          "fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-4 shadow-2xl transition-transform duration-200 lg:left-6 lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-[14rem] lg:rounded-[1.5rem] lg:border lg:shadow-none lg:glass-sidebar",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="mb-5 px-1">
+        <div className="mb-5 px-2">
           <Link href="/dashboard" prefetch className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--sidebar-accent)] text-[var(--text-primary)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
               <Zap className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <p className="page-eyebrow">
                 AgentGrade
               </p>
               <p className="truncate text-[15px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                Quality operations
+                Ops console
               </p>
             </div>
           </Link>
         </div>
 
-        <div className="mb-5 rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Workspace
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                Enterprise review loop
-              </p>
-            </div>
-            <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
-              Live
-            </div>
+        <div className="mb-5 px-2">
+          <div className="operator-chip">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Live workspace
           </div>
-          <p className="text-xs leading-5 text-[var(--text-secondary)]">
-            Review real conversations, catch repeated issues, and improve the assistant without digging through transcripts all day.
-          </p>
         </div>
 
-        <div className="mb-4 hidden items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] px-3 py-2 lg:flex">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              Theme
-            </p>
-            <p className="text-xs text-[var(--text-secondary)]">Switch light or dark mode</p>
-          </div>
-          <ThemeToggle />
-        </div>
-
-        <nav className="flex-1 space-y-5 overflow-y-auto pr-1">
+        <nav className="flex-1 space-y-5 overflow-y-auto px-1 pr-1">
           {navSections.map((section) => (
             <div key={section.title}>
               <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
@@ -212,22 +183,10 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
-          <div className="glass-static rounded-[1rem] p-3">
-            <UserButton
-              appearance={{
-                elements: {
-                  userButtonBox: "flex items-center gap-3 w-full",
-                  userButtonTrigger:
-                    "flex items-center gap-3 w-full rounded-xl p-1.5 transition-all hover:bg-[var(--surface)]",
-                  userButtonAvatarBox: "w-10 h-10",
-                  userButtonOuterIdentifier:
-                    "text-sm font-medium text-[var(--text-primary)] truncate",
-                },
-              }}
-              showName
-            />
-          </div>
+        <div className="mt-5 border-t border-[var(--border-subtle)] px-2 pt-4">
+          <p className="text-xs leading-5 text-[var(--text-secondary)]">
+            Review fast. Ignore noise. Ship one clear fix at a time.
+          </p>
         </div>
       </aside>
     </>

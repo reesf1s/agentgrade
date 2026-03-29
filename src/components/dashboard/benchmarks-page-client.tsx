@@ -13,12 +13,10 @@ export function BenchmarksPageClient({ stats }: { stats: BenchmarkStats }) {
 
   return (
     <div className="space-y-6 pb-10">
-      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
-        <p className="enterprise-kicker">Benchmarks</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
-          Compare quality over time, then compare to the market.
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+      <GlassCard className="rounded-[1.5rem] p-5 sm:p-6">
+        <p className="page-eyebrow">Benchmarks</p>
+        <h1 className="mt-2 page-title">Start with your own baseline, then compare outward.</h1>
+        <p className="mt-3 page-subtitle">
           Benchmarks start with your own scored conversations. Market comparisons will expand as segment coverage grows.
         </p>
       </GlassCard>

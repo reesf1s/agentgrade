@@ -34,37 +34,6 @@ function sanitizeReplayArtifactSignals(
   };
 }
 
-function getLatestMessageTimestamp(messages: Array<{ timestamp?: string }>): number | null {
-  const timestamps = messages
-    .map((message) => (message.timestamp ? new Date(message.timestamp).getTime() : NaN))
-    .filter((value) => !Number.isNaN(value));
-
-  if (timestamps.length === 0) return null;
-  return Math.max(...timestamps);
-}
-
-function isStaleQualityScore(
-  qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
-  messageCount: number,
-  latestMessageTimestamp: number | null
-): boolean {
-  if (!qualityScore) return true;
-  if ((qualityScore.flags || []).includes("scoring_error")) return true;
-
-  const scoredAt = qualityScore.scored_at ? new Date(qualityScore.scored_at).getTime() : NaN;
-  const scoredTurnCount = qualityScore.structural_metrics?.turn_count;
-
-  if (typeof scoredTurnCount === "number" && scoredTurnCount !== messageCount) {
-    return true;
-  }
-
-  if (latestMessageTimestamp !== null && !Number.isNaN(scoredAt) && scoredAt + 500 < latestMessageTimestamp) {
-    return true;
-  }
-
-  return false;
-}
-
 /**
  * GET /api/conversations/:id
  * Returns a single conversation with messages and quality score.
@@ -122,24 +91,18 @@ export async function GET(
         }
       : null;
     const sanitizedQualityScore = sanitizeReplayArtifactSignals(qualityScore, hadReplayArtifacts);
-    const latestMessageTimestamp = getLatestMessageTimestamp(compactedMessages);
-    const scoreIsStale = conversationIncomplete
-      ? false
-      : isStaleQualityScore(sanitizedQualityScore, compactedMessages.length, latestMessageTimestamp);
 
     return NextResponse.json(
       {
         ...convRes.data,
         message_count: compactedMessages.length,
         messages: compactedMessages,
-        quality_score: conversationIncomplete || scoreIsStale ? null : sanitizedQualityScore,
+        quality_score: conversationIncomplete ? null : sanitizedQualityScore,
         score_status: conversationIncomplete
           ? "waiting_for_completion"
-          : scoreIsStale
-            ? "refreshing"
-            : sanitizedQualityScore
-              ? "ready"
-              : "pending",
+          : sanitizedQualityScore
+            ? "ready"
+            : "pending",
       },
       {
         headers: {
