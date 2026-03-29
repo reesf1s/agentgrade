@@ -611,11 +611,11 @@ export default function ConversationDetailPage() {
             )}
           </GlassCard>
 
-          <details className="details-panel" open>
+          <details className="details-panel">
             <summary className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">Advanced review</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Open the deeper evidence and calibration controls when you need them.</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Claim checks, overrides, and training tools live here.</p>
               </div>
               <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
             </summary>

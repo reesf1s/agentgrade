@@ -1362,29 +1362,29 @@ export default function SettingsPage() {
     {
       id: "connections",
       step: "01",
-      label: "Connect sources",
-      description: "Bring in live or historical conversations.",
+      label: "Connect data",
+      description: "Bring in conversations.",
       icon: Plug,
     },
     {
       id: "knowledge",
       step: "02",
       label: "Add context",
-      description: "Upload docs and help center content.",
+      description: "Upload docs and help content.",
       icon: BookOpen,
     },
     {
       id: "alerts",
       step: "03",
-      label: "Set thresholds",
-      description: "Decide when the team should be notified.",
+      label: "Alerts",
+      description: "Choose when the team gets notified.",
       icon: Bell,
     },
     {
       id: "calibration",
       step: "04",
-      label: "Improve scoring",
-      description: "Label examples and sharpen the reviewer.",
+      label: "Training",
+      description: "Label examples and sharpen scoring.",
       icon: Brain,
     },
     {
@@ -1400,17 +1400,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
-        <p className="enterprise-kicker">Setup</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
-          Configure the workspace without hunting through settings.
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          Move through the workspace in order: connect sources, add context, set thresholds, then teach the scorer using the examples that matter most.
+      <GlassCard className="rounded-[1.5rem] p-5 sm:p-6">
+        <p className="page-eyebrow">Setup</p>
+        <h1 className="mt-2 page-title">Set up the workspace in one pass.</h1>
+        <p className="mt-3 page-subtitle">
+          Connect data, add context, tune notifications, then label the examples that matter.
         </p>
       </GlassCard>
 
-      <div className="grid gap-3 xl:grid-cols-5">
+      <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1420,63 +1418,40 @@ export default function SettingsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-[1.1rem] border p-4 text-left transition-all ${
+              className={`rounded-xl border px-4 py-3 text-left transition-all ${
                 isActive
                   ? "border-[var(--border-strong)] bg-[var(--panel)] shadow-sm"
-                  : "border-[var(--border-subtle)] bg-[var(--panel-subtle)] hover:bg-[var(--panel)]"
+                  : "border-[var(--border-subtle)] bg-[var(--surface-soft)] hover:bg-[var(--panel)]"
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                   {tab.step}
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-subtle)]">
                   <Icon className="h-4 w-4 text-[var(--text-primary)]" />
                 </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{tab.description}</p>
+                </div>
               </div>
-              <p className="mt-4 text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{tab.description}</p>
             </button>
           );
         })}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <GlassCard className="h-fit rounded-[1.25rem] p-5">
-          <p className="enterprise-section-title">Current step</p>
-          <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
-            {activeTabConfig.label}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-            {activeTabConfig.description}
-          </p>
-          <div className="mt-5 space-y-3">
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Recommended flow
-              </p>
-              <div className="mt-3 space-y-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
-                      activeTab === tab.id
-                        ? "bg-[var(--panel)] font-semibold text-[var(--text-primary)]"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--panel)]"
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      {tab.step}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+      <GlassCard className="rounded-[1.4rem] p-5">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-label">Current step</p>
+            <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              {activeTabConfig.label}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">{activeTabConfig.description}</p>
           </div>
-        </GlassCard>
+          <span className="operator-chip">Step {activeTabConfig.step} of {tabs.length}</span>
+        </div>
 
         <div>
           {activeTab === "connections" && <ConnectionsTab />}
@@ -1485,7 +1460,7 @@ export default function SettingsPage() {
           {activeTab === "calibration" && <CalibrationTab />}
           {activeTab === "workspace" && <WorkspaceTab />}
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }

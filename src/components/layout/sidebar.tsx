@@ -30,7 +30,7 @@ const navSections = [
   },
   {
     title: "Configure",
-    items: [{ href: "/settings", label: "Setup & training", icon: Settings }],
+    items: [{ href: "/settings", label: "Setup", icon: Settings }],
   },
 ];
 
