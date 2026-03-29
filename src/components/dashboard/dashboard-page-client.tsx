@@ -126,7 +126,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                 </Link>
               </div>
             ) : (
-              <p className="text-sm text-[var(--text-secondary)]">No repeated issue is standing out.</p>
+              <p className="text-sm text-[var(--text-secondary)]">None this week.</p>
             )}
           </div>
 
@@ -135,16 +135,12 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
               <p className="text-sm font-medium text-[var(--text-primary)]">Safe to ignore</p>
             </div>
-            <p className="text-sm text-[var(--text-secondary)]">
-              {safeCount} healthy conversations. Failed scores stay out of rollups.
-            </p>
+            <p className="text-sm text-[var(--text-secondary)]">{safeCount ? `${safeCount} healthy.` : "Nothing notable."}</p>
           </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">This week’s next move</p>
-            <p className="text-sm text-[var(--text-secondary)]">
-              {criticalPattern?.recommendation || "Review the top repeated issue before anything lower leverage."}
-            </p>
+            <p className="text-sm text-[var(--text-secondary)]">{criticalPattern?.recommendation || "Review the top issue first."}</p>
           </div>
         </div>
       </section>
@@ -157,7 +153,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           </div>
 
           {data.trend_data.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No trend data.</p>
+            <p className="text-sm text-[var(--text-muted)]">No trend yet.</p>
           ) : (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">

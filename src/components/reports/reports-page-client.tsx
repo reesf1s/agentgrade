@@ -69,7 +69,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
             <span className="text-[var(--text-primary)]">{trendTone.title}</span>
           </div>
           <p className="text-[var(--text-secondary)]">
-            {summary?.hallucination_count ? `${summary.hallucination_count} risky replies still need review.` : "No major issue stood out."}
+            {summary?.hallucination_count ? `${summary.hallucination_count} risky replies remain.` : "No issue."}
           </p>
         </div>
 
@@ -84,14 +84,14 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
               <p className="text-[var(--text-secondary)]">{report.patterns[0].description}</p>
             </>
           ) : (
-            <p className="text-[var(--text-secondary)]">No repeated issue is forming.</p>
+            <p className="text-[var(--text-secondary)]">None this week.</p>
           )}
         </div>
 
         <div className="space-y-2 border-b border-[var(--divider)] pb-4 text-sm">
           <p className="font-semibold text-[var(--text-primary)]">Best improvement opportunity</p>
           <p className="text-[var(--text-secondary)]">
-            {report.organization_recommendations[0]?.recommended_change || "No org-wide change stands out this week."}
+            {report.organization_recommendations[0]?.recommended_change || "No clear org-wide fix."}
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </div>
 
         {trendData.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No trend data.</p>
+          <p className="text-sm text-[var(--text-muted)]">No trend yet.</p>
         ) : (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">

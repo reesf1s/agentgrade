@@ -33,18 +33,10 @@ interface ConversationRow {
 
 function statusLabel(conversation: ConversationRow) {
   if (conversation.quality_scores) return `${conversation.quality_scores.confidence_level || "scored"} confidence`;
-  if (conversation.score_status === "waiting_for_completion") return "Waiting for conversation to finish";
+  if (conversation.score_status === "waiting_for_completion") return "Waiting to close";
   if (conversation.score_status === "waiting_for_quiet_period") return "Queued";
-  if (conversation.score_status === "refreshing") return "Refreshing saved score";
+  if (conversation.score_status === "refreshing") return "Refreshing";
   return "Pending";
-}
-
-function queueLabel(conversation: ConversationRow) {
-  const score = conversation.quality_scores?.overall_score ?? null;
-  if (score === null) return "Waiting";
-  if (score < 0.5) return "Review now";
-  if (score < 0.72) return "Quick pass";
-  return "Safe to close";
 }
 
 function priorityReason(conversation: ConversationRow) {
@@ -63,8 +55,8 @@ function priorityReason(conversation: ConversationRow) {
   if (flags.some((flag) => /ground|crm|record|source|verify/i.test(flag)) || /verify|record|source|detail/.test(summary)) {
     return "Needs source check";
   }
-  if (score < 0.5) return "Needs review now";
-  if (score < 0.72) return "Needs a quick pass";
+  if (score < 0.5) return "Needs review";
+  if (score < 0.72) return "Quick pass";
   return "Likely safe";
 }
 
@@ -204,7 +196,7 @@ export default function ConversationsPage() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="text-[var(--text-primary)]">Visible: {total}</span>
-          <span className="text-[var(--text-primary)]">Needs review: {stats.reviewNext}</span>
+          <span className="text-[var(--text-primary)]">Review: {stats.reviewNext}</span>
           <span className="text-[var(--text-primary)]">Waiting: {stats.pending}</span>
           <span className="text-[var(--text-primary)]">Processed: {stats.reviewed}</span>
         </div>
@@ -226,7 +218,7 @@ export default function ConversationsPage() {
       <section className="space-y-3 border-b border-[var(--divider)] pb-4">
         <div className="flex flex-wrap items-center gap-2">
           {[
-            ["review", "Needs review now"],
+            ["review", "Review now"],
             ["risk", "Highest risk"],
             ["recent", "Most recent"],
             ["confidence", "Lowest confidence"],
@@ -262,7 +254,7 @@ export default function ConversationsPage() {
             onChange={(event) => setScoreFilter(event.target.value)}
             className="glass-input px-3 py-2.5 text-sm"
           >
-            <option value="all">Needs review now</option>
+            <option value="all">Review now</option>
             <option value="critical">Needs review</option>
             <option value="warning">Watch</option>
             <option value="good">Likely safe</option>
@@ -328,14 +320,12 @@ export default function ConversationsPage() {
                             {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
                           </p>
                           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            Why it surfaced: {priorityReason(conversation)}
+                            {priorityReason(conversation)}
                           </p>
                           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            Suggested action: {queueLabel(conversation)}
+                            {formatDate(conversation.created_at)} · {conversation.quality_scores?.confidence_level || "pending"} confidence
                           </p>
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">
-                            {statusLabel(conversation)} · {formatDate(conversation.created_at)}
-                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">{statusLabel(conversation)}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <span className="operator-chip">{conversation.quality_scores?.confidence_level || "pending"}</span>

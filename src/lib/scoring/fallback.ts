@@ -78,8 +78,7 @@ export function buildDeterministicFallbackScore(
         "scoring_fallback_used",
         "no_agent_response",
       ],
-      summary:
-        "The transcript contains no agent response, so the conversation cannot be treated as resolved. This was scored with deterministic fallback logic.",
+      summary: "No agent reply. Review manually.",
       confidence_level: "medium",
       prompt_improvements: [
         {
@@ -127,8 +126,8 @@ export function buildDeterministicFallbackScore(
   );
 
   const summary = !grounded && operational
-    ? "The agent gave a useful operational answer, but the transcript did not include the tool or system evidence needed to fully verify it. This fallback score treats the result as helpful but low-confidence."
-    : "The transcript was scored with deterministic fallback logic because the full model evaluation did not complete cleanly.";
+    ? "Useful, but verify first."
+    : "Fallback score.";
 
   const prompt_improvements: QualityScore["prompt_improvements"] = [];
   if (!grounded && operational) {

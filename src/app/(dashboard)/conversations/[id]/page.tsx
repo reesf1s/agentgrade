@@ -55,16 +55,16 @@ function deriveStrengths(messages: Message[], score?: QualityScore | null) {
   const strengths: string[] = [];
 
   if ((score?.resolution_score || 0) >= 0.78) {
-    strengths.push("The answer moved the user toward a clear next step.");
+    strengths.push("Clear next step");
   }
   if ((score?.tone_score || 0) >= 0.84) {
-    strengths.push("The tone stayed calm, professional, and easy to trust.");
+    strengths.push("Calm tone");
   }
   if (hasStructuredAnswer(messages)) {
-    strengths.push("The response was easy to scan and would work well as a working brief.");
+    strengths.push("Clear structure");
   }
   if ((score?.overall_score || 0) >= 0.8) {
-    strengths.push("This is strong enough to treat as a repeatable response pattern.");
+    strengths.push("Reusable pattern");
   }
 
   return strengths.slice(0, 3);
@@ -129,10 +129,10 @@ function buildReviewGroups(score?: QualityScore | null): ReviewGroup[] {
 
 function nextBestAction(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return "Wait for score";
-  if (groundingOnly) return "Review before reuse";
-  if ((score.overall_score || 0) >= 0.82) return "No action needed";
-  if ((score.overall_score || 0) >= 0.65) return "Mark for follow-up";
-  return "Escalate pattern";
+  if (groundingOnly) return "Verify first";
+  if ((score.overall_score || 0) >= 0.82) return "Safe";
+  if ((score.overall_score || 0) >= 0.65) return "Watch";
+  return "Escalate";
 }
 
 function isLongMessage(content: string) {
@@ -188,13 +188,11 @@ function getAssessmentLabel(score?: QualityScore | null, groundingOnly = false) 
 }
 
 function getRiskLine(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "Risk is still being calculated.";
-  if (groundingOnly) {
-    return "Risk is moderate: the answer is useful, but any source-backed numbers, dates, or record details should be checked first.";
-  }
-  if ((score.overall_score || 0) >= 0.82) return "Risk is low. This answer looks solid.";
-  if ((score.overall_score || 0) >= 0.65) return "Risk is moderate. Review before using this as a default pattern.";
-  return "Risk is high. This response could create confusion or bad downstream decisions.";
+  if (!score) return "Pending";
+  if (groundingOnly) return "Moderate if reused";
+  if ((score.overall_score || 0) >= 0.82) return "Low reuse risk";
+  if ((score.overall_score || 0) >= 0.65) return "Moderate if reused";
+  return "High confusion risk";
 }
 
 function getEvidenceLabel(score?: QualityScore | null, groundingOnly = false) {
@@ -210,7 +208,7 @@ function getEvidenceLabel(score?: QualityScore | null, groundingOnly = false) {
 function getDisplaySummary(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return "Scoring in progress.";
   if (groundingOnly) {
-    return "Useful answer. Check record details before reuse.";
+    return "Useful, but verify first.";
   }
   return score.summary || "No summary available.";
 }
@@ -480,7 +478,7 @@ export default function ConversationDetailPage() {
           </button>
         </div>
         <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
-          {groundingOnly ? "Useful answer — verify record details." : displaySummary}
+          {groundingOnly ? "Useful, but verify first." : displaySummary}
         </p>
       </section>
 
@@ -501,7 +499,7 @@ export default function ConversationDetailPage() {
           <div className="flex min-w-0 items-start gap-2">
             <span className="text-[var(--text-secondary)]">Risk:</span>
             <span className="truncate text-[var(--text-primary)]">
-              {groundingOnly ? "Moderate — verify before reuse." : riskLine}
+              {riskLine}
             </span>
           </div>
         </div>

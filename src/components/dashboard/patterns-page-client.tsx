@@ -100,7 +100,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
       {patterns.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-sm text-[var(--text-muted)]">No repeated issue is standing out yet.</p>
+          <p className="text-sm text-[var(--text-muted)]">None this week.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -123,11 +123,9 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     </select>
                     <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{pattern.title}</p>
                   </div>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    Appeared in {pattern.affected_conversation_ids.length} conversations this week.
-                  </p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">{pattern.affected_conversation_ids.length} conversations this week.</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">{pattern.description}</p>
-                  <p className="mt-2 text-sm text-[var(--text-primary)]">Suggested fix: {nextAction(pattern)}</p>
+                  <p className="mt-2 text-sm text-[var(--text-primary)]">{nextAction(pattern)}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <SeverityBadge severity={pattern.severity} />
                     <span className="operator-chip">Frequency: {pattern.affected_conversation_ids.length}</span>

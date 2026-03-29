@@ -295,26 +295,26 @@ function buildDefaultSummary(result: ScoringResult) {
   const weakGrounding = result.hallucination_score < 0.55 || result.accuracy_score < 0.55;
 
   if (strongResolution && strongGrounding) {
-    return "The agent gave a strong, actionable answer that looks ready to use.";
+    return "Strong answer.";
   }
 
   if (strongResolution && !strongGrounding) {
-    return "The agent gave a strong, decision-useful answer. A few record-level details should be confirmed before anyone acts on them.";
+    return "Useful, but verify first.";
   }
 
   if (weakResolution && weakGrounding) {
-    return "The response did not move the user toward a reliable outcome and needs attention.";
+    return "Broken reply.";
   }
 
   if (weakResolution) {
-    return "The answer contained some useful material, but it did not fully resolve the user's request.";
+    return "Partial answer.";
   }
 
   if (weakGrounding) {
-    return "The answer was partially helpful, but some important claims need confirmation before they can be trusted.";
+    return "Needs source check.";
   }
 
-  return "The response was broadly serviceable, with a few quality tradeoffs still worth reviewing.";
+  return "Quick pass.";
 }
 
 function deriveConfidenceLevel(
@@ -514,8 +514,8 @@ export function applyScoringGuardrails(
       );
 
       adjusted.summary = strongAdvisoryAnswer
-        ? "The agent delivered a strong, useful answer with clear structure and good next-step guidance."
-        : "The answer was useful overall, but a human should sense-check the specific record details before relying on it fully.";
+        ? "Useful, but verify first."
+        : "Check record details.";
     }
   }
 
