@@ -2,16 +2,40 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, ArrowRight, Check, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, RefreshCw, X } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SeverityBadge } from "@/components/ui/score-badge";
 import type { FailurePattern } from "@/lib/db/types";
 
+function issueState(pattern: FailurePattern) {
+  if (pattern.is_resolved) return "Resolved";
+  if (pattern.severity === "critical" || pattern.severity === "high") return "Action needed";
+  if (pattern.affected_conversation_ids.length >= 6) return "Watching";
+  return "New";
+}
+
+function issueStateTone(pattern: FailurePattern) {
+  const state = issueState(pattern);
+  if (state === "Resolved") return "score-bg-good score-good";
+  if (state === "Action needed") return "score-bg-warning score-warning";
+  return "";
+}
+
+function nextAction(pattern: FailurePattern) {
+  return (
+    pattern.recommendation ||
+    pattern.prompt_fix ||
+    pattern.knowledge_base_suggestion ||
+    "Review a few examples and decide whether this belongs in prompt, workflow, or source coverage."
+  );
+}
+
 export function PatternsPageClient({ initialPatterns }: { initialPatterns: FailurePattern[] }) {
   const [patterns, setPatterns] = useState(initialPatterns);
   const [resolving, setResolving] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPattern, setSelectedPattern] = useState<FailurePattern | null>(null);
 
   async function resolvePattern(patternId: string) {
     setResolving(patternId);
@@ -98,6 +122,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <SeverityBadge severity={pattern.severity} />
+                            <span className={`operator-chip ${issueStateTone(pattern)}`}>{issueState(pattern)}</span>
                             <span className="operator-chip">
                               {pattern.affected_conversation_ids.length} conversations
                             </span>
@@ -118,19 +143,30 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
                   <div className="mt-5 grid gap-3 lg:grid-cols-2">
                     <div className="metric-card px-4 py-4">
-                      <p className="section-label">What is happening</p>
+                      <p className="section-label">Why it matters</p>
                       <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
                     </div>
                     <div className="metric-card px-4 py-4">
                       <p className="section-label">What to do next</p>
-                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                        {pattern.recommendation || pattern.prompt_fix || pattern.knowledge_base_suggestion || "Review this issue and decide whether the fix belongs in workflow, prompting, or coverage."}
-                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{nextAction(pattern)}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
+                  <div className="metric-card px-4 py-4">
+                    <p className="section-label">Recommended next action</p>
+                    <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{nextAction(pattern)}</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPattern(pattern)}
+                      className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]"
+                    >
+                      Open issue detail
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   {pattern.prompt_fix ? (
                     <div className="metric-card px-4 py-4">
                       <p className="section-label">Prompt change</p>
@@ -168,6 +204,80 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
           ))}
         </div>
       )}
+
+      {selectedPattern ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close issue detail"
+            className="drawer-backdrop"
+            onClick={() => setSelectedPattern(null)}
+          />
+          <aside className="drawer-panel">
+            <div className="drawer-header">
+              <div>
+                <p className="page-eyebrow">Issue detail</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                  {selectedPattern.title}
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <SeverityBadge severity={selectedPattern.severity} />
+                  <span className={`operator-chip ${issueStateTone(selectedPattern)}`}>{issueState(selectedPattern)}</span>
+                  <span className="operator-chip">{selectedPattern.affected_conversation_ids.length} examples</span>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedPattern(null)} className="operator-chip">
+                <X className="h-4 w-4" />
+                Close
+              </button>
+            </div>
+            <div className="drawer-body space-y-4">
+              <div className="compact-list">
+                <div className="compact-list-item">
+                  <p className="section-label">Why it matters</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.description}</p>
+                </div>
+                <div className="compact-list-item">
+                  <p className="section-label">Recommended next action</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(selectedPattern)}</p>
+                </div>
+              </div>
+
+              {selectedPattern.prompt_fix ? (
+                <div className="compact-list-item">
+                  <p className="section-label">Prompt change</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.prompt_fix}</p>
+                </div>
+              ) : null}
+
+              {selectedPattern.knowledge_base_suggestion ? (
+                <div className="compact-list-item">
+                  <p className="section-label">Knowledge update</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedPattern.knowledge_base_suggestion}</p>
+                </div>
+              ) : null}
+
+              {selectedPattern.affected_conversation_ids.length > 0 ? (
+                <div className="compact-list-item">
+                  <p className="section-label">Example conversations</p>
+                  <div className="mt-3 space-y-2">
+                    {selectedPattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
+                      <Link
+                        key={conversationId}
+                        href={`/conversations/${conversationId}`}
+                        className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                      >
+                        <span>{conversationId.slice(0, 8)}</span>
+                        <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </aside>
+        </>
+      ) : null}
     </div>
   );
 }

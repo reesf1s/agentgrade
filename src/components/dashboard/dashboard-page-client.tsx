@@ -35,6 +35,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
   const reviewNow = data.conversations.filter(
     (conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.65
   );
+  const safeCount = data.conversations.filter(
+    (conversation) => (conversation.quality_scores?.overall_score ?? 0) >= 0.8
+  ).length;
   const criticalPattern = data.patterns[0];
   const recentConversation = data.conversations[0];
   const trendDelta =
@@ -66,26 +69,26 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="metric-card px-4 py-4">
-            <p className="section-label">Quality</p>
+            <p className="section-label">Needs attention</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{reviewNow.length}</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Conversations worth opening now</p>
+          </div>
+          <div className="metric-card px-4 py-4">
+            <p className="section-label">Workspace quality</p>
             <p className={`mt-2 text-3xl font-semibold tracking-[-0.06em] ${scoreColor(avgScore)}`}>
               {percentage(avgScore)}
             </p>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">Average score in the current view</p>
           </div>
           <div className="metric-card px-4 py-4">
-            <p className="section-label">Needs review now</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{reviewNow.length}</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Conversations below the healthy range</p>
+            <p className="section-label">Quiet health</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{safeCount}</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Healthy reviews safe to ignore</p>
           </div>
           <div className="metric-card px-4 py-4">
             <p className="section-label">Reviewed</p>
             <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{reviewed}</p>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">Conversations shaping the workspace trend</p>
-          </div>
-          <div className="metric-card px-4 py-4">
-            <p className="section-label">Escalations</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">{percentage(escalationRate)}</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Needed a human handoff</p>
           </div>
         </div>
       </section>
@@ -106,7 +109,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-soft)] p-5">
               <p className="text-sm font-semibold text-[var(--text-primary)]">Nothing urgent is surfacing right now.</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                The current queue looks calm. Use the issue list to spot repeated patterns rather than one-off firefighting.
+                The queue looks calm. Use issues for slower-moving patterns instead of one-off firefighting.
               </p>
             </div>
           ) : (
@@ -118,7 +121,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                       <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                         {conversation.customer_identifier || "Unknown conversation"}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                      <p className="mt-1.5 text-sm leading-6 text-[var(--text-secondary)]">
                         {conversation.quality_scores?.summary || "This conversation needs a closer review before similar responses scale."}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -165,7 +168,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           <GlassCard className="rounded-[1.4rem] p-5">
             <div className="mb-3 flex items-center gap-2">
               <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Key issue</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Repeated issue</h2>
             </div>
             {criticalPattern ? (
               <>
@@ -174,6 +177,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                   <SeverityBadge severity={criticalPattern.severity} />
                 </div>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{criticalPattern.description}</p>
+                <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">
+                  Next: {criticalPattern.recommendation || criticalPattern.prompt_fix || criticalPattern.knowledge_base_suggestion || "Open the issue and choose one fix path."}
+                </p>
                 <Link href="/patterns" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
                   Open issue
                   <ArrowRight className="h-4 w-4" />
@@ -257,6 +263,11 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">Workspace health</h2>
           </div>
           <div className="grid gap-3">
+            <div className="metric-card px-4 py-4">
+              <p className="section-label">Escalations</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{percentage(escalationRate)}</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Needed a human handoff</p>
+            </div>
             <div className="metric-card px-4 py-4">
               <p className="section-label">Risky replies</p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{percentage(riskyReplies)}</p>

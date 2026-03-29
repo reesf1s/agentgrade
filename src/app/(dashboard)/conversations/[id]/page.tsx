@@ -8,11 +8,11 @@ import {
   ArrowLeft,
   Bot,
   CheckCircle2,
-  ChevronDown,
   Headphones,
   ShieldAlert,
   Sparkles,
   User,
+  X,
 } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -122,6 +122,18 @@ function buildReviewGroups(score?: QualityScore | null): ReviewGroup[] {
   }
 
   return groups.slice(0, 3);
+}
+
+function nextBestAction(score?: QualityScore | null, groundingOnly = false) {
+  if (!score) return "Wait for score";
+  if (groundingOnly) return "Review before reuse";
+  if ((score.overall_score || 0) >= 0.82) return "No action needed";
+  if ((score.overall_score || 0) >= 0.65) return "Mark for follow-up";
+  return "Escalate pattern";
+}
+
+function isLongMessage(content: string) {
+  return content.length > 520 || content.split("\n").length > 10;
 }
 
 function groupClaimsForAdvancedReview(score?: QualityScore | null) {
@@ -240,6 +252,7 @@ export default function ConversationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [showAdvancedDrawer, setShowAdvancedDrawer] = useState(false);
   const [overrideDimension, setOverrideDimension] = useState("overall");
   const [overrideScore, setOverrideScore] = useState("50");
   const [overrideReason, setOverrideReason] = useState("");
@@ -249,6 +262,7 @@ export default function ConversationDetailPage() {
   const [labelNotes, setLabelNotes] = useState("");
   const [labelShareScope, setLabelShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
   const [labelExampleKind, setLabelExampleKind] = useState<"real" | "synthetic">("real");
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const [trainingLabels, setTrainingLabels] = useState({
     overall: "",
     accuracy: "",
@@ -396,6 +410,7 @@ export default function ConversationDetailPage() {
   const reviewGroups = buildReviewGroups(qs);
   const advancedClaimGroups = groupClaimsForAdvancedReview(qs);
   const showKnowledgeAndPromptDetails = !groundingOnly;
+  const actionState = nextBestAction(qs, groundingOnly);
   const roleConfig = {
     customer: { icon: User, label: "Customer", shell: "mr-auto bg-[var(--panel-subtle)]" },
     agent: { icon: Bot, label: "AI agent", shell: "ml-auto bg-[var(--surface-soft)]" },
@@ -422,12 +437,23 @@ export default function ConversationDetailPage() {
       </Link>
 
       <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.8fr)]">
-          <div>
-            <p className="page-eyebrow">Conversation review</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.2rem]">
-              {conv.customer_identifier || "Unknown customer"}
-            </h1>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,0.7fr)]">
+          <div className="space-y-4">
+            <div className="review-topline">
+              <div>
+                <p className="page-eyebrow">Conversation review</p>
+                <h1 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.2rem]">
+                  {conv.customer_identifier || "Unknown customer"}
+                </h1>
+              </div>
+              <div className="review-action-strip">
+                <span className="operator-chip">{actionState}</span>
+                <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
+                  Advanced review
+                </button>
+              </div>
+            </div>
+
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
               {conv.platform} · {conv.message_count} messages
               {conv.was_escalated ? " · escalated" : ""}
@@ -447,38 +473,21 @@ export default function ConversationDetailPage() {
               ) : null}
             </div>
 
-            <div className="mt-5 space-y-3">
-              <div>
-                <p className="section-label">Assessment</p>
-                <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                  {assessmentLabel}
-                </p>
-              </div>
-              <p className="max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
-                {operatorTakeaway}
-              </p>
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--text-primary)]">
-                {primaryAction}
-              </div>
+            <div className="space-y-2.5">
+              <p className="text-xl font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{assessmentLabel}</p>
+              <p className="max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">{operatorTakeaway}</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{primaryAction}</p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <div className="metric-card px-4 py-4">
-              <p className="section-label">Overall</p>
-              <div className="mt-3">
-                {qs ? (
-                  <ScoreBadge score={qs.overall_score} size="lg" />
-                ) : (
-                  <span className="text-sm text-[var(--text-muted)]">Pending</span>
-                )}
-              </div>
+              <p className="section-label">Score</p>
+              <div className="mt-3">{qs ? <ScoreBadge score={qs.overall_score} size="lg" /> : <span className="text-sm text-[var(--text-muted)]">Pending</span>}</div>
             </div>
             <div className="metric-card px-4 py-4">
-              <p className="section-label">Review note</p>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                {displaySummary}
-              </p>
+              <p className="section-label">Takeaway</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{displaySummary}</p>
             </div>
           </div>
         </div>
@@ -491,11 +500,9 @@ export default function ConversationDetailPage() {
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">What worked</h2>
           </div>
           {strengths.length > 0 ? (
-            <div className="stack-list">
+            <div className="space-y-2">
               {strengths.map((strength) => (
-                <div key={strength} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--text-primary)]">
-                  {strength}
-                </div>
+                <div key={strength} className="flex gap-2 text-sm text-[var(--text-primary)]"><span className="mt-1 h-1.5 w-1.5 rounded-full bg-current/60" /> <span>{strength}</span></div>
               ))}
             </div>
           ) : (
@@ -511,11 +518,11 @@ export default function ConversationDetailPage() {
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">What needs checking</h2>
           </div>
           {reviewGroups.length > 0 ? (
-            <div className="stack-list">
+            <div className="space-y-2">
               {reviewGroups.map((group) => (
                 <div key={group.title} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{group.body}</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{group.body}</p>
                 </div>
               ))}
             </div>
@@ -536,7 +543,7 @@ export default function ConversationDetailPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.92fr)]">
-        <GlassCard className="p-5">
+        <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <p className="section-label">Transcript</p>
@@ -548,14 +555,17 @@ export default function ConversationDetailPage() {
           {conv.messages.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No messages found.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {conv.messages.map((message) => {
                 const config = roleConfig[message.role] || roleConfig.system;
                 const Icon = config.icon;
+                const expanded = expandedMessages[message.id] || false;
+                const collapsible = message.role === "agent" && isLongMessage(message.content);
+                const preview = collapsible && !expanded ? `${message.content.slice(0, 520).trimEnd()}…` : message.content;
 
                 return (
                   <div key={message.id} className={`flex ${config.shell.includes("ml-auto") ? "justify-end" : config.shell.includes("mx-auto") ? "justify-center" : "justify-start"}`}>
-                    <div className={`transcript-bubble max-w-[92%] px-4 py-4 sm:max-w-[82%] ${config.shell}`}>
+                    <div className={`transcript-bubble max-w-[94%] px-4 py-3.5 sm:max-w-[84%] ${config.shell}`}>
                       <div className="mb-2 flex items-center gap-2">
                         <Icon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                         <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -563,8 +573,17 @@ export default function ConversationDetailPage() {
                         </span>
                       </div>
                       <p className="text-sm leading-7 text-[var(--text-primary)] whitespace-pre-wrap">
-                        {message.content}
+                        {preview}
                       </p>
+                      {collapsible ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedMessages((current) => ({ ...current, [message.id]: !expanded }))}
+                          className="mt-3 text-sm font-medium text-[var(--text-primary)]"
+                        >
+                          {expanded ? "Show less" : "Expand response"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -580,22 +599,24 @@ export default function ConversationDetailPage() {
               <h2 className="text-sm font-semibold text-[var(--text-primary)]">Score breakdown</h2>
             </div>
             {qs ? (
-              <div className="space-y-4">
+              <div className="score-strip">
                 {scoreRows.map(({ label, score }) => (
-                  <div key={label}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
-                      <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-                      <span className={`text-sm font-semibold ${scoreColor(score || 0)}`}>
-                        {formatScore(score || 0)}%
-                      </span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[var(--surface)]">
-                      <div
-                        className={`h-full rounded-full ${
-                          (score || 0) >= 0.75 ? "bg-score-good" : (score || 0) >= 0.5 ? "bg-score-warning" : "bg-score-critical"
-                        }`}
-                        style={{ width: `${Math.max(6, (score || 0) * 100)}%` }}
-                      />
+                  <div key={label} className="score-strip-row">
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <span className="text-sm text-[var(--text-secondary)]">{label}</span>
+                        <span className={`text-sm font-semibold ${scoreColor(score || 0)}`}>
+                          {formatScore(score || 0)}%
+                        </span>
+                      </div>
+                      <div className="score-strip-bar">
+                        <div
+                          className={`score-strip-fill ${
+                            (score || 0) >= 0.75 ? "bg-score-good" : (score || 0) >= 0.5 ? "bg-score-warning" : "bg-score-critical"
+                          }`}
+                          style={{ width: `${Math.max(6, (score || 0) * 100)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -611,91 +632,97 @@ export default function ConversationDetailPage() {
             )}
           </GlassCard>
 
-          <details className="details-panel">
-            <summary className="flex items-center justify-between gap-4">
+          <GlassCard className="p-5">
+            <p className="section-label">Next best action</p>
+            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{actionState}</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              {actionState === "No action needed"
+                ? "This review looks stable. Keep it as a strong example."
+                : actionState === "Review before reuse"
+                  ? "Check the source-backed details before this answer is reused."
+                  : actionState === "Mark for follow-up"
+                    ? "A light follow-up is enough. Tighten the weak spots and move on."
+                    : "This pattern is worth escalating or fixing before it repeats."}
+            </p>
+          </GlassCard>
+        </div>
+      </section>
+
+      {showAdvancedDrawer ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close advanced review"
+            className="drawer-backdrop"
+            onClick={() => setShowAdvancedDrawer(false)}
+          />
+          <aside className="drawer-panel">
+            <div className="drawer-header">
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Advanced review</p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Claim checks, overrides, and training tools live here.</p>
+                <p className="page-eyebrow">Advanced review</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                  Claim checks, overrides, and training
+                </h2>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Use these tools when the core review is not enough to make a call.
+                </p>
               </div>
-              <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-            </summary>
-            <div className="details-panel-content space-y-3">
+              <button type="button" onClick={() => setShowAdvancedDrawer(false)} className="operator-chip">
+                <X className="h-4 w-4" />
+                Close
+              </button>
+            </div>
+            <div className="drawer-body space-y-3">
               {advancedClaimGroups.length > 0 ? (
-                <details className="details-panel">
-                  <summary className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Claim checks</p>
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">Grouped by the kind of detail a reviewer would spot-check.</p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-                  </summary>
-                  <div className="details-panel-content space-y-3">
-                    {advancedClaimGroups.map((group) => (
-                      <div key={group.title} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
-                        <div className="mt-3 space-y-3">
-                          {group.items.map((claim) => (
-                            <div key={`${group.title}-${claim.claim}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
-                              <p className="text-sm text-[var(--text-primary)]">{claim.claim}</p>
-                              <p className="mt-1 text-xs capitalize text-[var(--text-muted)]">{claim.verdict}</p>
-                            </div>
-                          ))}
-                        </div>
+                <div className="details-panel-content space-y-3">
+                  {advancedClaimGroups.map((group) => (
+                    <div key={group.title} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
+                      <div className="mt-3 space-y-3">
+                        {group.items.map((claim) => (
+                          <div key={`${group.title}-${claim.claim}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
+                            <p className="text-sm text-[var(--text-primary)]">{claim.claim}</p>
+                            <p className="mt-1 text-xs capitalize text-[var(--text-muted)]">{claim.verdict}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </details>
+                    </div>
+                  ))}
+                </div>
               ) : null}
 
               {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.length ? (
-                <details className="details-panel">
-                  <summary className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Prompt guidance</p>
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">Only shown when the review points to a real repeatable fix.</p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-                  </summary>
-                  <div className="details-panel-content space-y-3">
+                <div className="compact-list-item">
+                  <p className="section-label">Prompt guidance</p>
+                  <div className="mt-3 space-y-3">
                     {qs.prompt_improvements.slice(0, 3).map((improvement) => (
-                      <div key={improvement.issue} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
+                      <div key={improvement.issue}>
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
-                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{improvement.expected_impact}</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{improvement.expected_impact}</p>
                       </div>
                     ))}
                   </div>
-                </details>
+                </div>
               ) : null}
 
               {showKnowledgeAndPromptDetails && qs?.knowledge_gaps?.length ? (
-                <details className="details-panel">
-                  <summary className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Knowledge coverage</p>
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">Only shown when missing coverage is part of the real issue.</p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-                  </summary>
-                  <div className="details-panel-content space-y-3">
+                <div className="compact-list-item">
+                  <p className="section-label">Knowledge coverage</p>
+                  <div className="mt-3 space-y-3">
                     {qs.knowledge_gaps.slice(0, 3).map((gap) => (
-                      <div key={gap.topic} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
+                      <div key={gap.topic}>
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{gap.topic}</p>
-                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{gap.description}</p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{gap.description}</p>
                       </div>
                     ))}
                   </div>
-                </details>
+                </div>
               ) : null}
 
-              <details className="details-panel">
-                <summary className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">Correct the score</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">Override this review if your team thinks the judgment is off.</p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-                </summary>
-                <div className="details-panel-content space-y-3">
+              <div className="compact-list-item">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Correct the score</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Override this review if your team thinks the judgment is off.</p>
+                <div className="mt-3 space-y-3">
                   {showOverrideForm ? (
                     <>
                       <select
@@ -742,17 +769,12 @@ export default function ConversationDetailPage() {
                   {overrideState === "saved" ? <p className="text-xs text-score-good">Override saved.</p> : null}
                   {overrideState === "error" ? <p className="text-xs text-score-critical">Failed to save override.</p> : null}
                 </div>
-              </details>
+              </div>
 
-              <details className="details-panel">
-                <summary className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">Train the scorer</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">Save a human label set only when this conversation is genuinely useful for training.</p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
-                </summary>
-                <div className="details-panel-content space-y-3">
+              <div className="compact-list-item">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Train the scorer</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Save a human label set only when this conversation is genuinely useful for training.</p>
+                <div className="mt-3 space-y-3">
                   {showTrainingForm ? (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -762,7 +784,7 @@ export default function ConversationDetailPage() {
                           onChange={(event) => setLabelExampleKind(event.target.value as "real" | "synthetic")}
                           options={[
                             { value: "real", label: "Real customer conversation" },
-                            { value: "synthetic", label: "Synthetic test case" },
+                            { value: "synthetic", label: "Synthetic training example" },
                           ]}
                         />
                         <GlassSelect
@@ -771,28 +793,19 @@ export default function ConversationDetailPage() {
                           onChange={(event) => setLabelShareScope(event.target.value as "workspace_private" | "global_anonymous")}
                           options={[
                             { value: "workspace_private", label: "Private to this workspace" },
-                            { value: "global_anonymous", label: "Share anonymized features globally" },
+                            { value: "global_anonymous", label: "Share anonymized features" },
                           ]}
                         />
                       </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          ["overall", "Overall"],
-                          ["accuracy", "Accuracy"],
-                          ["hallucination", "Hallucination"],
-                          ["resolution", "Resolution"],
-                          ["escalation", "Escalation"],
-                          ["tone", "Tone"],
-                          ["sentiment", "Sentiment"],
-                        ].map(([key, label]) => (
-                          <div key={key}>
-                            <p className="mb-1 text-xs text-[var(--text-secondary)]">{label}</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {Object.entries(trainingLabels).map(([key, value]) => (
+                          <label key={key} className="space-y-1">
+                            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{key}</span>
                             <input
                               type="number"
                               min={0}
                               max={100}
-                              value={trainingLabels[key as keyof typeof trainingLabels]}
+                              value={value}
                               onChange={(event) =>
                                 setTrainingLabels((current) => ({
                                   ...current,
@@ -800,12 +813,11 @@ export default function ConversationDetailPage() {
                                 }))
                               }
                               className="glass-input w-full px-3 py-2 text-sm"
-                              placeholder="%"
+                              placeholder="Optional %"
                             />
-                          </div>
+                          </label>
                         ))}
                       </div>
-
                       <GlassButton
                         size="sm"
                         variant="ghost"
@@ -824,16 +836,12 @@ export default function ConversationDetailPage() {
                       >
                         Start from current scores
                       </GlassButton>
-
                       <GlassTextarea
                         value={labelNotes}
                         onChange={(event) => setLabelNotes(event.target.value)}
-                        className="min-h-[96px]"
-                        placeholder="Why are these labels correct? Capture groundedness, user intent, escalation quality, and any reviewer context."
+                        className="min-h-[104px]"
+                        placeholder="Why are these labels correct?"
                       />
-                      <p className="text-[11px] leading-5 text-[var(--text-muted)]">
-                        Global sharing uses anonymized score features and your labels, not raw transcript text.
-                      </p>
                       <div className="flex gap-2">
                         <GlassButton size="sm" className="w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
                           {labelSetState === "saving" ? "Saving..." : "Save labels"}
@@ -845,17 +853,17 @@ export default function ConversationDetailPage() {
                     </>
                   ) : (
                     <GlassButton size="sm" className="w-full" onClick={() => setShowTrainingForm(true)}>
-                      Add human label
+                      Save training label
                     </GlassButton>
                   )}
-                  {labelSetState === "saved" ? <p className="text-xs text-score-good">Gold-set labels saved.</p> : null}
-                  {labelSetState === "error" ? <p className="text-xs text-score-critical">Failed to save training labels.</p> : null}
+                  {labelSetState === "saved" ? <p className="text-xs text-score-good">Labels saved.</p> : null}
+                  {labelSetState === "error" ? <p className="text-xs text-score-critical">Failed to save labels.</p> : null}
                 </div>
-              </details>
+              </div>
             </div>
-          </details>
-        </div>
-      </section>
+          </aside>
+        </>
+      ) : null}
     </div>
   );
 }

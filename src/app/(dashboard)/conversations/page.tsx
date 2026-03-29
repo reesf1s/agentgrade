@@ -62,6 +62,27 @@ function queueReason(conversation: ConversationRow) {
   return "This conversation looks healthy and does not need urgent attention.";
 }
 
+function priorityReason(conversation: ConversationRow) {
+  if (!conversation.quality_scores) {
+    return conversation.score_status === "waiting_for_completion"
+      ? "Still open"
+      : "Scoring";
+  }
+
+  const score = conversation.quality_scores.overall_score;
+  const summary = (conversation.quality_scores.summary || "").toLowerCase();
+  const flags = conversation.quality_scores.flags || [];
+
+  if (flags.some((flag) => /escalation/i.test(flag)) || /escalat/.test(summary)) return "Escalation handling";
+  if (flags.some((flag) => /resolution/i.test(flag)) || /resolve|next step|follow-up/.test(summary)) return "Resolution weak";
+  if (flags.some((flag) => /ground|crm|record|source|verify/i.test(flag)) || /verify|record|source|detail/.test(summary)) {
+    return "Needs source check";
+  }
+  if (score < 0.5) return "Needs review now";
+  if (score < 0.72) return "Needs a quick pass";
+  return "Likely safe";
+}
+
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -71,6 +92,7 @@ export default function ConversationsPage() {
   const [platform, setPlatform] = useState<string>("all");
   const [escalated, setEscalated] = useState<string>("all");
   const [flag, setFlag] = useState("");
+  const [sortPreset, setSortPreset] = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
 
   const fetchConversations = useCallback(() => {
     setLoading(true);
@@ -123,6 +145,36 @@ export default function ConversationsPage() {
     };
   }, [conversations]);
 
+  const sortedConversations = useMemo(() => {
+    const sorted = [...conversations];
+
+    sorted.sort((a, b) => {
+      const aScore = a.quality_scores?.overall_score ?? -1;
+      const bScore = b.quality_scores?.overall_score ?? -1;
+      const aConfidence = a.quality_scores?.confidence_level === "high" ? 2 : a.quality_scores?.confidence_level === "medium" ? 1 : 0;
+      const bConfidence = b.quality_scores?.confidence_level === "high" ? 2 : b.quality_scores?.confidence_level === "medium" ? 1 : 0;
+
+      switch (sortPreset) {
+        case "risk":
+          return aScore - bScore;
+        case "recent":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "confidence":
+          return aConfidence - bConfidence || aScore - bScore;
+        case "safe":
+          return bScore - aScore;
+        case "review":
+        default: {
+          const aPending = a.quality_scores ? 0 : 1;
+          const bPending = b.quality_scores ? 0 : 1;
+          return aPending - bPending || aScore - bScore;
+        }
+      }
+    });
+
+    return sorted;
+  }, [conversations, sortPreset]);
+
   return (
     <div className="space-y-6 pb-10">
       <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
@@ -152,7 +204,28 @@ export default function ConversationsPage() {
       </section>
 
       <GlassCard className="rounded-[1.4rem] p-4 sm:p-5">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(0,0.55fr))_minmax(0,0.8fr)]">
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            ["review", "Needs review now"],
+            ["risk", "Highest risk"],
+            ["recent", "Most recent"],
+            ["confidence", "Lowest confidence"],
+            ["safe", "Likely safe"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSortPreset(key as typeof sortPreset)}
+              className={`operator-chip transition-colors ${
+                sortPreset === key ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(0,0.55fr))_minmax(0,0.8fr)]">
           <label className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
@@ -212,7 +285,7 @@ export default function ConversationsPage() {
       </GlassCard>
 
       <div className="space-y-3">
-        {conversations.map((conversation) => (
+        {sortedConversations.map((conversation) => (
           <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
             <div className="stack-row">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.65fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] xl:items-center">
@@ -225,7 +298,7 @@ export default function ConversationsPage() {
                       <span className="operator-chip score-bg-warning score-warning">Escalated</span>
                     ) : null}
                   </div>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+                  <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
                     {queueReason(conversation)}
                   </p>
                   <div className="mt-3 stack-row-meta">
@@ -236,7 +309,7 @@ export default function ConversationsPage() {
                 </div>
 
                 <div className="metric-card px-4 py-3">
-                  <p className="section-label">Queue</p>
+                  <p className="section-label">Priority</p>
                   <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                     {conversation.quality_scores?.overall_score !== undefined && conversation.quality_scores.overall_score < 0.5 ? (
                       <AlertTriangle className="h-4 w-4 text-score-critical" />
@@ -247,6 +320,7 @@ export default function ConversationsPage() {
                     )}
                     <span>{queueLabel(conversation)}</span>
                   </div>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">{priorityReason(conversation)}</p>
                 </div>
 
                 <div className="metric-card px-4 py-3">
@@ -261,10 +335,9 @@ export default function ConversationsPage() {
                 </div>
 
                 <div className="metric-card px-4 py-3">
-                  <p className="section-label">Open review</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Read the transcript, see the judgment, and decide whether anything needs action.
-                  </p>
+                  <p className="section-label">Next</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">Open review</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Read the transcript and make a call.</p>
                 </div>
               </div>
             </div>
