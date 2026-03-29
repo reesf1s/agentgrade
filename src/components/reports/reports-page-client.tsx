@@ -57,8 +57,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="mb-6 rounded-[1.1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="enterprise-kicker">Reports</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Weekly quality report</h1>
@@ -70,7 +70,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-4 gap-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Conversations Scored"
           value={summary?.total_scored ?? 0}
@@ -102,7 +102,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         />
       </div>
 
-      <GlassCard className="mb-6 p-6">
+      <GlassCard className="mb-6 rounded-[1rem] p-5">
         <h2 className="mb-4 text-sm font-medium text-[var(--text-primary)]">Quality Trend</h2>
         {trendData.length === 0 ? (
           <div className="flex h-56 items-center justify-center text-sm text-[var(--text-muted)]">
@@ -125,8 +125,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         )}
       </GlassCard>
 
-      <div className="mb-6 grid grid-cols-2 gap-6">
-        <GlassCard className="p-6">
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <NotableIcon className={`h-4 w-4 ${notableIconClass}`} />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Notable Change</h2>
@@ -141,7 +141,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           </p>
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Best prompt changes</h2>
@@ -164,8 +164,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </GlassCard>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-6">
-        <GlassCard className="p-6">
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge gaps</h2>
@@ -187,7 +187,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           )}
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Siren className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts triggered</h2>
@@ -214,8 +214,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </GlassCard>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-6">
-        <GlassCard className="p-6">
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Team-wide improvements</h2>
@@ -251,7 +251,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           )}
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Recurring issues</h2>
@@ -277,7 +277,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           )}
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Recommended Interventions</h2>
@@ -304,7 +304,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </GlassCard>
       </div>
 
-      <GlassCard className="p-6">
+      <GlassCard className="rounded-[1rem] p-5">
         <div className="mb-4 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
           <h2 className="text-sm font-medium text-[var(--text-primary)]">Worst Conversations This Week</h2>

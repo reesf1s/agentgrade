@@ -1,19 +1,11 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
-import { scoreConversation } from "@/lib/scoring";
-import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import { isManualCalibrationConversation } from "@/lib/calibration";
 
-function shouldRefreshScore(
-  conversation: { created_at?: string | null; ended_at?: string | null; metadata?: Record<string, unknown> | null },
-  qualityScore?: { flags?: string[] | null; scoring_model_version?: string | null } | null
-) {
-  if (!qualityScore) return false;
-  if ((qualityScore.flags || []).includes("scoring_error")) return true;
-  if (qualityScore.scoring_model_version !== SCORING_MODEL_VERSION) return true;
-  return false;
+function hasScoreError(qualityScore?: { flags?: string[] | null } | null) {
+  return (qualityScore?.flags || []).includes("scoring_error");
 }
 
 /**
@@ -106,8 +98,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const displayedRescoreIds: string[] = [];
-
     conversations = conversations
       .filter((conversation) => !isManualCalibrationConversation((conversation.metadata as Record<string, unknown> | null) || null))
       .map((conversation) => {
@@ -117,7 +107,7 @@ export async function GET(request: NextRequest) {
 
       const metadata = (conversation.metadata as Record<string, unknown> | null) || null;
       const conversationIncomplete = isConversationExplicitlyIncomplete(metadata);
-      const needsRefresh = shouldRefreshScore(conversation, qualityScore);
+      const scoreFailed = hasScoreError(qualityScore);
 
       const normalizedQualityScore = qualityScore
         ? {
@@ -129,32 +119,18 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
-      if (needsRefresh && !conversationIncomplete && displayedRescoreIds.length < 10) {
-        displayedRescoreIds.push(conversation.id as string);
-      }
-
       return {
         ...conversation,
-        quality_scores: needsRefresh ? null : normalizedQualityScore,
+        quality_scores: scoreFailed ? null : normalizedQualityScore,
         score_status: conversationIncomplete
           ? "waiting_for_completion"
-          : needsRefresh
-            ? "refreshing"
+          : scoreFailed
+            ? "pending"
             : normalizedQualityScore
               ? "ready"
               : "pending",
       };
       });
-
-    after(async () => {
-      for (const conversationId of displayedRescoreIds) {
-        try {
-          await scoreConversation(conversationId);
-        } catch (error) {
-          console.error(`Conversation list refresh failed for ${conversationId}:`, error);
-        }
-      }
-    });
 
     return NextResponse.json({
       conversations,

@@ -1,11 +1,9 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
-import { scoreConversation } from "@/lib/scoring";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import type { PromptImprovement, QualityScore } from "@/lib/db/types";
-import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 
 function sanitizeReplayArtifactSignals(
   qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
@@ -52,7 +50,6 @@ function isStaleQualityScore(
 ): boolean {
   if (!qualityScore) return true;
   if ((qualityScore.flags || []).includes("scoring_error")) return true;
-  if (qualityScore.scoring_model_version !== SCORING_MODEL_VERSION) return true;
 
   const scoredAt = qualityScore.scored_at ? new Date(qualityScore.scored_at).getTime() : NaN;
   const scoredTurnCount = qualityScore.structural_metrics?.turn_count;
@@ -129,16 +126,6 @@ export async function GET(
     const scoreIsStale = conversationIncomplete
       ? false
       : isStaleQualityScore(sanitizedQualityScore, compactedMessages.length, latestMessageTimestamp);
-
-    if (hadReplayArtifacts || (scoreIsStale && !conversationIncomplete)) {
-      after(async () => {
-        try {
-          await scoreConversation(id);
-        } catch (error) {
-          console.error(`Replay-artifact rescore failed for conversation ${id}:`, error);
-        }
-      });
-    }
 
     return NextResponse.json(
       {

@@ -27,18 +27,18 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
   return (
     <div className="max-w-6xl pb-10">
-      <div className="mb-8 rounded-[1.65rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <div className="mb-6 rounded-[1.1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="enterprise-kicker">Overview</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
-              Know whether your AI is actually helping
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">
+              See where your assistant is helping, drifting, or bluffing
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              See where quality is holding, where trust is slipping, and what to improve next without combing through every transcript.
+              Follow quality, understand repeated failures, and decide what to improve next without reading every conversation.
             </p>
           </div>
-          <div className="grid gap-3 md:min-w-[34rem] sm:grid-cols-3">
+          <div className="grid gap-3 md:min-w-[30rem] sm:grid-cols-3">
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">Quality state</p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{trustState}</p>
@@ -55,7 +55,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Average quality"
           value={`${(avgScore * 100).toFixed(0)}%`}
@@ -94,7 +94,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       </div>
 
       <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <GlassCard className="rounded-[1.25rem] p-6">
+        <GlassCard className="rounded-[1rem] p-5">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <p className="enterprise-kicker">Trend</p>
@@ -147,7 +147,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </GlassCard>
 
         <div className="space-y-4">
-          <GlassCard className="rounded-[1.25rem] p-5">
+          <GlassCard className="rounded-[1rem] p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="enterprise-section-title">Priority</p>
@@ -175,7 +175,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             )}
           </GlassCard>
 
-          <GlassCard className="rounded-[1.25rem] p-5">
+          <GlassCard className="rounded-[1rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts that need action</h2>
@@ -194,7 +194,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             )}
           </GlassCard>
 
-          <GlassCard className="rounded-[1.25rem] p-5">
+          <GlassCard className="rounded-[1rem] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
               <h2 className="text-sm font-medium text-[var(--text-primary)]">Recurring issues</h2>
@@ -218,7 +218,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <GlassCard className="mt-6 rounded-[1.25rem] p-6">
+      <GlassCard className="mt-6 rounded-[1rem] p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
@@ -237,7 +237,29 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             to start ingesting data.
           </div>
         ) : (
-          <table className="glass-table">
+          <>
+          <div className="space-y-3 md:hidden">
+            {data.conversations.slice(0, 6).map((conversation) => (
+              <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block rounded-[0.95rem] border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                      {conversation.customer_identifier || "Unknown"}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      {conversation.platform} · {formatDate(conversation.created_at)}
+                    </p>
+                  </div>
+                  {conversation.quality_scores ? (
+                    <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
+                  ) : (
+                    <span className="text-xs text-[var(--text-muted)]">Pending</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+          <table className="glass-table hidden md:table">
             <thead>
               <tr>
                 <th>Customer</th>
@@ -281,6 +303,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </GlassCard>
     </div>

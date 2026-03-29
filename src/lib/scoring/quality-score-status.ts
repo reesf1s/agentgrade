@@ -1,5 +1,4 @@
 import type { FailurePattern, QualityScore } from "@/lib/db/types";
-import { SCORING_MODEL_VERSION } from "@/lib/scoring/version";
 
 type ScoreLike = {
   overall_score?: number;
@@ -50,9 +49,6 @@ export function isGroundingRiskOnlyScore(score?: ScoreLike | null): boolean {
 
 export function isInsightEligibleScore(score?: ScoreLike | null): boolean {
   if (!isAnalyticsEligibleScore(score)) return false;
-  if (score?.scoring_model_version && score.scoring_model_version !== SCORING_MODEL_VERSION) {
-    return false;
-  }
 
   const lowConfidence = normalizedConfidenceLevel(score) === "low";
   if (lowConfidence && isGroundingRiskOnlyScore(score)) {

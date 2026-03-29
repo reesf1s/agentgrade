@@ -1,7 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import { scoreConversation } from "@/lib/scoring";
-import { SCORING_MODEL_VERSION } from "./version";
 
 const QUIET_PERIOD_MS = 10 * 60 * 1000;
 const MAX_PENDING_SCORE_BATCH = 10;
@@ -30,12 +29,10 @@ export function needsFreshScore(
   qualityScore?: {
     scored_at?: string | null;
     flags?: string[] | null;
-    scoring_model_version?: string | null;
   } | null
 ): boolean {
   if (!qualityScore?.scored_at) return true;
   if ((qualityScore.flags || []).includes("scoring_error")) return true;
-  if (qualityScore.scoring_model_version !== SCORING_MODEL_VERSION) return true;
 
   const conversationTimestamp =
     toTimestamp(conversation.ended_at) || toTimestamp(conversation.created_at);
@@ -51,7 +48,7 @@ export function needsFreshScore(
 export async function queueEligibleConversationScores(workspaceId: string) {
   const { data: conversations, error } = await supabaseAdmin
     .from("conversations")
-    .select("id, ended_at, created_at, metadata, quality_scores:quality_scores(scored_at, flags, scoring_model_version), messages:messages!inner(role)")
+    .select("id, ended_at, created_at, metadata, quality_scores:quality_scores(scored_at, flags), messages:messages!inner(role)")
     .eq("workspace_id", workspaceId)
     .in("messages.role", ["agent", "human_agent"])
     .order("ended_at", { ascending: false, nullsFirst: false })

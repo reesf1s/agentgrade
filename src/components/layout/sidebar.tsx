@@ -85,21 +85,21 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-[var(--border-subtle)] bg-[var(--panel)] px-4 py-4 shadow-2xl transition-transform duration-200 lg:left-5 lg:top-5 lg:h-[calc(100vh-2.5rem)] lg:w-[16.5rem] lg:rounded-[2rem] lg:border lg:shadow-none lg:glass-sidebar",
+          "fixed inset-y-0 left-0 z-50 flex w-[18rem] flex-col border-r border-[var(--border-subtle)] bg-[var(--panel)] px-4 py-4 shadow-2xl transition-transform duration-200 lg:left-5 lg:top-5 lg:h-[calc(100vh-2.5rem)] lg:w-[15.5rem] lg:rounded-[1.5rem] lg:border lg:shadow-none lg:glass-sidebar",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         <div className="mb-5 flex items-center justify-between px-2">
           <Link href="/dashboard" prefetch className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--sidebar-accent)] text-[var(--text-primary)] shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--sidebar-accent)] text-[var(--text-primary)]">
               <Zap className="h-4 w-4" />
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">
                 AgentGrade
               </p>
-              <span className="text-[16px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-                Quality control
+              <span className="text-[15px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                Quality ops
               </span>
             </div>
           </Link>
@@ -108,7 +108,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className="mb-5 rounded-[1.35rem] border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
+        <div className="mb-4 rounded-[1rem] border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">
               Workspace
@@ -118,16 +118,16 @@ export function Sidebar() {
             </span>
           </div>
           <p className="text-sm font-semibold leading-5 text-[var(--text-primary)]">
-            Find what is working, what is risky, and what to fix next
+            Review quality, spot drift, and tighten your assistant.
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Focus</p>
-              <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Useful scoring</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Primary use</p>
+              <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Trust reviews</p>
             </div>
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Mode</p>
-              <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Live review</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Status</p>
+              <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">Tracking live</p>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ export function Sidebar() {
                 prefetch
                 onMouseEnter={() => router.prefetch(item.href)}
                 className={cn(
-                  "group flex items-center gap-3 rounded-[1rem] px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  "group flex items-center gap-3 rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-sm"
                     : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]"
@@ -157,7 +157,7 @@ export function Sidebar() {
               >
                 <span
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] transition-all duration-200",
+                    "flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-subtle)] transition-all duration-200",
                     isActive && "bg-[var(--panel)]"
                   )}
                 >

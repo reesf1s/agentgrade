@@ -4,24 +4,24 @@
 
 /* ─── Light Theme (default) ─────────────────────────────────────── */
 :root {
-  --background: #eef2f6;
+  --background: #f3f5f8;
   --foreground: #0f172a;
-  --page-shell: rgba(250, 252, 253, 0.94);
-  --page-shell-border: rgba(15, 23, 42, 0.06);
-  --panel: rgba(255, 255, 255, 0.94);
-  --panel-subtle: rgba(247, 249, 252, 0.96);
-  --surface: rgba(15, 23, 42, 0.045);
-  --surface-strong: rgba(15, 23, 42, 0.07);
-  --surface-soft: rgba(15, 23, 42, 0.02);
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-strong: rgba(15, 23, 42, 0.14);
-  --glass-bg: rgba(255, 255, 255, 0.96);
+  --page-shell: rgba(250, 251, 253, 0.98);
+  --page-shell-border: rgba(15, 23, 42, 0.08);
+  --panel: rgba(255, 255, 255, 0.98);
+  --panel-subtle: rgba(248, 250, 252, 0.98);
+  --surface: rgba(15, 23, 42, 0.05);
+  --surface-strong: rgba(15, 23, 42, 0.09);
+  --surface-soft: rgba(15, 23, 42, 0.025);
+  --border-subtle: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.15);
+  --glass-bg: rgba(255, 255, 255, 0.98);
   --glass-bg-hover: rgba(255, 255, 255, 1);
   --glass-bg-elevated: rgba(255, 255, 255, 1);
-  --glass-border: rgba(15, 23, 42, 0.065);
-  --glass-border-hover: rgba(15, 23, 42, 0.12);
-  --glass-shadow: 0 10px 22px rgba(15, 23, 42, 0.045);
-  --glass-shadow-elevated: 0 16px 38px rgba(15, 23, 42, 0.06);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-border-hover: rgba(15, 23, 42, 0.14);
+  --glass-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  --glass-shadow-elevated: 0 14px 30px rgba(15, 23, 42, 0.05);
   --text-primary: #0f172a;
   --text-secondary: #445164;
   --text-muted: #6a778b;
@@ -31,32 +31,32 @@
   --btn-primary-hover: #0f172a;
   --btn-primary-text: #ffffff;
   --focus-ring: rgba(59, 130, 246, 0.14);
-  --app-shell-shadow: 0 24px 60px rgba(15, 23, 42, 0.07);
+  --app-shell-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
   --table-row-hover: rgba(15, 23, 42, 0.03);
-  --sidebar-accent: rgba(15, 23, 42, 0.04);
+  --sidebar-accent: rgba(15, 23, 42, 0.05);
 }
 
 /* ─── Dark Theme ────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
-  --background: #0a0f16;
+  --background: #090d14;
   --foreground: rgba(244, 247, 252, 0.96);
-  --page-shell: rgba(11, 16, 24, 0.92);
-  --page-shell-border: rgba(148, 163, 184, 0.1);
-  --panel: rgba(14, 20, 29, 0.93);
-  --panel-subtle: rgba(17, 24, 35, 0.95);
+  --page-shell: rgba(13, 18, 28, 0.98);
+  --page-shell-border: rgba(148, 163, 184, 0.12);
+  --panel: rgba(14, 20, 30, 0.98);
+  --panel-subtle: rgba(17, 24, 35, 0.98);
   --surface: rgba(148, 163, 184, 0.08);
   --surface-strong: rgba(148, 163, 184, 0.12);
-  --surface-soft: rgba(148, 163, 184, 0.04);
-  --border-subtle: rgba(148, 163, 184, 0.12);
-  --border-strong: rgba(226, 232, 240, 0.2);
-  --glass-bg: rgba(15, 21, 30, 0.94);
-  --glass-bg-hover: rgba(17, 24, 35, 0.98);
-  --glass-bg-elevated: rgba(18, 25, 36, 0.98);
-  --glass-border: rgba(148, 163, 184, 0.11);
-  --glass-border-hover: rgba(191, 219, 254, 0.22);
-  --glass-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
-  --glass-shadow-elevated: 0 18px 34px rgba(0, 0, 0, 0.3);
+  --surface-soft: rgba(148, 163, 184, 0.045);
+  --border-subtle: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(226, 232, 240, 0.22);
+  --glass-bg: rgba(14, 20, 30, 0.98);
+  --glass-bg-hover: rgba(17, 24, 35, 1);
+  --glass-bg-elevated: rgba(17, 24, 35, 1);
+  --glass-border: rgba(148, 163, 184, 0.14);
+  --glass-border-hover: rgba(191, 219, 254, 0.2);
+  --glass-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  --glass-shadow-elevated: 0 14px 30px rgba(0, 0, 0, 0.26);
   --text-primary: rgba(246, 248, 252, 0.96);
   --text-secondary: rgba(211, 219, 230, 0.82);
   --text-muted: rgba(148, 163, 184, 0.7);
@@ -66,16 +66,14 @@
   --btn-primary-hover: #ffffff;
   --btn-primary-text: #111827;
   --focus-ring: rgba(125, 211, 252, 0.14);
-  --app-shell-shadow: 0 28px 68px rgba(0, 0, 0, 0.34);
+  --app-shell-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
   --table-row-hover: rgba(148, 163, 184, 0.05);
   --sidebar-accent: rgba(148, 163, 184, 0.05);
 }
 
 body {
   color: var(--foreground);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.64) 0%, rgba(238, 242, 246, 0.94) 100%),
-    var(--background);
+  background: var(--background);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -83,37 +81,35 @@ body {
 }
 
 .dark body {
-  background:
-    linear-gradient(180deg, rgba(10, 15, 22, 0.92) 0%, rgba(8, 13, 19, 0.98) 100%),
-    var(--background);
+  background: var(--background);
 }
 
 /* ─── Glass Components ──────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: var(--glass-shadow);
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .glass:hover {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
-  transform: translateY(-1px);
+  box-shadow: var(--glass-shadow-elevated);
 }
 
 .glass-elevated {
   background: var(--glass-bg-elevated);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: 18px;
   box-shadow: var(--glass-shadow-elevated);
 }
 
 .glass-static {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: var(--glass-shadow);
 }
 
@@ -121,15 +117,13 @@ body {
   background: var(--panel);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--app-shell-shadow);
-  backdrop-filter: blur(20px);
 }
 
 .dashboard-shell {
   background: var(--page-shell);
   border: 1px solid var(--page-shell-border);
-  border-radius: 30px;
+  border-radius: 24px;
   box-shadow: var(--app-shell-shadow);
-  backdrop-filter: blur(20px);
 }
 
 html {
@@ -176,7 +170,6 @@ html {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
   box-shadow: var(--glass-shadow);
-  transform: translateY(-1px);
 }
 
 .glass-button-primary {
@@ -258,14 +251,13 @@ html {
 }
 
 .dashboard-topbar {
-  background: color-mix(in srgb, var(--panel) 76%, transparent);
+  background: var(--panel);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(18px);
+  box-shadow: var(--glass-shadow);
 }
 
 .dark .dashboard-topbar {
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--glass-shadow);
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────── */
