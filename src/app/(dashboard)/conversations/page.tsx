@@ -182,35 +182,20 @@ export default function ConversationsPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
+      <section className="glass-static rounded-[1.25rem] p-4 sm:p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-eyebrow">Review queue</p>
-            <h1 className="mt-2 page-title">Move through conversations quickly.</h1>
-            <p className="mt-3 page-subtitle">
-              Open the reviews that need judgment, ignore the healthy ones, and keep score-state noise out of the way.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[28rem]">
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Visible</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{total}</p>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Needs review</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{stats.reviewNext}</p>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Waiting</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{stats.pending}</p>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Processed</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{stats.reviewed}</p>
-            </div>
+            <h1 className="mt-2 page-title">Review inbox.</h1>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <span className="text-[var(--text-primary)]">Visible: {total}</span>
+          <span className="text-[var(--text-primary)]">Needs review: {stats.reviewNext}</span>
+          <span className="text-[var(--text-primary)]">Waiting: {stats.pending}</span>
+          <span className="text-[var(--text-primary)]">Processed: {stats.reviewed}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
           <span>{stats.reviewNext} to review</span>
           <span>•</span>
           <span>{conversations.filter((conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.5).length} high risk</span>
@@ -225,7 +210,7 @@ export default function ConversationsPage() {
         </div>
       </section>
 
-      <GlassCard className="rounded-[1.4rem] p-4 sm:p-5">
+      <GlassCard className="rounded-[1.2rem] p-3.5 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           {[
             ["review", "Needs review now"],
@@ -345,23 +330,17 @@ export default function ConversationsPage() {
                     <p className="truncate text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                       {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {conversation.was_escalated ? (
-                        <span className="operator-chip score-bg-warning score-warning">Escalated</span>
-                      ) : null}
-                      {conversation.quality_scores?.flags?.slice(0, 2).map((flag) => (
-                        <span key={flag} className="operator-chip">
-                          {flag.replaceAll("_", " ")}
-                        </span>
-                      ))}
-                    </div>
+                    {conversation.was_escalated ? (
+                      <span className="operator-chip score-bg-warning score-warning">Escalated</span>
+                    ) : null}
                   </div>
                   <p className="mt-1 max-w-3xl text-sm text-[var(--text-secondary)]">
-                    {priorityReason(conversation)} · {formatDate(conversation.created_at)}
+                    {conversation.quality_scores?.flags?.slice(0, 2).map((flag) => flag.replaceAll("_", " ")).join(" • ") || priorityReason(conversation)}
                   </p>
                   <div className="mt-2 stack-row-meta">
                     <span className="operator-chip capitalize">{conversation.platform}</span>
                     <span className="operator-chip">{statusLabel(conversation)}</span>
+                    <span className="operator-chip">{formatDate(conversation.created_at)}</span>
                   </div>
                 </div>
 

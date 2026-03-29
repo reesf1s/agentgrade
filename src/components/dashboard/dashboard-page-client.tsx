@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   ShieldAlert,
@@ -18,7 +17,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { GlassCard } from "@/components/ui/glass-card";
 import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
 import { formatDate, scoreColor } from "@/lib/utils";
 import type { DashboardData } from "@/lib/dashboard-data";
@@ -78,7 +76,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      <section className="space-y-6">
+      <section className="space-y-5">
         <div>
           <div className="mb-3 flex items-center justify-between gap-4">
             <p className="text-sm font-medium text-[var(--text-primary)]">Needs attention this week</p>
@@ -153,22 +151,17 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-        <GlassCard className="rounded-[1.4rem] p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="section-label">Trend</p>
-              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Quality trend</h2>
-            </div>
-            <span className="operator-chip">Last 30 days</span>
+      <section className="space-y-5">
+        <div className="border-b border-[var(--divider)] pb-4">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Trend</p>
+            <span className="operator-chip">30 days</span>
           </div>
 
           {data.trend_data.length === 0 ? (
-            <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-soft)] text-sm text-[var(--text-muted)]">
-              Ingest conversations to start seeing quality movement.
-            </div>
+            <p className="text-sm text-[var(--text-muted)]">No trend data.</p>
           ) : (
-            <div className="h-72">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.trend_data}>
                   <CartesianGrid stroke="var(--divider)" vertical={false} />
@@ -201,43 +194,20 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               </ResponsiveContainer>
             </div>
           )}
-        </GlassCard>
+        </div>
 
-        <GlassCard className="rounded-[1.4rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Workspace health</h2>
-          </div>
-          <div className="grid gap-3">
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Escalations</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{percentage(escalationRate)}</p>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Needed a human handoff</p>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Risky replies</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{percentage(riskyReplies)}</p>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">Recent usable reviews with weak hallucination prevention</p>
-            </div>
-            <div className="metric-card px-4 py-4">
-              <p className="section-label">Most recent review</p>
-              {recentConversation ? (
-                <>
-                  <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                    {recentConversation.customer_identifier || "Unknown conversation"}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{formatDate(recentConversation.created_at)}</p>
-                  <Link href={`/conversations/${recentConversation.id}`} className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-                    Open review
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </>
-              ) : (
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">No recent review available.</p>
-              )}
-            </div>
-          </div>
-        </GlassCard>
+        <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
+          <span className="text-[var(--text-primary)]">Escalations: {percentage(escalationRate)}</span>
+          <span className="text-[var(--text-primary)]">Risky replies: {percentage(riskyReplies)}</span>
+          <span className="text-[var(--text-primary)]">
+            Recent: {recentConversation ? recentConversation.customer_identifier || formatDate(recentConversation.created_at) : "None"}
+          </span>
+          {recentConversation ? (
+            <Link href={`/conversations/${recentConversation.id}`} className="text-[var(--text-primary)] underline-offset-4 hover:underline">
+              Open review
+            </Link>
+          ) : null}
+        </div>
       </section>
     </div>
   );

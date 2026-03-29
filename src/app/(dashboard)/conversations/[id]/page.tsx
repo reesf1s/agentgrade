@@ -461,39 +461,30 @@ export default function ConversationDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to review queue
       </Link>
 
-      <section className="glass-static rounded-[1.25rem] px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-lg font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-              {conv.customer_identifier || "Unknown customer"}
-            </p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              {conv.platform} · {conv.message_count} messages · {new Date(conv.created_at).toLocaleDateString("en-GB")}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {qs ? <ScoreBadge score={qs.overall_score} size="sm" /> : <span className="operator-chip">Pending</span>}
-            <span className="operator-chip">{assessmentLabel}</span>
-            {confidenceLevel ? <span className="operator-chip capitalize">{confidenceLevel}</span> : null}
-            <span className="operator-chip">{reviewDisposition ? reviewDisposition.replaceAll("_", " ") : actionState}</span>
-            {nextConversationId ? (
-              <Link href={`/conversations/${nextConversationId}`} className="glass-button">
-                Open next
-              </Link>
-            ) : null}
-            <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
-              Advanced
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium text-[var(--text-primary)]">{assessmentLabel}</span>
-          <span className="text-[var(--text-secondary)]">—</span>
-          <span className="text-[var(--text-secondary)]">
-            {groundingOnly ? "Useful answer, check record details before reuse." : displaySummary}
+      <section className="border-b border-[var(--divider)] pb-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="truncate font-semibold text-[var(--text-primary)]">
+            {conv.customer_identifier || "Unknown customer"}
           </span>
+          <span className="text-[var(--text-secondary)]">{conv.platform}</span>
+          <span className="text-[var(--text-secondary)]">{conv.message_count} messages</span>
+          <span className="text-[var(--text-secondary)]">{new Date(conv.created_at).toLocaleDateString("en-GB")}</span>
+          {qs ? <ScoreBadge score={qs.overall_score} size="sm" /> : <span className="operator-chip">Pending</span>}
+          <span className="operator-chip">{assessmentLabel}</span>
+          {confidenceLevel ? <span className="operator-chip capitalize">{confidenceLevel}</span> : null}
+          <span className="operator-chip">{reviewDisposition ? reviewDisposition.replaceAll("_", " ") : actionState}</span>
+          {nextConversationId ? (
+            <Link href={`/conversations/${nextConversationId}`} className="glass-button">
+              Open next
+            </Link>
+          ) : null}
+          <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
+            Advanced
+          </button>
         </div>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          {groundingOnly ? "Useful answer — verify record details." : displaySummary}
+        </p>
       </section>
 
       <section className="border-b border-[var(--divider)] pb-3 text-sm">
@@ -572,7 +563,6 @@ export default function ConversationDetailPage() {
 
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <div className="border-b border-[var(--divider)] pb-3">
-            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">Scores</p>
             {qs ? (
               <div className="flex flex-wrap gap-2 text-sm">
                 {scoreRows.map(({ label, score }) => (
@@ -593,8 +583,7 @@ export default function ConversationDetailPage() {
             )}
           </div>
 
-          <div className="border-b border-[var(--divider)] pb-3 xl:sticky xl:top-24">
-            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">Disposition</p>
+          <div className="border-b border-[var(--divider)] pb-3 xl:sticky xl:top-20">
             <div className="flex flex-wrap gap-2">
               {[
                 ["safe", "Safe"],
@@ -632,11 +621,8 @@ export default function ConversationDetailPage() {
               <div>
                 <p className="page-eyebrow">Advanced review</p>
                 <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-                  Claim checks, overrides, and training
+                  Claims, evidence, overrides, training
                 </h2>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Use these tools when the core review is not enough to make a call.
-                </p>
               </div>
               <button type="button" onClick={() => setShowAdvancedDrawer(false)} className="operator-chip">
                 <X className="h-4 w-4" />
