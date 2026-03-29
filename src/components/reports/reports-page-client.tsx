@@ -56,9 +56,9 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-eyebrow">Reports</p>
-            <h1 className="mt-2 page-title">One weekly quality readout for the workspace.</h1>
+            <h1 className="mt-2 page-title">Weekly quality summary.</h1>
             <p className="mt-3 page-subtitle">
-              {report.week_start} to {report.week_end}. Use this to explain what changed, what matters, and what the team should do next.
+              {report.week_start} to {report.week_end}. Scan what changed, what matters, and what to do next.
             </p>
           </div>
           <button className="glass-button glass-button-primary">Export PDF</button>
@@ -148,7 +148,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           <GlassCard className="rounded-[1.4rem] p-5">
             <div className="mb-3 flex items-center gap-2">
               <TrendIcon className={`h-4 w-4 ${trendTone.tone}`} />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">This week in one line</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">This week</h2>
             </div>
             <p className="text-sm font-semibold text-[var(--text-primary)]">{trendTone.title}</p>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{trendTone.description}</p>
@@ -157,11 +157,11 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
           <GlassCard className="rounded-[1.4rem] p-5">
             <div className="mb-3 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recommended next moves</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Next moves</h2>
             </div>
             {report.organization_recommendations.length === 0 ? (
               <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                No org-wide change is standing out yet.
+                No org-wide change stands out this week.
               </p>
             ) : (
               <div className="stack-list">
@@ -187,7 +187,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recurring issues</h2>
           </div>
           {report.patterns.length === 0 ? (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">No repeated issue was detected this week.</p>
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No repeated issue stands out this week.</p>
           ) : (
             <div className="stack-list">
               {report.patterns.map((pattern) => (
@@ -210,7 +210,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <GlassCard className="rounded-[1.4rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Worst conversations this week</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Lowest-scoring conversations</h2>
           </div>
           {summary?.top_failures?.length ? (
             <div className="stack-list">

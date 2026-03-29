@@ -1,24 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowRight, Check, RefreshCw, X } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SeverityBadge } from "@/components/ui/score-badge";
 import type { FailurePattern } from "@/lib/db/types";
+import { getIssueStateMap, setIssueState, type IssueWorkflowState } from "@/lib/review-workflow";
 
-function issueState(pattern: FailurePattern) {
+function issueState(pattern: FailurePattern, savedState?: IssueWorkflowState) {
+  if (savedState) {
+    const labels: Record<IssueWorkflowState, string> = {
+      new: "New",
+      monitoring: "Monitoring",
+      actioning: "Actioning",
+      quieted: "Quieted",
+      resolved: "Resolved",
+    };
+    return labels[savedState];
+  }
   if (pattern.is_resolved) return "Resolved";
   if (pattern.severity === "critical" || pattern.severity === "high") return "Action needed";
   if (pattern.affected_conversation_ids.length >= 6) return "Watching";
   return "New";
 }
 
-function issueStateTone(pattern: FailurePattern) {
-  const state = issueState(pattern);
+function issueStateTone(pattern: FailurePattern, savedState?: IssueWorkflowState) {
+  const state = issueState(pattern, savedState);
   if (state === "Resolved") return "score-bg-good score-good";
-  if (state === "Action needed") return "score-bg-warning score-warning";
+  if (state === "Actioning" || state === "Action needed") return "score-bg-warning score-warning";
   return "";
 }
 
@@ -36,6 +47,16 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
   const [resolving, setResolving] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<FailurePattern | null>(null);
+  const [issueStates, setIssueStates] = useState<Record<string, IssueWorkflowState>>({});
+
+  useEffect(() => {
+    setIssueStates(getIssueStateMap());
+  }, []);
+
+  function updateIssueWorkflowState(patternId: string, state: IssueWorkflowState) {
+    setIssueState(patternId, state);
+    setIssueStates((current) => ({ ...current, [patternId]: state }));
+  }
 
   async function resolvePattern(patternId: string) {
     setResolving(patternId);
@@ -122,7 +143,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <SeverityBadge severity={pattern.severity} />
-                            <span className={`operator-chip ${issueStateTone(pattern)}`}>{issueState(pattern)}</span>
+                            <span className={`operator-chip ${issueStateTone(pattern, issueStates[pattern.id])}`}>{issueState(pattern, issueStates[pattern.id])}</span>
                             <span className="operator-chip">
                               {pattern.affected_conversation_ids.length} conversations
                             </span>
@@ -149,6 +170,17 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     <div className="metric-card px-4 py-4">
                       <p className="section-label">What to do next</p>
                       <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{nextAction(pattern)}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "actioning")}>
+                          Create fix
+                        </button>
+                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "monitoring")}>
+                          Monitor
+                        </button>
+                        <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(pattern.id, "quieted")}>
+                          Quiet for now
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -222,7 +254,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <SeverityBadge severity={selectedPattern.severity} />
-                  <span className={`operator-chip ${issueStateTone(selectedPattern)}`}>{issueState(selectedPattern)}</span>
+                  <span className={`operator-chip ${issueStateTone(selectedPattern, issueStates[selectedPattern.id])}`}>{issueState(selectedPattern, issueStates[selectedPattern.id])}</span>
                   <span className="operator-chip">{selectedPattern.affected_conversation_ids.length} examples</span>
                 </div>
               </div>
@@ -240,7 +272,30 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 <div className="compact-list-item">
                   <p className="section-label">Recommended next action</p>
                   <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">{nextAction(selectedPattern)}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "actioning")}>
+                      Track fix
+                    </button>
+                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "quieted")}>
+                      Recheck next week
+                    </button>
+                    <button type="button" className="operator-chip" onClick={() => updateIssueWorkflowState(selectedPattern.id, "resolved")}>
+                      Mark resolved
+                    </button>
+                  </div>
                 </div>
+              </div>
+
+              <div className="compact-list-item">
+                <p className="section-label">Current state</p>
+                <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                  {issueState(selectedPattern, issueStates[selectedPattern.id])}
+                </p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  {selectedPattern.severity === "critical" || selectedPattern.severity === "high"
+                    ? "This issue is active enough to warrant a tracked response."
+                    : "Keep this issue visible until it quiets down or proves safe to ignore."}
+                </p>
               </div>
 
               {selectedPattern.prompt_fix ? (

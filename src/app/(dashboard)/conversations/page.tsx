@@ -6,6 +6,7 @@ import { AlertTriangle, Clock3, Filter, Search, ShieldCheck } from "lucide-react
 import { GlassCard } from "@/components/ui/glass-card";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { formatDate } from "@/lib/utils";
+import { getQueueStateMap, setQueueState, type QueueWorkflowState } from "@/lib/review-workflow";
 
 interface ConversationRow {
   id: string;
@@ -93,6 +94,11 @@ export default function ConversationsPage() {
   const [escalated, setEscalated] = useState<string>("all");
   const [flag, setFlag] = useState("");
   const [sortPreset, setSortPreset] = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
+  const [queueStates, setQueueStates] = useState<Record<string, QueueWorkflowState>>({});
+
+  useEffect(() => {
+    setQueueStates(getQueueStateMap());
+  }, []);
 
   const fetchConversations = useCallback(() => {
     setLoading(true);
@@ -142,8 +148,9 @@ export default function ConversationsPage() {
       scored: scored.length,
       reviewNext: reviewNext.length,
       pending: pending.length,
+      reviewed: Object.values(queueStates).filter((value) => value === "reviewed" || value === "safe").length,
     };
-  }, [conversations]);
+  }, [conversations, queueStates]);
 
   const sortedConversations = useMemo(() => {
     const sorted = [...conversations];
@@ -175,6 +182,19 @@ export default function ConversationsPage() {
     return sorted;
   }, [conversations, sortPreset]);
 
+  function updateQueueState(conversationId: string, state: QueueWorkflowState) {
+    setQueueState(conversationId, state);
+    setQueueStates((current) => ({ ...current, [conversationId]: state }));
+  }
+
+  function rowWorkflowState(conversationId: string, score?: number | null): QueueWorkflowState {
+    const saved = queueStates[conversationId];
+    if (saved) return saved;
+    if (score === null || score === undefined) return "new";
+    if (score < 0.65) return "needs_review";
+    return "safe";
+  }
+
   return (
     <div className="space-y-6 pb-10">
       <section className="glass-static rounded-[1.5rem] p-5 sm:p-6">
@@ -199,7 +219,17 @@ export default function ConversationsPage() {
               <p className="section-label">Waiting</p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{stats.pending}</p>
             </div>
+            <div className="metric-card px-4 py-4">
+              <p className="section-label">Processed</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{stats.reviewed}</p>
+            </div>
           </div>
+        </div>
+        <div className="mt-4 h-1.5 rounded-full bg-[var(--surface)]">
+          <div
+            className="h-full rounded-full bg-[var(--text-primary)]"
+            style={{ width: `${total > 0 ? Math.min(100, (stats.reviewed / total) * 100) : 0}%` }}
+          />
         </div>
       </section>
 
@@ -288,6 +318,34 @@ export default function ConversationsPage() {
         {sortedConversations.map((conversation) => (
           <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
             <div className="stack-row">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="stack-row-meta">
+                  <span className="operator-chip">
+                    {rowWorkflowState(conversation.id, conversation.quality_scores?.overall_score).replaceAll("_", " ")}
+                  </span>
+                  <span className="operator-chip">{priorityReason(conversation)}</span>
+                </div>
+                <div
+                  className="flex flex-wrap gap-2"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                >
+                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "reviewed")}>
+                    Mark reviewed
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "safe")}>
+                    Mark safe
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "escalated")}>
+                    Escalate
+                  </button>
+                  <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "snoozed")}>
+                    Snooze
+                  </button>
+                </div>
+              </div>
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.65fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] xl:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -320,7 +378,9 @@ export default function ConversationsPage() {
                     )}
                     <span>{queueLabel(conversation)}</span>
                   </div>
-                  <p className="mt-2 text-sm text-[var(--text-secondary)]">{priorityReason(conversation)}</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    {rowWorkflowState(conversation.id, conversation.quality_scores?.overall_score).replaceAll("_", " ")}
+                  </p>
                 </div>
 
                 <div className="metric-card px-4 py-3">

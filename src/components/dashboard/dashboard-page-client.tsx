@@ -51,9 +51,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-eyebrow">Overview</p>
-            <h1 className="mt-2 page-title">See what matters, then decide what to fix.</h1>
+            <h1 className="mt-2 page-title">Run this week’s quality review.</h1>
             <p className="mt-3 page-subtitle">
-              AgentGrade should tell you what needs attention now, what changed recently, and what is safe to ignore.
+              See what needs attention, what changed this week, and what the team can safely leave alone.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -63,6 +63,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
             </Link>
             <Link href="/patterns" className="glass-button inline-flex items-center gap-2">
               Open issues
+            </Link>
+            <Link href="/reports" className="glass-button inline-flex items-center gap-2">
+              Check reports
             </Link>
           </div>
         </div>
@@ -97,7 +100,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         <GlassCard className="rounded-[1.4rem] p-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <p className="section-label">Needs review now</p>
+              <p className="section-label">Needs attention this week</p>
               <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Top conversations to look at next</h2>
             </div>
             <Link href="/conversations" className="text-sm font-medium text-[var(--text-primary)]">
@@ -147,7 +150,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               ) : (
                 <TrendingUp className="h-4 w-4 text-score-good" />
               )}
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recently changed</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Changed this week</h2>
             </div>
             <p className="text-sm font-semibold text-[var(--text-primary)]">
               {trendDelta < -0.02
@@ -168,7 +171,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           <GlassCard className="rounded-[1.4rem] p-5">
             <div className="mb-3 flex items-center gap-2">
               <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Repeated issue</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Repeated issue this week</h2>
             </div>
             {criticalPattern ? (
               <>
@@ -198,7 +201,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
           <GlassCard className="rounded-[1.4rem] p-5">
             <div className="mb-3 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-[var(--text-secondary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Safe to ignore</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Quiet this week</h2>
             </div>
             <p className="text-sm leading-6 text-[var(--text-secondary)]">
               Low-evidence reviews and failed scoring states are kept out of the workspace rollups, so this page only reflects conversations the platform considers usable.

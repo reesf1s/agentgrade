@@ -21,6 +21,12 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import { scoreColor, formatScore } from "@/lib/utils";
 import type { ClaimAnalysis, Message, QualityScore } from "@/lib/db/types";
 import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
+import {
+  getConversationDispositionMap,
+  setConversationDisposition,
+  setQueueState,
+  type ReviewDisposition,
+} from "@/lib/review-workflow";
 
 interface ConversationDetail {
   id: string;
@@ -253,6 +259,8 @@ export default function ConversationDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [showAdvancedDrawer, setShowAdvancedDrawer] = useState(false);
+  const [reviewDisposition, setReviewDispositionState] = useState<ReviewDisposition | null>(null);
+  const [nextConversationId, setNextConversationId] = useState<string | null>(null);
   const [overrideDimension, setOverrideDimension] = useState("overall");
   const [overrideScore, setOverrideScore] = useState("50");
   const [overrideReason, setOverrideReason] = useState("");
@@ -315,6 +323,40 @@ export default function ConversationDetailPage() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!conv) return;
+    const dispositions = getConversationDispositionMap();
+    setReviewDispositionState(dispositions[conv.id] || null);
+  }, [conv]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNextConversation() {
+      try {
+        const response = await fetch("/api/conversations?limit=100", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+
+        const list = (data.conversations || []) as Array<{ id: string }>;
+        const currentIndex = list.findIndex((item) => item.id === params.id);
+        if (currentIndex >= 0 && currentIndex < list.length - 1) {
+          setNextConversationId(list[currentIndex + 1]?.id || null);
+        } else {
+          setNextConversationId(null);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void loadNextConversation();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
+
   async function submitOverride() {
     if (!conv) return;
 
@@ -369,6 +411,25 @@ export default function ConversationDetailPage() {
     } catch {
       setLabelSetState("error");
     }
+  }
+
+  function updateDisposition(disposition: ReviewDisposition) {
+    if (!conv) return;
+    setConversationDisposition(conv.id, disposition);
+    setReviewDispositionState(disposition);
+
+    const queueState =
+      disposition === "safe"
+        ? "safe"
+        : disposition === "ignore"
+          ? "reviewed"
+          : disposition === "escalate_issue"
+            ? "escalated"
+            : disposition === "action_needed"
+              ? "needs_review"
+              : "reviewed";
+
+    setQueueState(conv.id, queueState);
   }
 
   if (loading) {
@@ -447,7 +508,12 @@ export default function ConversationDetailPage() {
                 </h1>
               </div>
               <div className="review-action-strip">
-                <span className="operator-chip">{actionState}</span>
+                <span className="operator-chip">{reviewDisposition ? reviewDisposition.replaceAll("_", " ") : actionState}</span>
+                {nextConversationId ? (
+                  <Link href={`/conversations/${nextConversationId}`} className="glass-button">
+                    Open next
+                  </Link>
+                ) : null}
                 <button type="button" className="glass-button" onClick={() => setShowAdvancedDrawer(true)}>
                   Advanced review
                 </button>
@@ -644,6 +710,26 @@ export default function ConversationDetailPage() {
                     ? "A light follow-up is enough. Tighten the weak spots and move on."
                     : "This pattern is worth escalating or fixing before it repeats."}
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                ["safe", "Safe"],
+                ["watch", "Watch"],
+                ["action_needed", "Action needed"],
+                ["escalate_issue", "Escalate to issue"],
+                ["ignore", "Ignore"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => updateDisposition(value as ReviewDisposition)}
+                  className={`operator-chip transition-colors ${
+                    reviewDisposition === value ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </GlassCard>
         </div>
       </section>
