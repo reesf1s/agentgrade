@@ -238,24 +238,30 @@ function removeKnowledgeGapsByPattern(
   });
 }
 
+function looksLikeEvidenceGap(evidence?: string | null) {
+  if (!evidence) return false;
+
+  return /(no (visible|supporting|live)? ?(tool|source|lookup|trace|evidence|context)|cannot be verified|not directly traceable|no kb|no crm|transcript contains no|without any source|without visible|no meeting notes|no calendar|no current tool result|should require live evidence)/i.test(
+    evidence
+  );
+}
+
 function downgradeUnsupportedOperationalFabrication(
   input: ScoringInput,
   result: ScoringResult
 ): ScoringResult {
   const hasToolEvidence = hasTranscriptToolEvidence(input.messages);
   const operational = hasOperationalRecordClaim(input.messages);
-  const hasKbBackedEvidence = result.claim_analysis.some(
-    (claim) =>
-      Boolean(claim.kb_source) &&
-      (claim.verdict === "verified" || claim.verdict === "contradicted")
-  );
-
-  if (hasToolEvidence || !operational || hasKbBackedEvidence) {
+  if (hasToolEvidence || !operational) {
     return result;
   }
 
   const remappedClaims = result.claim_analysis.map((claim) => {
     if (claim.verdict !== "fabricated" && claim.verdict !== "contradicted") {
+      return claim;
+    }
+
+    if (!looksLikeEvidenceGap(claim.evidence)) {
       return claim;
     }
 

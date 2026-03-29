@@ -46,7 +46,7 @@ export const SCORER_MODEL_INFO = {
   evaluator_provider: getScoringProvider(),
   evaluation_mode: "Base evaluator + guardrails + learned corrections",
   calibration_note:
-    "Human reviews help the scorer get smarter over time. Private labels stay inside your workspace. Shared learning uses anonymized scoring features and labels, not raw transcript text. The foundation model itself is not being live fine-tuned in real time.",
+    "Human labels help the reviewer get better over time. Private labels stay inside your workspace. Shared learning only uses anonymized score features and labels, not raw transcript text.",
 };
 
 export function isManualCalibrationConversation(metadata?: Record<string, unknown> | null) {

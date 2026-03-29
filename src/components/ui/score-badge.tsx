@@ -17,7 +17,7 @@ export function ScoreBadge({ score, label, size = "md" }: ScoreBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-mono",
+        "inline-flex items-center gap-1.5 rounded-full border border-transparent font-mono font-semibold",
         scoreBgColor(score),
         scoreColor(score),
         sizeClasses[size]

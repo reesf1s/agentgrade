@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassInput, GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
-import { Plug, Bell, Users, CreditCard, BookOpen, Trash2, Copy, Check, RefreshCw, Brain } from "lucide-react";
+import { Plug, Bell, Users, BookOpen, Trash2, Copy, Check, RefreshCw, Brain } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1047,256 +1047,206 @@ function CalibrationTab() {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="enterprise-section-title">Improve scoring</p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="enterprise-section-title">Training</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-              Train the scorer like an internal quality team
+              Improve scoring with examples your team agrees on
             </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Review real conversations, add synthetic edge cases, and tighten how AgentGrade judges your assistant. Private labels improve your workspace. Shared opt-in labels improve the anonymized global model.
+              Add real or synthetic conversations, label them once, and AgentGrade uses those labels to calibrate scoring over time.
             </p>
           </div>
           <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
             {data?.scorer.training_stage.label}
           </div>
         </div>
-        <p className="mt-4 text-xs leading-5 text-[var(--text-muted)]">
-          {data?.scorer.training_stage.description}
-        </p>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-[var(--text-muted)]">Base evaluator</p>
-            <p className="mt-1 font-medium text-[var(--text-primary)]">
+
+        <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Human labels</p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              {data?.scorer.labeled_examples || 0}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Across private and shared training sets</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Workspace learning</p>
+            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+              {data?.scorer.learned_calibration.workspace_model.active ? "Active" : "Warming up"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              {data?.scorer.learned_calibration.workspace_private_labels || 0} private labels in this workspace
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Scorer</p>
+            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
               {data?.scorer.evaluator_provider} / {data?.scorer.evaluator_model}
             </p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-[var(--text-muted)]">Scoring version</p>
-            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.scoring_model_version}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-[var(--text-muted)]">Repo eval cases</p>
-            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.repo_eval_cases}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-[var(--text-muted)]">Human labels</p>
-            <p className="mt-1 font-medium text-[var(--text-primary)]">{data?.scorer.labeled_examples}</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Version {data?.scorer.scoring_model_version}
+            </p>
           </div>
         </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Quick actions</p>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-                <p className="text-sm font-medium text-[var(--text-primary)]">Create a synthetic test case</p>
-                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Add a crafted conversation for a failure mode, edge case, or regression you want the scorer to learn.
-                </p>
-                <GlassButton className="mt-4 w-full" onClick={() => document.getElementById("training-example-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-                  Create training example
-                </GlassButton>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-                <p className="text-sm font-medium text-[var(--text-primary)]">Label real conversations</p>
-                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Open the highest-value conversations that will improve the scorer fastest for your workspace.
-                </p>
-                <GlassButton className="mt-4 w-full" onClick={() => document.getElementById("review-queue")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-                  Review suggested conversations
-                </GlassButton>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Workspace Model</p>
-            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
-              {data?.scorer.learned_calibration.workspace_model.active ? "Active" : "Not enough labels yet"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              {data?.scorer.learned_calibration.workspace_private_labels} private labels across this workspace
-            </p>
-            {data?.scorer.learned_calibration.workspace_model.mean_abs_error !== undefined ? (
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Holdout MAE: {(data.scorer.learned_calibration.workspace_model.mean_abs_error * 100).toFixed(1)} points
-              </p>
-            ) : null}
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Global Anonymized Model</p>
-            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
-              {data?.scorer.learned_calibration.global_model.active ? "Active" : "Waiting for shared labels"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              {data?.scorer.learned_calibration.global_shared_labels} shared anonymized labels from opted-in workspaces
-            </p>
-            {data?.scorer.learned_calibration.global_model.mean_abs_error !== undefined ? (
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Holdout MAE: {(data.scorer.learned_calibration.global_model.mean_abs_error * 100).toFixed(1)} points
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <p className="mt-4 text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.calibration_note}</p>
       </GlassCard>
 
-      <GlassCard id="training-example-form" className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">Create a training example</h2>
-            <p className="text-xs text-[var(--text-muted)]">
-              Paste a transcript with lines like <span className="font-mono">Customer:</span>, <span className="font-mono">AI Agent:</span>, <span className="font-mono">Human Agent:</span>, or <span className="font-mono">Tool:</span>.
-            </p>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <GlassCard id="training-example-form" className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Create a training example</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Paste a transcript, add the scores a human would give it, and save it as a gold-set example.
+              </p>
+            </div>
+            <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+              {exampleKind === "synthetic" ? "Synthetic" : "Real"}
+            </div>
           </div>
-          <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
-            {exampleKind === "synthetic" ? "Synthetic" : "Real"}
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
-          <GlassInput label="Example title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Crestline health trend example" />
-          <div className="grid gap-3 md:grid-cols-2">
-            <GlassSelect
-              label="Example type"
-              value={exampleKind}
-              onChange={(event) => setExampleKind(event.target.value as "real" | "synthetic")}
-              options={(data?.scorer.example_kind_options || []).map((option) => ({
-                value: option.key,
-                label: option.label,
-              }))}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-[1.15fr_0.85fr]">
+            <GlassInput
+              label="Example title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Crestline deal briefing without trace data"
             />
-            <GlassSelect
-              label="Training scope"
-              value={shareScope}
-              onChange={(event) => setShareScope(event.target.value as "workspace_private" | "global_anonymous")}
-              options={(data?.scorer.share_scope_options || []).map((option) => ({
-                value: option.key,
-                label: option.label,
-              }))}
-            />
-          </div>
-        </div>
-        <GlassTextarea
-          className="mt-3 min-h-[220px]"
-          value={transcript}
-          onChange={(event) => setTranscript(event.target.value)}
-          placeholder={"Customer: What changed and when?\nAI Agent: Here's the timeline...\nTool: get_deal_health(...) => ..."}
-        />
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {data?.scorer.supported_dimensions.map((dimension) => (
-            <div key={dimension.key}>
-              <p className="mb-1 text-xs text-[var(--text-secondary)]">{dimension.label}</p>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={labels[dimension.key] || ""}
-                onChange={(event) =>
-                  setLabels((current) => ({
-                    ...current,
-                    [dimension.key]: event.target.value,
-                  }))
-                }
-                className="glass-input w-full px-3 py-2 text-sm"
-                placeholder="%"
+            <div className="grid gap-3 md:grid-cols-2">
+              <GlassSelect
+                label="Example type"
+                value={exampleKind}
+                onChange={(event) => setExampleKind(event.target.value as "real" | "synthetic")}
+                options={(data?.scorer.example_kind_options || []).map((option) => ({
+                  value: option.key,
+                  label: option.label,
+                }))}
+              />
+              <GlassSelect
+                label="Training scope"
+                value={shareScope}
+                onChange={(event) => setShareScope(event.target.value as "workspace_private" | "global_anonymous")}
+                options={(data?.scorer.share_scope_options || []).map((option) => ({
+                  value: option.key,
+                  label: option.label,
+                }))}
               />
             </div>
-          ))}
-        </div>
-        <GlassTextarea
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          className="mt-3 min-h-[96px]"
-          placeholder="Explain the correct judgment. Capture grounding, user intent, escalation quality, and any org policy context."
-        />
-        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-[var(--text-muted)]">
-            Shared learning uses anonymized score features plus your labels. Raw transcript text stays private.
-          </p>
-          <GlassButton className="md:min-w-[220px]" onClick={submitCalibrationExample} disabled={saving}>
-            {saving ? "Saving..." : "Save training example"}
-          </GlassButton>
-        </div>
-        {state === "saved" ? <p className="mt-3 text-xs text-score-good">Training example saved.</p> : null}
-        {state === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save training example.</p> : null}
-      </GlassCard>
+          </div>
 
-      <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Where to focus next</h2>
-        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
-          These are the highest-leverage steps if you want the scorer to improve quickly without wasting review time.
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Training examples</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
-              {data?.scorer.training_insights.label_coverage.total_gold_set_conversations || 0}
-            </p>
-            <p className="mt-2 text-xs text-[var(--text-secondary)]">
-              Real: {data?.scorer.training_insights.label_coverage.real_examples || 0} · Synthetic: {data?.scorer.training_insights.label_coverage.synthetic_examples || 0}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Next private milestone</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
-              {data?.scorer.training_insights.roadmap.next_workspace_label_milestone || 30}
-            </p>
-            <p className="mt-2 text-xs text-[var(--text-secondary)]">
-              Private labels needed for a stronger workspace-specific scorer
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Next shared milestone</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
-              {data?.scorer.training_insights.roadmap.next_shared_label_milestone || 50}
-            </p>
-            <p className="mt-2 text-xs text-[var(--text-secondary)]">
-              Shared anonymized labels needed to strengthen the cross-org model
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Best next steps</p>
-          <div className="mt-3 space-y-2">
-            {data?.scorer.training_insights.roadmap.best_next_steps.map((step) => (
-              <p key={step} className="text-xs leading-5 text-[var(--text-secondary)]">• {step}</p>
+          <GlassTextarea
+            className="mt-3 min-h-[220px]"
+            value={transcript}
+            onChange={(event) => setTranscript(event.target.value)}
+            placeholder={"Customer: What changed and when?\nAI Agent: Here's the timeline...\nTool: get_deal_health(...) => ..."}
+          />
+
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {data?.scorer.supported_dimensions.map((dimension) => (
+              <div key={dimension.key}>
+                <p className="mb-1 text-xs text-[var(--text-secondary)]">{dimension.label}</p>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={labels[dimension.key] || ""}
+                  onChange={(event) =>
+                    setLabels((current) => ({
+                      ...current,
+                      [dimension.key]: event.target.value,
+                    }))
+                  }
+                  className="glass-input w-full px-3 py-2 text-sm"
+                  placeholder="%"
+                />
+              </div>
             ))}
           </div>
-        </div>
-      </GlassCard>
 
-      <GlassCard id="review-queue" className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Label real conversations next</h2>
-        <p className="mb-4 text-xs leading-5 text-[var(--text-secondary)]">
-          These conversations are the highest-value places to add labels right now.
-        </p>
-        <div className="space-y-3">
-          {data?.scorer.training_insights.review_queue.length ? data.scorer.training_insights.review_queue.map((item) => (
-            <div key={item.conversation_id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">
-                    {item.customer_identifier || item.conversation_id}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
-                    {item.platform || "custom"} · Score {(item.overall_score * 100).toFixed(0)}% · Confidence {item.confidence_level}
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{item.reason}</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    Priority {item.priority_score.toFixed(2)}
-                  </span>
-                  <GlassButton size="sm" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
-                    Review
-                  </GlassButton>
+          <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--text-primary)]">
+              Add reviewer notes and sharing details
+            </summary>
+            <GlassTextarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              className="mt-4 min-h-[96px]"
+              placeholder="Explain the correct judgment. Capture groundedness, user intent, escalation quality, and any org context."
+            />
+            <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+              Shared learning uses anonymized score features plus your labels. Raw transcript text stays private.
+            </p>
+          </details>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--text-muted)]">
+              {data?.scorer.calibration_note}
+            </p>
+            <GlassButton className="sm:min-w-[220px]" onClick={submitCalibrationExample} disabled={saving}>
+              {saving ? "Saving..." : "Save training example"}
+            </GlassButton>
+          </div>
+          {state === "saved" ? <p className="mt-3 text-xs text-score-good">Training example saved.</p> : null}
+          {state === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save training example.</p> : null}
+        </GlassCard>
+
+        <div className="space-y-4">
+          <GlassCard className="p-5">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Where to focus next</h2>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Next private milestone</p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                  {data?.scorer.training_insights.roadmap.next_workspace_label_milestone || 30}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">Private labels needed to strengthen the workspace scorer</p>
+              </div>
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Best next steps</p>
+                <div className="mt-3 space-y-2">
+                  {data?.scorer.training_insights.roadmap.best_next_steps.map((step) => (
+                    <p key={step} className="text-sm leading-6 text-[var(--text-secondary)]">• {step}</p>
+                  ))}
                 </div>
               </div>
             </div>
-          )) : (
-            <p className="text-sm text-[var(--text-muted)]">No unlabeled high-value conversations right now.</p>
-          )}
+          </GlassCard>
+
+          <GlassCard id="review-queue" className="p-5">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Label real conversations next</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              These are the highest-value conversations to review if you want the scorer to improve quickly.
+            </p>
+            <div className="mt-4 space-y-3">
+              {data?.scorer.training_insights.review_queue.length ? data.scorer.training_insights.review_queue.map((item) => (
+                <div key={item.conversation_id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        {item.customer_identifier || item.conversation_id}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                        {item.platform || "custom"} · Score {(item.overall_score * 100).toFixed(0)}% · Confidence {item.confidence_level}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.reason}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-full bg-[var(--panel)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        Priority {item.priority_score.toFixed(2)}
+                      </span>
+                      <GlassButton size="sm" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
+                        Review
+                      </GlassButton>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-sm text-[var(--text-muted)]">No high-value unlabeled conversations right now.</p>
+              )}
+            </div>
+          </GlassCard>
         </div>
-      </GlassCard>
+      </div>
 
       <details className="group rounded-[1.25rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
@@ -1394,60 +1344,146 @@ function CalibrationTab() {
   );
 }
 
+function WorkspaceTab() {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <TeamTab />
+      <BillingTab />
+    </div>
+  );
+}
+
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("connections");
 
   const tabs = [
-    { id: "connections", label: "Connections", icon: Plug },
-    { id: "alerts", label: "Alert Thresholds", icon: Bell },
-    { id: "team", label: "Team", icon: Users },
-    { id: "knowledge", label: "Knowledge Base", icon: BookOpen },
-    { id: "calibration", label: "Improve Scoring", icon: Brain },
-    { id: "billing", label: "Billing", icon: CreditCard },
+    {
+      id: "connections",
+      step: "01",
+      label: "Connect sources",
+      description: "Bring in live or historical conversations.",
+      icon: Plug,
+    },
+    {
+      id: "knowledge",
+      step: "02",
+      label: "Add context",
+      description: "Upload docs and help center content.",
+      icon: BookOpen,
+    },
+    {
+      id: "alerts",
+      step: "03",
+      label: "Set thresholds",
+      description: "Decide when the team should be notified.",
+      icon: Bell,
+    },
+    {
+      id: "calibration",
+      step: "04",
+      label: "Improve scoring",
+      description: "Label examples and sharpen the reviewer.",
+      icon: Brain,
+    },
+    {
+      id: "workspace",
+      step: "05",
+      label: "Workspace",
+      description: "Manage team access and billing.",
+      icon: Users,
+    },
   ];
 
+  const activeTabConfig = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+
   return (
-    <div className="max-w-6xl">
-      <div className="mb-8 rounded-[1.45rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6 shadow-sm">
+    <div className="space-y-6 pb-10">
+      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
         <p className="enterprise-kicker">Setup</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Set up the workspace without hunting for settings</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          Connect assistants, teach the scorer, manage alerts, and keep the workspace healthy from one place.
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
+          Configure the workspace without hunting through settings.
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+          Move through the workspace in order: connect sources, add context, set thresholds, then teach the scorer using the examples that matter most.
         </p>
+      </GlassCard>
+
+      <div className="grid gap-3 xl:grid-cols-5">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-[1.1rem] border p-4 text-left transition-all ${
+                isActive
+                  ? "border-[var(--border-strong)] bg-[var(--panel)] shadow-sm"
+                  : "border-[var(--border-subtle)] bg-[var(--panel-subtle)] hover:bg-[var(--panel)]"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {tab.step}
+                </span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
+                  <Icon className="h-4 w-4 text-[var(--text-primary)]" />
+                </div>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{tab.description}</p>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="space-y-6">
-        <div className="sticky top-4 z-20 -mx-1 overflow-x-auto pb-1">
-          <div className="inline-flex min-w-full gap-2 rounded-[1.2rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-2 shadow-sm sm:min-w-0">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 whitespace-nowrap px-3 py-2 rounded-xl text-sm transition-all ${
-                  activeTab === tab.id
-                    ? "bg-[var(--surface)] text-[var(--text-primary)] font-medium shadow-sm"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)]"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
+      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <GlassCard className="h-fit rounded-[1.25rem] p-5">
+          <p className="enterprise-section-title">Current step</p>
+          <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+            {activeTabConfig.label}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            {activeTabConfig.description}
+          </p>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Recommended flow
+              </p>
+              <div className="mt-3 space-y-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                      activeTab === tab.id
+                        ? "bg-[var(--panel)] font-semibold text-[var(--text-primary)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--panel)]"
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      {tab.step}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </GlassCard>
 
         <div>
           {activeTab === "connections" && <ConnectionsTab />}
           {activeTab === "alerts" && <AlertsTab />}
-          {activeTab === "team" && <TeamTab />}
           {activeTab === "knowledge" && <KnowledgeTab />}
           {activeTab === "calibration" && <CalibrationTab />}
-          {activeTab === "billing" && <BillingTab />}
+          {activeTab === "workspace" && <WorkspaceTab />}
         </div>
       </div>
     </div>

@@ -15,9 +15,9 @@ export function GlassButton({
   ...props
 }: GlassButtonProps) {
   const sizeClasses = {
-    sm: "text-sm px-3 py-1.5 rounded-lg",
-    md: "text-sm px-5 py-2.5 rounded-xl",
-    lg: "text-base px-6 py-3 rounded-xl",
+    sm: "text-sm px-3 py-2 rounded-xl",
+    md: "text-sm px-4 py-2.5 rounded-xl",
+    lg: "text-base px-5 py-3 rounded-2xl",
   };
 
   const variantClasses = {

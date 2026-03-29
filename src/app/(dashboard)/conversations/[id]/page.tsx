@@ -52,35 +52,66 @@ function deriveStrengths(messages: Message[], score?: QualityScore | null) {
 }
 
 function deriveChecks(score?: QualityScore | null, evidenceLimited = false) {
-  const claims = (score?.claim_analysis || [])
-    .filter((claim) => claim.verdict !== "verified")
-    .slice(0, evidenceLimited ? 2 : 3)
-    .map((claim) => ({
-      label:
-        claim.verdict === "fabricated"
-          ? "Likely wrong"
-          : claim.verdict === "contradicted"
-            ? "Conflicts with evidence"
-            : "Needs confirmation",
-      claim: claim.claim,
-      verdict: claim.verdict,
-    }));
-
-  if (claims.length > 0) {
-    return claims;
-  }
+  const rawClaims = (score?.claim_analysis || []).filter((claim) => claim.verdict !== "verified");
 
   if (evidenceLimited) {
+    const groupedChecks: Array<{
+      label: string;
+      claim: string;
+      verdict: "unverifiable" | "fabricated" | "contradicted";
+    }> = [];
+
+    const hasMetricClaim = rawClaims.some((claim) => /\b(%|hours?|hrs?|metrics?|signals?|accuracy|score)\b/i.test(claim.claim));
+    const hasDateClaim = rawClaims.some((claim) => /\b(date|due|overdue|march|april|today|tomorrow|deadline|week)\b/i.test(claim.claim));
+    const hasPeopleClaim = rawClaims.some((claim) => /\b(contact|partner|director|coo|decision-maker|champion|amelia|thomas|charles)\b/i.test(claim.claim));
+
+    if (hasMetricClaim) {
+      groupedChecks.push({
+        label: "Check the numbers",
+        claim: "Confirm any quoted metrics, scores, or performance claims before sharing them internally or with a customer.",
+        verdict: "unverifiable",
+      });
+    }
+
+    if (hasDateClaim) {
+      groupedChecks.push({
+        label: "Check timing",
+        claim: "Confirm dates, due dates, and anything marked overdue in the source system before acting on it.",
+        verdict: "unverifiable",
+      });
+    }
+
+    if (hasPeopleClaim) {
+      groupedChecks.push({
+        label: "Check deal details",
+        claim: "Double-check names, roles, and internal deal notes before treating the briefing as final.",
+        verdict: "unverifiable",
+      });
+    }
+
+    if (groupedChecks.length > 0) {
+      return groupedChecks.slice(0, 3);
+    }
+
     return [
       {
-        label: "Needs confirmation",
-        claim: "Record-level facts were not directly traceable in the transcript.",
-        verdict: "unverifiable" as const,
+        label: "Check source details",
+        claim: "Use the answer as a working draft, then confirm the record-level details in the source system.",
+        verdict: "unverifiable",
       },
     ];
   }
 
-  return [];
+  return rawClaims.slice(0, 3).map((claim) => ({
+    label:
+      claim.verdict === "fabricated"
+        ? "Likely wrong"
+        : claim.verdict === "contradicted"
+          ? "Conflicts with evidence"
+          : "Needs confirmation",
+    claim: claim.claim,
+    verdict: claim.verdict,
+  }));
 }
 
 export default function ConversationDetailPage() {
@@ -461,7 +492,9 @@ export default function ConversationDetailPage() {
               <GlassCard className="rounded-[1rem] p-5">
                 <div className="mb-4 flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" />
-                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">What to check</h2>
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                    {lowConfidenceGroundingOnly ? "Double-check before using" : "What to check"}
+                  </h2>
                 </div>
                 {checks.length === 0 ? (
                   <p className="text-sm text-[var(--text-secondary)]">

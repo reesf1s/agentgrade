@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, BookOpen, Brain, Check } from "lucide-react";
+import { AlertTriangle, BookOpen, Brain, Check, RefreshCw } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SeverityBadge } from "@/components/ui/score-badge";
@@ -41,117 +41,142 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
   }
 
   return (
-    <div className="max-w-[88rem] pb-10">
-      <div className="mb-6 rounded-[1.1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="enterprise-kicker">Insights</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Fix repeated failures once</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Repeated failure modes grouped into clean operational themes.
-          </p>
+    <div className="space-y-6 pb-10">
+      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="enterprise-kicker">Issues</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
+              Turn repeated failures into one clear fix.
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              Similar breakdowns are grouped into operating issues so you can fix the root cause once instead of chasing one conversation at a time.
+            </p>
+          </div>
+          <GlassButton onClick={refreshPatterns} disabled={refreshing} className="inline-flex items-center gap-2">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing issues..." : "Refresh issues"}
+          </GlassButton>
         </div>
-        <GlassButton onClick={refreshPatterns} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh insights"}
-        </GlassButton>
-        </div>
-      </div>
+      </GlassCard>
 
       {patterns.length === 0 ? (
-        <GlassCard className="rounded-[1rem] p-12 text-center">
+        <GlassCard className="rounded-[1.25rem] p-12 text-center">
           <p className="text-sm text-[var(--text-muted)]">
-            No failure patterns detected yet. Patterns emerge after scoring multiple conversations.
+            No recurring issue is standing out yet. Once enough scored conversations land, AgentGrade will group repeated failures here.
           </p>
         </GlassCard>
       ) : (
         <div className="space-y-4">
           {patterns.map((pattern) => (
-          <GlassCard key={pattern.id} className="rounded-[1rem] p-5">
-              <div className="mb-3 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-                      pattern.severity === "critical"
-                        ? "score-bg-critical"
-                        : pattern.severity === "high"
-                          ? "score-bg-warning"
-                          : "bg-[rgba(0,0,0,0.04)]"
-                    }`}
-                  >
-                    <AlertTriangle
-                      className={`h-4 w-4 ${
-                        pattern.severity === "critical"
-                          ? "score-critical"
-                          : pattern.severity === "high"
-                            ? "score-warning"
-                            : "text-[var(--text-secondary)]"
-                      }`}
-                    />
+            <GlassCard key={pattern.id} className="rounded-[1.25rem] p-5">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+                <div>
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="mb-2 flex items-center gap-3">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                            pattern.severity === "critical"
+                              ? "score-bg-critical"
+                              : pattern.severity === "high"
+                                ? "score-bg-warning"
+                                : "bg-[var(--surface)]"
+                          }`}
+                        >
+                          <AlertTriangle
+                            className={`h-4 w-4 ${
+                              pattern.severity === "critical"
+                                ? "score-critical"
+                                : pattern.severity === "high"
+                                  ? "score-warning"
+                                  : "text-[var(--text-secondary)]"
+                            }`}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                            {pattern.title}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <SeverityBadge severity={pattern.severity} />
+                            <span className="text-xs text-[var(--text-muted)]">
+                              Seen across {pattern.affected_conversation_ids.length} conversations
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <GlassButton
+                      size="sm"
+                      onClick={() => resolvePattern(pattern.id)}
+                      disabled={resolving === pattern.id}
+                      className="inline-flex items-center gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      {resolving === pattern.id ? "Resolving..." : "Mark resolved"}
+                    </GlassButton>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">{pattern.title}</h3>
-                    <div className="mt-1 flex items-center gap-2">
-                      <SeverityBadge severity={pattern.severity} />
-                      <span className="text-xs text-[var(--text-muted)]">
-                        Seen across {pattern.affected_conversation_ids.length} conversations
-                      </span>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        What is happening
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        Best next fix
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                        {pattern.recommendation || pattern.prompt_fix || pattern.knowledge_base_suggestion || "Review this issue and decide whether the fix belongs in prompting, workflow, or documentation."}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <GlassButton
-                  size="sm"
-                  className="flex items-center gap-1.5"
-                  onClick={() => resolvePattern(pattern.id)}
-                  disabled={resolving === pattern.id}
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  {resolving === pattern.id ? "Resolving..." : "Mark resolved"}
-                </GlassButton>
+
+                <div className="space-y-3">
+                  {pattern.prompt_fix ? (
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Prompt change</p>
+                      </div>
+                      <p className="text-sm leading-6 text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
+                    </div>
+                  ) : null}
+
+                  {pattern.knowledge_base_suggestion ? (
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Knowledge update</p>
+                      </div>
+                      <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                        {pattern.knowledge_base_suggestion}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {pattern.affected_conversation_ids.length > 0 ? (
+                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">Example conversations</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {pattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
+                          <Link
+                            key={conversationId}
+                            href={`/conversations/${conversationId}`}
+                            className="rounded-full border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-1 text-xs font-medium text-[var(--text-primary)]"
+                          >
+                            {conversationId.slice(0, 8)}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-
-              <p className="mb-4 text-sm leading-relaxed text-[var(--text-secondary)]">{pattern.description}</p>
-
-              {pattern.affected_conversation_ids.length > 0 && (
-                <div className="mb-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                    <span className="text-xs font-medium text-[var(--text-primary)]">Example conversations</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {pattern.affected_conversation_ids.slice(0, 6).map((conversationId) => (
-                      <Link
-                        key={conversationId}
-                        href={`/conversations/${conversationId}`}
-                        className="rounded-full border border-[var(--border-subtle)] bg-[var(--panel)] px-3 py-1 text-xs text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-soft)]"
-                      >
-                        {conversationId.slice(0, 8)}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {pattern.prompt_fix && (
-                <div className="mb-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Brain className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                    <span className="text-xs font-medium text-[var(--text-primary)]">Recommended Prompt Fix</span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{pattern.prompt_fix}</p>
-                </div>
-              )}
-
-              {pattern.knowledge_base_suggestion && (
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <BookOpen className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                    <span className="text-xs font-medium text-[var(--text-primary)]">Knowledge Base Suggestion</span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {pattern.knowledge_base_suggestion}
-                  </p>
-                </div>
-              )}
             </GlassCard>
           ))}
         </div>

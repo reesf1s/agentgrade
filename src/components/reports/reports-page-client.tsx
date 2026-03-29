@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, BookOpen, Brain, Siren, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  BookOpen,
+  Brain,
+  Siren,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -25,209 +32,214 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
     trendDelta > 0.02
       ? {
           title: "Quality improved this week",
-          description: `Overall quality increased by ${(trendDelta * 100).toFixed(1)} points versus the prior week.`,
+          description: `Average quality moved up by ${(trendDelta * 100).toFixed(1)} points versus the previous week.`,
           icon: TrendingUp,
         }
       : trendDelta < -0.02
         ? {
-            title: "Quality deteriorated this week",
-            description: `Overall quality fell by ${Math.abs(trendDelta * 100).toFixed(1)} points versus the prior week.`,
+            title: "Quality slipped this week",
+            description: `Average quality fell by ${Math.abs(trendDelta * 100).toFixed(1)} points versus the previous week.`,
             icon: TrendingDown,
           }
         : {
-            title: "Quality stayed broadly stable",
-            description: "Scores were within a narrow range of the prior week, so there was no material shift in overall quality.",
+            title: "Quality stayed steady",
+            description: "No material movement versus the previous week.",
             icon: TrendingUp,
           };
   const notableIconClass = trendDelta < -0.02 ? "text-score-critical" : "text-score-good";
-  const recommendedInterventions = report.patterns
-    .slice(0, 3)
-    .map((pattern) => ({
-      id: pattern.id,
-      title: pattern.title,
-      intervention:
-        pattern.recommendation ||
-        pattern.prompt_fix ||
-        pattern.knowledge_base_suggestion ||
-        "Manual review required to identify the right remediation.",
-      severity: pattern.severity,
-      href: `/conversations/${pattern.affected_conversation_ids[0]}`,
-    }));
   const NotableIcon = trendTone.icon;
+  const recommendedInterventions = report.patterns.slice(0, 3).map((pattern) => ({
+    id: pattern.id,
+    title: pattern.title,
+    intervention:
+      pattern.recommendation ||
+      pattern.prompt_fix ||
+      pattern.knowledge_base_suggestion ||
+      "Review the pattern and decide on a prompt, policy, or workflow change.",
+    severity: pattern.severity,
+    href: pattern.affected_conversation_ids[0]
+      ? `/conversations/${pattern.affected_conversation_ids[0]}`
+      : "/patterns",
+  }));
 
   return (
-    <div className="max-w-6xl">
-      <div className="mb-6 rounded-[1.1rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="enterprise-kicker">Reports</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Weekly quality report</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Week of {report.week_start} - {report.week_end}
-          </p>
+    <div className="space-y-6 pb-10">
+      <GlassCard className="rounded-[1.35rem] p-6 md:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="enterprise-kicker">Reports</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-[var(--text-primary)]">
+              Weekly quality review for the workspace.
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              {report.week_start} to {report.week_end}. Use this report to explain what changed, where trust is drifting, and what the team should fix next.
+            </p>
+          </div>
+          <button className="glass-button glass-button-primary">Export PDF</button>
         </div>
-        <button className="glass-button text-sm">Export PDF</button>
-        </div>
-      </div>
+      </GlassCard>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Conversations Scored"
+          label="Scored"
           value={summary?.total_scored ?? 0}
-          subtitle={`${summary?.total_conversations ?? 0} total`}
+          subtitle={`${summary?.total_conversations ?? 0} conversations in range`}
         />
         <StatCard
-          label="Avg Quality"
-          value={`${((summary?.avg_overall_score ?? 0) * 100).toFixed(0)}%`}
+          label="Average quality"
+          value={`${Math.round((summary?.avg_overall_score ?? 0) * 100)}%`}
           subtitle={
             summary?.score_trend !== undefined
-              ? summary.score_trend > 0
-                ? `+${(summary.score_trend * 100).toFixed(1)}% from last week`
-                : `${(summary.score_trend * 100).toFixed(1)}% from last week`
-              : "vs last week"
+              ? `${summary.score_trend > 0 ? "+" : ""}${(summary.score_trend * 100).toFixed(1)} points vs prior week`
+              : "Comparing with last week"
           }
           scoreColor={scoreColor(summary?.avg_overall_score ?? 0)}
         />
         <StatCard
-          label="Grounding issues"
+          label="Evidence review"
           value={summary?.hallucination_count ?? 0}
-          subtitle="Conversations that need evidence review"
+          subtitle="Conversations that still need fact checks"
           scoreColor={(summary?.hallucination_count ?? 0) > 5 ? "score-critical" : "score-warning"}
         />
         <StatCard
           label="Escalations"
           value={summary?.escalation_count ?? 0}
-          subtitle="Needed a human handoff"
+          subtitle="Conversations that needed a human"
           scoreColor={(summary?.escalation_count ?? 0) > 10 ? "score-warning" : "score-good"}
         />
       </div>
 
-      <GlassCard className="mb-6 rounded-[1rem] p-5">
-        <h2 className="mb-4 text-sm font-medium text-[var(--text-primary)]">Quality Trend</h2>
-        {trendData.length === 0 ? (
-          <div className="flex h-56 items-center justify-center text-sm text-[var(--text-muted)]">
-            No trend data yet.
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.9fr)]">
+        <GlassCard className="rounded-[1.25rem] p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="enterprise-section-title">Trend</p>
+              <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">Weekly quality trend</h2>
+            </div>
+            {summary?.avg_overall_score !== undefined ? (
+              <ScoreBadge score={summary.avg_overall_score} size="sm" />
+            ) : null}
           </div>
-        ) : (
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid stroke="rgba(0,0,0,0.04)" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(value) => value.slice(5)} axisLine={{ stroke: "rgba(0,0,0,0.06)" }} tickLine={false} />
-                <YAxis domain={[0.3, 1]} tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} axisLine={{ stroke: "rgba(0,0,0,0.06)" }} tickLine={false} />
-                <Tooltip contentStyle={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: "12px", fontSize: 12 }} formatter={(value) => [`${(Number(value) * 100).toFixed(0)}%`]} />
-                <Line type="monotone" dataKey="overall" stroke="#111827" strokeWidth={2} dot={false} name="Overall" />
-                <Line type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} dot={false} name="Accuracy" opacity={0.5} />
-                <Line type="monotone" dataKey="hallucination" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Hallucination" opacity={0.5} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </GlassCard>
 
-      <div className="mb-6 grid gap-6 xl:grid-cols-2">
-        <GlassCard className="rounded-[1rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <NotableIcon className={`h-4 w-4 ${notableIconClass}`} />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Notable Change</h2>
-          </div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">{trendTone.title}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-            {trendTone.description}
-          </p>
-          <p className="mt-3 text-xs text-[var(--text-muted)]">
-            Hallucinations this week: {summary?.hallucination_count ?? 0}. Escalation issues this
-            week: {summary?.escalation_count ?? 0}.
-          </p>
+          {trendData.length === 0 ? (
+            <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-soft)] text-sm text-[var(--text-muted)]">
+              No trend data yet.
+            </div>
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <CartesianGrid stroke="var(--divider)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                    tickFormatter={(value) => value.slice(5)}
+                    axisLine={{ stroke: "var(--divider)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0.3, 1]}
+                    tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                    tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                    axisLine={{ stroke: "var(--divider)" }}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--panel)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "14px",
+                      fontSize: 12,
+                      boxShadow: "var(--glass-shadow)",
+                    }}
+                  />
+                  <Line type="monotone" dataKey="overall" stroke="var(--text-primary)" strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} dot={false} opacity={0.55} />
+                  <Line type="monotone" dataKey="hallucination" stroke="#F97316" strokeWidth={1.5} dot={false} opacity={0.55} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </GlassCard>
 
-        <GlassCard className="rounded-[1rem] p-5">
+        <div className="space-y-4">
+          <GlassCard className="rounded-[1.25rem] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <NotableIcon className={`h-4 w-4 ${notableIconClass}`} />
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">This week in one line</h2>
+            </div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">{trendTone.title}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{trendTone.description}</p>
+          </GlassCard>
+
+          <GlassCard className="rounded-[1.25rem] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recommended next moves</h2>
+            </div>
+            {recommendedInterventions.length === 0 ? (
+              <p className="text-sm leading-6 text-[var(--text-secondary)]">No intervention is standing out yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recommendedInterventions.map((intervention) => (
+                  <Link
+                    key={intervention.id}
+                    href={intervention.href}
+                    className="block rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{intervention.title}</p>
+                      <SeverityBadge severity={intervention.severity} />
+                    </div>
+                    <p className="text-sm leading-6 text-[var(--text-secondary)]">{intervention.intervention}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <GlassCard className="rounded-[1.25rem] p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recurring issues</h2>
+          </div>
+          {report.patterns.length === 0 ? (
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No repeated issue was detected this week.</p>
+          ) : (
+            <div className="space-y-3">
+              {report.patterns.map((pattern) => (
+                <Link
+                  key={pattern.id}
+                  href={pattern.affected_conversation_ids[0] ? `/conversations/${pattern.affected_conversation_ids[0]}` : "/patterns"}
+                  className="block rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{pattern.title}</p>
+                    <SeverityBadge severity={pattern.severity} />
+                  </div>
+                  <p className="text-sm leading-6 text-[var(--text-secondary)]">{pattern.description}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="rounded-[1.25rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Best prompt changes</h2>
-          </div>
-          {!summary?.prompt_improvements?.length ? (
-            <p className="text-sm text-[var(--text-muted)]">None detected this week.</p>
-          ) : (
-            <div className="space-y-3">
-              {summary.prompt_improvements.map((improvement: PromptImprovement, index: number) => (
-                <div key={index} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
-                  <div className="mb-1 flex items-center justify-between">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{improvement.issue}</p>
-                    <SeverityBadge severity={improvement.priority === "high" ? "high" : "medium"} />
-                  </div>
-                  <p className="text-xs italic text-[var(--text-muted)]">{improvement.recommended_prompt_change}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </GlassCard>
-      </div>
-
-      <div className="mb-6 grid gap-6 xl:grid-cols-2">
-        <GlassCard className="rounded-[1rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Knowledge gaps</h2>
-          </div>
-          {!summary?.knowledge_gaps?.length ? (
-            <p className="text-sm text-[var(--text-muted)]">No gaps detected this week.</p>
-          ) : (
-            <div className="space-y-3">
-              {summary.knowledge_gaps.map((gap: KnowledgeGap, index: number) => (
-                <div key={index} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
-                  <p className="text-sm font-medium capitalize text-[var(--text-primary)]">{gap.topic}</p>
-                  <p className="mt-1 text-xs text-[var(--text-secondary)]">{gap.description}</p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Affects {gap.affected_conversations} conversations
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </GlassCard>
-
-        <GlassCard className="rounded-[1rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Siren className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Alerts triggered</h2>
-          </div>
-          {report.alerts.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No alerts triggered this week.</p>
-          ) : (
-            <div className="space-y-3">
-              {report.alerts.map((alert) => (
-                <div key={alert.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{alert.title}</p>
-                    <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      {alert.alert_type.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    {alert.description || "Threshold crossed."}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </GlassCard>
-      </div>
-
-      <div className="mb-6 grid gap-6 xl:grid-cols-2">
-        <GlassCard className="rounded-[1rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Team-wide improvements</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Org-wide improvements</h2>
           </div>
           {report.organization_recommendations.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No repeated operating recommendations yet.</p>
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No org-wide change is being recommended yet.</p>
           ) : (
             <div className="space-y-3">
               {report.organization_recommendations.map((recommendation) => (
-                <div key={recommendation.id} className="rounded-xl bg-[rgba(0,0,0,0.02)] p-3">
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{recommendation.title}</p>
+                <div key={recommendation.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{recommendation.title}</p>
                     <SeverityBadge
                       severity={
                         recommendation.priority === "high"
@@ -238,97 +250,73 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                       }
                     />
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)]">{recommendation.rationale}</p>
-                  <p className="mt-2 text-xs italic text-[var(--text-muted)]">
-                    {recommendation.recommended_change}
-                  </p>
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">
-                    Seen across {recommendation.occurrence_count} conversations or patterns.
-                  </p>
+                  <p className="text-sm leading-6 text-[var(--text-secondary)]">{recommendation.rationale}</p>
+                  <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{recommendation.recommended_change}</p>
                 </div>
               ))}
             </div>
           )}
         </GlassCard>
+      </section>
 
-        <GlassCard className="rounded-[1rem] p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recurring issues</h2>
-          </div>
-          {report.patterns.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No recurring patterns detected this week.</p>
-          ) : (
-            <div className="space-y-3">
-              {report.patterns.map((pattern) => (
-                <Link
-                  key={pattern.id}
-                  href={pattern.affected_conversation_ids[0] ? `/conversations/${pattern.affected_conversation_ids[0]}` : "/patterns"}
-                  className="block rounded-xl bg-[rgba(0,0,0,0.02)] p-3 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-                >
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{pattern.title}</p>
-                    <SeverityBadge severity={pattern.severity} />
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)]">{pattern.description}</p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </GlassCard>
-
-        <GlassCard className="rounded-[1rem] p-5">
+      <section className="grid gap-4 xl:grid-cols-3">
+        <GlassCard className="rounded-[1.25rem] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Brain className="h-4 w-4 text-[var(--text-secondary)]" />
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recommended Interventions</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Prompt improvements</h2>
           </div>
-          {recommendedInterventions.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No interventions recommended this week.</p>
+          {!summary?.prompt_improvements?.length ? (
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No prompt improvement surfaced this week.</p>
           ) : (
             <div className="space-y-3">
-              {recommendedInterventions.map((intervention) => (
-                <Link
-                  key={intervention.id}
-                  href={intervention.href}
-                  className="block rounded-xl bg-[rgba(0,0,0,0.02)] p-3 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-                >
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{intervention.title}</p>
-                    <SeverityBadge severity={intervention.severity} />
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)]">{intervention.intervention}</p>
-                </Link>
+              {summary.prompt_improvements.map((improvement: PromptImprovement, index: number) => (
+                <div key={`${improvement.issue}-${index}`} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{improvement.recommended_prompt_change}</p>
+                </div>
               ))}
             </div>
           )}
         </GlassCard>
-      </div>
 
-      <GlassCard className="rounded-[1rem] p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-[var(--text-secondary)]" />
-          <h2 className="text-sm font-medium text-[var(--text-primary)]">Worst Conversations This Week</h2>
-        </div>
-        {!summary?.top_failures?.length ? (
-          <p className="text-sm text-[var(--text-muted)]">No scored conversations this week.</p>
-        ) : (
-          <div className="space-y-2">
-            {summary.top_failures.map((failure, index) => (
-              <Link
-                key={index}
-                href={`/conversations/${failure.conversation_id}`}
-                className="flex items-center justify-between rounded-xl bg-[rgba(0,0,0,0.02)] p-3 transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-              >
-                <div>
-                  <p className="text-sm text-[var(--text-primary)]">{failure.summary}</p>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{failure.conversation_id}</p>
-                </div>
-                <ScoreBadge score={failure.score} />
-              </Link>
-            ))}
+        <GlassCard className="rounded-[1.25rem] p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Knowledge gaps</h2>
           </div>
-        )}
-      </GlassCard>
+          {!summary?.knowledge_gaps?.length ? (
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No knowledge gap surfaced this week.</p>
+          ) : (
+            <div className="space-y-3">
+              {summary.knowledge_gaps.map((gap: KnowledgeGap, index: number) => (
+                <div key={`${gap.topic}-${index}`} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-sm font-semibold capitalize text-[var(--text-primary)]">{gap.topic}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{gap.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="rounded-[1.25rem] p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <Siren className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Alerts fired</h2>
+          </div>
+          {report.alerts.length === 0 ? (
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">No alerts fired in this window.</p>
+          ) : (
+            <div className="space-y-3">
+              {report.alerts.map((alert) => (
+                <div key={alert.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{alert.description || "Threshold crossed."}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      </section>
     </div>
   );
 }
