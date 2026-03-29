@@ -57,7 +57,7 @@ function hasOperationalRecordClaim(messages: Message[]): boolean {
   return messages.some(
     (message) =>
       message.role === "agent" &&
-      /(i can see|i found|i checked|it looks like|already exists|in your pipeline|on your account|your account shows|your order shows|your subscription is|record shows|crm|deal|contact|ticket|company|workspace)/i.test(
+      /(i can see|i found|i checked|it looks like|already exists|in your pipeline|on your account|your account shows|your order shows|your subscription is|record shows|crm|deal|contact|ticket|company|workspace|briefing|close date|stage|value|partner|decision-maker|internal champion|open todos|what to do next|risk|competitor)/i.test(
         message.content
       )
   );
@@ -95,9 +95,10 @@ function hasSubstantiveAgentResponse(messages: Message[]): boolean {
     const wordCount = normalized.split(/\s+/).filter(Boolean).length;
     return (
       wordCount >= 25 ||
-      /priority|next step|today|first|second|follow up|action|recommend|should|start with|watch point/i.test(
+      /priority|next step|today|first|second|follow up|action|recommend|should|start with|watch point|briefing|snapshot|stage|value|close date|contact|where things stand|risk|todo|what to do next/i.test(
         normalized
-      )
+      ) ||
+      /##|###|\|/.test(normalized)
     );
   });
 }
@@ -241,16 +242,20 @@ function downgradeUnsupportedOperationalFabrication(
   input: ScoringInput,
   result: ScoringResult
 ): ScoringResult {
-  const hasKb = Boolean(input.knowledgeBaseContext?.length);
   const hasToolEvidence = hasTranscriptToolEvidence(input.messages);
   const operational = hasOperationalRecordClaim(input.messages);
+  const hasKbBackedEvidence = result.claim_analysis.some(
+    (claim) =>
+      Boolean(claim.kb_source) &&
+      (claim.verdict === "verified" || claim.verdict === "contradicted")
+  );
 
-  if (hasKb || hasToolEvidence || !operational) {
+  if (hasToolEvidence || !operational || hasKbBackedEvidence) {
     return result;
   }
 
   const remappedClaims = result.claim_analysis.map((claim) => {
-    if (claim.verdict !== "fabricated") {
+    if (claim.verdict !== "fabricated" && claim.verdict !== "contradicted") {
       return claim;
     }
 
@@ -263,15 +268,17 @@ function downgradeUnsupportedOperationalFabrication(
     };
   });
 
-  const hadFabricatedClaims = remappedClaims.some((claim) => claim.verdict === "fabricated");
-  if (hadFabricatedClaims) {
+  const stillHasStrongNegativeClaims = remappedClaims.some(
+    (claim) => claim.verdict === "fabricated" || claim.verdict === "contradicted"
+  );
+  if (stillHasStrongNegativeClaims) {
     return result;
   }
 
   return {
     ...result,
     claim_analysis: remappedClaims,
-    flags: removeMatchingFlags(result.flags, /fabricat|hallucinat/i),
+    flags: removeMatchingFlags(result.flags, /fabricat|hallucinat|unsupported_internal_metrics|unsupported_contact_roles|likely_fabricated/i),
   };
 }
 
@@ -589,6 +596,18 @@ export function applyScoringGuardrails(
 
   const confidence = deriveConfidenceLevel(input, adjusted);
   adjusted.confidence_level = confidence.level;
+
+  if (
+    confidence.level === "low" &&
+    adjusted.flags.includes("grounding_risk_review_recommended") &&
+    !adjusted.claim_analysis.some((claim) => claim.verdict === "fabricated" || claim.verdict === "contradicted")
+  ) {
+    adjusted.overall_score = Math.min(adjusted.overall_score, strongAdvisoryAnswer ? 0.79 : 0.72);
+    if (adjusted.overall_decision === "pass") {
+      adjusted.overall_decision = "borderline";
+    }
+  }
+
   adjusted.summary =
     adjusted.summary ||
     buildDefaultSummary(adjusted, confidence);

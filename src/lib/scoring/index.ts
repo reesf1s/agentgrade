@@ -53,6 +53,56 @@ function shouldUseDeterministicPass(messages: Message[]) {
   return messages.length <= 2 && totalWords <= 18;
 }
 
+function hasTranscriptToolEvidence(messages: Message[]) {
+  return messages.some(
+    (message) =>
+      message.role === "tool" ||
+      message.role === "system" ||
+      Boolean(message.metadata?.tool_name) ||
+      Boolean(message.metadata?.tool_result) ||
+      Boolean(message.metadata?.source)
+  );
+}
+
+function isOperationalRecordRequest(messages: Message[]) {
+  return messages.some(
+    (message) =>
+      message.role === "customer" &&
+      /\b(deal|account|crm|pipeline|ticket|subscription|contact|company|briefing|score history|health trend|close date|next steps|todos)\b/i.test(
+        message.content
+      )
+  );
+}
+
+function filterRelevantKnowledgeBaseItems(
+  items: Array<{ title?: string; content?: string; similarity?: number }>,
+  query: string,
+  messages: Message[]
+) {
+  const operationalRequest = isOperationalRecordRequest(messages);
+  const hasToolEvidence = hasTranscriptToolEvidence(messages);
+  const minSimilarity = operationalRequest && !hasToolEvidence ? 0.58 : 0.36;
+  const queryTerms = Array.from(
+    new Set(
+      query
+        .toLowerCase()
+        .match(/[a-z]{4,}/g)
+        ?.filter((term) => !["what", "show", "give", "complete", "briefing", "score", "history", "health", "trend", "with", "from", "that", "this"].includes(term)) || []
+    )
+  ).slice(0, 10);
+
+  return items.filter((item) => {
+    const similarity = typeof item.similarity === "number" ? item.similarity : 0;
+    if (similarity < minSimilarity) return false;
+
+    if (!operationalRequest || queryTerms.length === 0) return true;
+
+    const haystack = `${item.title || ""} ${item.content || ""}`.toLowerCase();
+    const overlap = queryTerms.filter((term) => haystack.includes(term)).length;
+    return overlap >= 1;
+  });
+}
+
 // ─── Stateless Pipeline (backward compatible) ───────────────────────
 /**
  * Runs the scoring pipeline on an in-memory message array.
@@ -210,11 +260,12 @@ export async function scoreConversation(conversationId: string): Promise<{
   let knowledgeBaseContext: string[] = [];
   try {
     const kbItems = await searchKnowledgeBase(workspaceId, topicQuery, 5);
-    knowledgeBaseContext = kbItems.map((item) => `[${item.title}]\n${item.content}`);
+    const relevantKbItems = filterRelevantKnowledgeBaseItems(kbItems, topicQuery, messages);
+    knowledgeBaseContext = relevantKbItems.map((item) => `[${item.title}]\n${item.content}`);
 
-    if (kbItems.length > 0) {
+    if (relevantKbItems.length > 0) {
       console.log(
-        `[scoring] KB search returned ${kbItems.length} relevant docs for conversation ${conversationId}`
+        `[scoring] KB search returned ${relevantKbItems.length} relevant docs for conversation ${conversationId}`
       );
     }
   } catch (e) {

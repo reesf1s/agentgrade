@@ -145,7 +145,9 @@ export async function searchKnowledgeBase(
       return [];
     }
 
-    return (data || []) as KnowledgeBaseItem[];
+    return ((data || []) as Array<KnowledgeBaseItem & { similarity?: number }>).filter(
+      (item) => typeof item?.content === "string" && item.content.trim().length > 0
+    );
   } catch (error) {
     console.warn("[knowledge-base] Search error:", error);
     return [];

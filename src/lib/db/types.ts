@@ -201,6 +201,7 @@ export interface KnowledgeBaseItem {
   workspace_id: string;
   title: string;
   content: string;
+  similarity?: number;
   chunk_index: number;
   source_file?: string;
   source_url?: string;
