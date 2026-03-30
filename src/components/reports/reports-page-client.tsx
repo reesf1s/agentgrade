@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { ArrowRight, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2, BarChart2 } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -164,9 +164,9 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
             <p className="text-sm font-semibold text-[var(--text-primary)]">Quality trend</p>
           </div>
           <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-full bg-[#2563EB]" />Overall</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-full bg-[#10b981]" />Accuracy</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-full bg-[#f59e0b]" />Hallucination</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#3B82F6]" />Overall</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#10b981]" />Accuracy</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#f59e0b]" />Hallucination</span>
           </div>
         </div>
 
@@ -175,7 +175,17 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         ) : (
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+              <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradOverall" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradAccuracy" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
                 <XAxis
                   dataKey="date"
@@ -193,18 +203,19 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "var(--panel)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "8px",
+                    background: "var(--glass-bg-elevated)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "10px",
                     fontSize: 12,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    backdropFilter: "blur(16px)",
                   }}
                   formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
                 />
-                <Line type="monotone" dataKey="overall"      stroke="#2563EB" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="accuracy"     stroke="#10b981" strokeWidth={1.5} dot={false} opacity={0.7} />
-                <Line type="monotone" dataKey="hallucination" stroke="#f59e0b" strokeWidth={1.5} dot={false} opacity={0.7} />
-              </LineChart>
+                <Area type="monotone" dataKey="overall" stroke="#3B82F6" strokeWidth={2} fill="url(#gradOverall)" dot={false} />
+                <Area type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={1.5} fill="url(#gradAccuracy)" dot={false} opacity={0.7} />
+                <Area type="monotone" dataKey="hallucination" stroke="#f59e0b" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         )}

@@ -56,24 +56,28 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       value: pct(avgScore),
       sub:   trendDelta > 0.02 ? "↑ improving" : trendDelta < -0.02 ? "↓ declining" : "→ steady",
       color: scoreColor(avgScore),
+      glow: scoreColor(avgScore) === 'text-score-good' ? '#16A34A' : scoreColor(avgScore) === 'text-score-critical' ? '#DC2626' : '#D97706',
     },
     {
       label: "Scored",
       value: reviewed.toString(),
       sub:   "conversations",
       color: "text-[var(--text-primary)]",
+      glow: '#3B82F6',
     },
     {
       label: "Hallucination",
       value: pct(hallucinationRate),
       sub:   hallucinationRate > 0.1 ? "Above threshold" : "Within range",
       color: hallucinationRate > 0.1 ? "text-score-critical" : hallucinationRate > 0.05 ? "text-score-warning" : "text-score-good",
+      glow: hallucinationRate > 0.1 ? '#DC2626' : hallucinationRate > 0.05 ? '#D97706' : '#16A34A',
     },
     {
       label: "Escalation rate",
       value: pct(escalationRate),
       sub:   escalationRate > 0.12 ? "Above threshold" : "Within range",
       color: escalationRate > 0.12 ? "text-score-critical" : escalationRate > 0.06 ? "text-score-warning" : "text-score-good",
+      glow: escalationRate > 0.12 ? '#DC2626' : escalationRate > 0.06 ? '#D97706' : '#16A34A',
     },
   ];
 
@@ -95,10 +99,49 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         </Link>
       </div>
 
+      {/* Hero score ring */}
+      <div className="glass-static p-6 flex items-center gap-6">
+        <div className="relative">
+          <div
+            className="score-ring"
+            style={{
+              '--ring-pct': `${Math.round(avgScore * 100)}%`,
+              '--ring-color': avgScore >= 0.75 ? '#16A34A' : avgScore >= 0.55 ? '#D97706' : '#DC2626',
+            } as React.CSSProperties}
+          >
+            <div className="score-ring-label" style={{ width: 'var(--size)', height: 'var(--size)', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className={`text-lg font-bold ${scoreColor(avgScore)}`}>{pct(avgScore)}</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Overall quality</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            {trendDelta > 0.02 ? 'Improving this week' : trendDelta < -0.02 ? 'Declining this week' : 'Holding steady this week'}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            {trendDelta > 0.02 ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#16A34A]">
+                <TrendingUp className="h-3 w-3" /> +{Math.round(trendDelta * 100)}%
+              </span>
+            ) : trendDelta < -0.02 ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#DC2626]">
+                <TrendingDown className="h-3 w-3" /> {Math.round(trendDelta * 100)}%
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--text-muted)]">
+                <Minus className="h-3 w-3" /> Steady
+              </span>
+            )}
+            <span className="text-xs text-[var(--text-muted)]">· {reviewed} conversations scored</span>
+          </div>
+        </div>
+      </div>
+
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metrics.map((m) => (
-          <div key={m.label} className="metric-card">
+          <div key={m.label} className="metric-card" data-glow style={{ '--metric-glow': m.glow } as React.CSSProperties}>
             <p className="metric-label">{m.label}</p>
             <p className={`metric-value ${m.color}`}>{m.value}</p>
             <p className="metric-sub">{m.sub}</p>
@@ -209,7 +252,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               </span>
             )}
           </div>
-          <span className="operator-chip">30 days</span>
+          <span className="glass-button text-[10px] py-0.5 px-2">30d</span>
         </div>
 
         {data.trend_data.length === 0 ? (
@@ -247,7 +290,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                 <Line
                   type="monotone"
                   dataKey="overall"
-                  stroke="var(--btn-primary-bg)"
+                  stroke="#3B82F6"
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 4 }}

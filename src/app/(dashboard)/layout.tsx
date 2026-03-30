@@ -15,7 +15,7 @@ export default function DashboardLayout({
       <div className="flex flex-1 flex-col lg:pl-[13.5rem]">
 
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-2 border-b border-[var(--border-subtle)] bg-[var(--panel)] px-4 pt-14 pb-2 lg:pt-0">
+        <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl px-4 pt-14 pb-2 lg:pt-0">
           <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1.5">
             <ThemeToggle />
           </div>
