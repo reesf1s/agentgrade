@@ -17,7 +17,6 @@ import {
   X,
 } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
-import { GlassCard } from "@/components/ui/glass-card";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { useToast } from "@/components/ui/toast";
@@ -462,7 +461,6 @@ export default function ConversationDetailPage() {
   const reviewGroups = buildReviewGroups(qs);
   const advancedClaimGroups = groupClaimsForAdvancedReview(qs);
   const showKnowledgeAndPromptDetails = !groundingOnly;
-  const actionState = nextBestAction(qs, groundingOnly);
 
   const msgConfig = {
     customer:    { icon: User,      label: "Customer",     bubbleClass: "msg-customer", align: "start" as const },

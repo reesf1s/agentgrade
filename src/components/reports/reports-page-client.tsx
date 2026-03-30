@@ -199,7 +199,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                     fontSize: 12,
                     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                   }}
-                  formatter={(value: number) => [`${Math.round(value * 100)}%`]}
+                  formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
                 />
                 <Line type="monotone" dataKey="overall"      stroke="#2563EB" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="accuracy"     stroke="#10b981" strokeWidth={1.5} dot={false} opacity={0.7} />
