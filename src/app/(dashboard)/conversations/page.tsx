@@ -84,6 +84,7 @@ export default function ConversationsPage() {
   const [sortPreset, setSortPreset]         = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
   const [queueStates, setQueueStates]       = useState<Record<string, QueueWorkflowState>>({});
   const [showFilters, setShowFilters]       = useState(false);
+  const [viewMode, setViewMode]             = useState<"queue" | "all">("all");
   const { success, error }                  = useToast();
 
   useEffect(() => { setQueueStates(getQueueStateMap()); }, []);
@@ -101,12 +102,8 @@ export default function ConversationsPage() {
     fetch(`/api/conversations?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        const rows = (data.conversations || []).filter((c: ConversationRow) => {
-          const wf = getConversationWorkflow(c.metadata);
-          return wf?.queue_state !== "safe" && wf?.queue_state !== "reviewed";
-        });
-        setConversations(rows);
-        setTotal(rows.length);
+        setConversations(data.conversations || []);
+        setTotal((data.conversations || []).length);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -136,7 +133,12 @@ export default function ConversationsPage() {
   }, [conversations, queueStates]);
 
   const sorted = useMemo(() => {
-    const arr = [...conversations];
+    const arr = viewMode === "queue"
+      ? conversations.filter((c) => {
+          const wf = getConversationWorkflow(c.metadata);
+          return wf?.queue_state !== "safe" && wf?.queue_state !== "reviewed";
+        })
+      : [...conversations];
     arr.sort((a, b) => {
       const aS = a.quality_scores?.overall_score ?? -1;
       const bS = b.quality_scores?.overall_score ?? -1;
@@ -155,7 +157,7 @@ export default function ConversationsPage() {
       }
     });
     return arr;
-  }, [conversations, sortPreset]);
+  }, [conversations, sortPreset, viewMode]);
 
   const groups = useMemo(() => {
     const g: Record<string, ConversationRow[]> = { "Review now": [], "Quick pass": [], "Pending": [], "Safe to close": [] };
@@ -206,13 +208,29 @@ export default function ConversationsPage() {
       {/* Page header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Review queue</h1>
+          <h1 className="page-title">Conversations</h1>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
-            <span><strong className="text-[var(--text-primary)]">{stats.reviewNext}</strong> to review</span>
-            {highRisk > 0 && <span><strong className="score-critical">{highRisk}</strong> high risk</span>}
+            <span><strong className="text-[var(--text-primary)]">{total}</strong> total</span>
+            {stats.reviewNext > 0 && <span><strong className="text-score-critical">{stats.reviewNext}</strong> to review</span>}
+            {highRisk > 0 && <span><strong className="text-score-critical">{highRisk}</strong> high risk</span>}
             {stats.pending > 0 && <span>{stats.pending} scoring</span>}
-            {stats.done > 0 && <span>{stats.done} processed</span>}
           </div>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("all")}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${viewMode === "all" ? "bg-[var(--panel)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("queue")}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${viewMode === "queue" ? "bg-[var(--panel)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+          >
+            Queue
+          </button>
         </div>
       </div>
 
