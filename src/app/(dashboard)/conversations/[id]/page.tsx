@@ -507,7 +507,8 @@ export default function ConversationDetailPage() {
       </div>
 
       {/* Header card */}
-      <div className="glass-static p-5">
+      <div className="glass-static p-5 relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-[0.07]" style={{ background: `radial-gradient(circle, ${qs && (qs.overall_score || 0) >= 0.75 ? '#16A34A' : qs && (qs.overall_score || 0) >= 0.5 ? '#D97706' : '#DC2626'}, transparent 70%)` }} />
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="operator-chip capitalize">{conv.platform}</span>
           <span className="operator-chip">{new Date(conv.created_at).toLocaleDateString("en-GB")}</span>
@@ -556,7 +557,7 @@ export default function ConversationDetailPage() {
         {/* Transcript */}
         <div className="glass-static overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-3">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Conversation transcript</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Transcript <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--surface)] px-1.5 text-[10px] font-medium text-[var(--text-muted)]">{conv.messages.length}</span></p>
             <div className="flex gap-2">
               {evidenceLabel && <span className="operator-chip">{evidenceLabel}</span>}
             </div>
@@ -634,7 +635,7 @@ export default function ConversationDetailPage() {
                       <div className="score-bar-track">
                         <div
                           className="score-bar-fill"
-                          style={{ width: `${s * 100}%`, background: barColor }}
+                          style={{ width: `${s * 100}%`, background: barColor, boxShadow: `0 0 8px ${barColor}40` }}
                         />
                       </div>
                     </div>
@@ -647,6 +648,7 @@ export default function ConversationDetailPage() {
           {/* Action card */}
           <div className="glass-static p-4">
             <p className="section-label mb-3">Your call</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3 -mt-1">Choose how to handle this conversation</p>
             <div className="space-y-1.5">
               {dispositions.map(({ value, label, hint }) => {
                 const isActive = reviewDisposition === value;

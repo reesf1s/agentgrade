@@ -345,6 +345,9 @@ export default function ConversationsPage() {
                 <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
                   {items.length}
                 </span>
+                <div className="ml-auto h-1 flex-1 max-w-[100px] rounded-full bg-[var(--surface)] overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, (items.length / Math.max(1, sorted.length)) * 100)}%`, background: groupName === 'Review now' ? '#DC2626' : groupName === 'Quick pass' ? '#D97706' : groupName === 'Pending' ? '#64748B' : '#16A34A' }} />
+                </div>
               </div>
 
               {/* Table */}
@@ -400,7 +403,7 @@ export default function ConversationsPage() {
                             type="button"
                             disabled={savingActionId === c.id}
                             onClick={() => updateQueueState(c.id, state)}
-                            className="glass-button py-0.5 px-2 text-xs"
+                            className={`glass-button py-0.5 px-2 text-xs ${state === 'safe' ? 'hover:!border-[#16A34A] hover:!text-[#16A34A]' : state === 'escalated' ? 'hover:!border-[#DC2626] hover:!text-[#DC2626]' : ''}`}
                           >
                             {savingActionId === c.id
                               ? "···"
@@ -420,8 +423,12 @@ export default function ConversationsPage() {
         })}
 
         {!loading && conversations.length === 0 && (
-          <div className="glass-static py-12 text-center">
-            <p className="text-sm text-[var(--text-muted)]">No conversations match your filters.</p>
+          <div className="glass-static py-16 text-center">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)]">
+              <Search className="h-4 w-4 text-[var(--text-muted)]" />
+            </div>
+            <p className="text-sm font-medium text-[var(--text-secondary)]">No conversations found</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Try adjusting your filters or search terms</p>
           </div>
         )}
       </div>
