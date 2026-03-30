@@ -231,10 +231,10 @@ export default function OnboardingPage() {
   return (
     <div className="mx-auto max-w-4xl py-10">
       <div className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+        <h1 className="text-3xl font-semibold tracking-tight text-fg">
           Set up AgentGrade
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-secondary">
           Connect one or more support agents, add knowledge sources, and set the thresholds that should trigger review.
         </p>
       </div>
@@ -252,15 +252,15 @@ export default function OnboardingPage() {
                   isDone
                     ? "bg-[var(--text-primary)] text-white"
                     : isActive
-                      ? "bg-[rgba(0,0,0,0.08)] text-[var(--text-primary)]"
-                      : "bg-[rgba(0,0,0,0.03)] text-[var(--text-muted)]"
+                      ? "bg-[rgba(0,0,0,0.08)] text-fg"
+                      : "bg-[rgba(0,0,0,0.03)] text-fg-muted"
                 }`}
               >
                 {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
               </div>
               <span
                 className={`text-sm ${
-                  isActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"
+                  isActive ? "text-fg font-medium" : "text-fg-muted"
                 }`}
               >
                 {step.title}
@@ -281,8 +281,8 @@ export default function OnboardingPage() {
       {currentStep === 1 && (
         <GlassCard className="grid gap-8 p-8 lg:grid-cols-[minmax(0,1.2fr)_320px]">
           <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Connect your AI agent</h2>
-          <p className="text-sm text-[var(--text-secondary)] mb-8">
+          <h2 className="text-xl font-semibold text-fg mb-2">Connect your AI agent</h2>
+          <p className="text-sm text-fg-secondary mb-8">
             Choose how conversations should flow into AgentGrade. Each connection gets its own secret, setup guide, and scoring history.
           </p>
 
@@ -303,8 +303,8 @@ export default function OnboardingPage() {
                     : "bg-[rgba(0,0,0,0.02)] border border-transparent hover:bg-[rgba(0,0,0,0.04)]"
                 }`}
               >
-                <p className="text-sm font-medium text-[var(--text-primary)]">{option.name}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{option.desc}</p>
+                <p className="text-sm font-medium text-fg">{option.name}</p>
+                <p className="text-xs text-fg-muted mt-0.5">{option.desc}</p>
               </button>
             ))}
           </div>
@@ -329,7 +329,7 @@ export default function OnboardingPage() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-fg-muted">
                 Find this in Intercom → Settings → Integrations → Developer Hub.
               </p>
             </div>
@@ -356,14 +356,14 @@ export default function OnboardingPage() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-fg-muted">
                 Zendesk API token auth uses your agent email plus an API token. AgentGrade uses both to sync ticket comments and Help Center articles.
               </p>
             </div>
           )}
 
           {(platform === "custom" || platform === "voiceflow") && (
-            <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] text-sm text-[var(--text-secondary)] mb-6">
+            <div className="p-4 rounded-xl bg-[rgba(0,0,0,0.02)] text-sm text-fg-secondary mb-6">
               We&apos;ll generate a secure webhook URL and bearer secret on the next step. Recommended trigger:
               {platform === "voiceflow"
                 ? " call AgentGrade from a Voiceflow custom action after each assistant turn or when the session closes."
@@ -387,13 +387,13 @@ export default function OnboardingPage() {
                 className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer"
                 onClick={() => conversationFileInputRef.current?.click()}
               >
-                <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-                <p className="text-sm text-[var(--text-secondary)]">Choose your CSV or JSON export</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
+                <Upload className="w-8 h-8 text-fg-muted mx-auto mb-2" />
+                <p className="text-sm text-fg-secondary">Choose your CSV or JSON export</p>
+                <p className="text-xs text-fg-muted mt-1">
                   Expected format: each row is a message with `conversation_id`, `role`, `content`, and optional `timestamp`.
                 </p>
                 {conversationFileInputRef.current?.files?.[0] && (
-                  <p className="text-xs text-[var(--text-primary)] mt-3">
+                  <p className="text-xs text-fg mt-3">
                     Selected: {conversationFileInputRef.current.files[0].name}
                   </p>
                 )}
@@ -411,16 +411,16 @@ export default function OnboardingPage() {
           </GlassButton>
           </div>
 
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          <div className="rounded-2xl border border-edge bg-[var(--panel-subtle)] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
               Best path for most teams
             </p>
-            <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+            <ul className="mt-4 space-y-3 text-sm text-fg-secondary">
               <li>Use `Custom Webhook` for in-product copilots, command menus, and internal chatbots.</li>
               <li>Use `Voiceflow` when you want AgentGrade to expect Voiceflow-shaped payloads.</li>
               <li>Use `Upload CSV/JSON` if you want an immediate historical audit before going live.</li>
             </ul>
-            <div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-xs text-[var(--text-muted)]">
+            <div className="mt-5 rounded-2xl bg-surface p-4 text-xs text-fg-muted">
               AgentGrade supports multiple bots per workspace, so you can connect your live assistant, fallback assistant, and internal support copilot separately.
             </div>
           </div>
@@ -430,28 +430,28 @@ export default function OnboardingPage() {
       {currentStep === 2 && (
         <GlassCard className="grid gap-8 p-8 lg:grid-cols-[minmax(0,1.2fr)_320px]">
           <div>
-          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+          <h2 className="text-xl font-semibold text-fg mb-2">
             Upload your knowledge base
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mb-8">
+          <p className="text-sm text-fg-secondary mb-8">
             We use this content to verify factual claims, catch hallucinations, and improve how precisely your bot is assessed.
           </p>
 
           {(platform === "custom" || platform === "voiceflow") && webhookSecret && (
             <div className="space-y-3 mb-6">
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                <p className="text-xs text-[var(--text-secondary)] mb-1">Your webhook URL</p>
-                <code className="text-xs font-mono text-[var(--text-primary)] break-all">
+                <p className="text-xs text-fg-secondary mb-1">Your webhook URL</p>
+                <code className="text-xs font-mono text-fg break-all">
                   {webhookUrl || `${browserOrigin}/api/webhooks/ingest`}
                 </code>
               </div>
               <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)]">
-                <p className="text-xs text-[var(--text-secondary)] mb-1">Authorization header</p>
-                <code className="text-xs font-mono text-[var(--text-primary)] break-all">
+                <p className="text-xs text-fg-secondary mb-1">Authorization header</p>
+                <code className="text-xs font-mono text-fg break-all">
                   Bearer {webhookSecret}
                 </code>
               </div>
-              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)] text-xs text-[var(--text-secondary)]">
+              <div className="p-3 rounded-xl bg-[rgba(0,0,0,0.02)] text-xs text-fg-secondary">
                 {platform === "voiceflow" && "Voiceflow recipe: add a custom action that POSTs the current session transcript and variables to AgentGrade after each assistant reply."}
                 {platform === "custom" && "Custom recipe: send the conversation transcript from your runtime, server, or workflow tool using the secure webhook."}
               </div>
@@ -480,13 +480,13 @@ export default function OnboardingPage() {
             className="border-2 border-dashed border-[rgba(0,0,0,0.08)] rounded-xl p-8 text-center hover:border-[rgba(0,0,0,0.15)] transition-colors cursor-pointer mb-6"
             onClick={() => kbFileInputRef.current?.click()}
           >
-            <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--text-secondary)]">Choose PDF, DOCX, TXT, Markdown, or JSON files</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
+            <BookOpen className="w-8 h-8 text-fg-muted mx-auto mb-2" />
+            <p className="text-sm text-fg-secondary">Choose PDF, DOCX, TXT, Markdown, or JSON files</p>
+            <p className="text-xs text-fg-muted mt-1">
               Help articles, FAQs, policy docs, product documentation, and support playbooks all improve scoring fidelity.
             </p>
             {kbFileInputRef.current?.files?.[0] && (
-              <p className="text-xs text-[var(--text-primary)] mt-3">
+              <p className="text-xs text-fg mt-3">
                 Selected: {kbFileInputRef.current.files[0].name}
               </p>
             )}
@@ -516,13 +516,13 @@ export default function OnboardingPage() {
 
           <div className="space-y-4">
             {(platform === "custom" || platform === "voiceflow") && webhookSecret && (
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              <div className="rounded-2xl border border-edge bg-[var(--panel-subtle)] p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
                   Hand this to a developer
                 </p>
-                <div className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+                <div className="mt-4 space-y-3 text-sm text-fg-secondary">
                   <p>1. Add these env vars to the chatbot app and Vercel project.</p>
-                  <pre className="overflow-x-auto rounded-xl bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)]">
+                  <pre className="overflow-x-auto rounded-xl bg-surface p-3 text-xs text-fg">
 {`AGENTGRADE_WEBHOOK_URL=${webhookUrl || `${browserOrigin}/api/webhooks/${platform === "voiceflow" ? "voiceflow" : "ingest"}`}
 AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
                   </pre>
@@ -532,11 +532,11 @@ AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
               </div>
             )}
 
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            <div className="rounded-2xl border border-edge bg-[var(--panel-subtle)] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
                 Why add a knowledge base
               </p>
-              <ul className="mt-4 space-y-3 text-sm text-[var(--text-secondary)]">
+              <ul className="mt-4 space-y-3 text-sm text-fg-secondary">
                 <li>Improves hallucination detection by grounding the scoring engine.</li>
                 <li>Makes explanations more trustworthy because the evaluator has source material.</li>
                 <li>Turns missing documentation into explicit knowledge gaps and recommendations.</li>
@@ -548,10 +548,10 @@ AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
 
       {currentStep === 3 && (
         <GlassCard className="p-8">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+          <h2 className="text-xl font-semibold text-fg mb-2">
             Set alert thresholds
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mb-8">
+          <p className="text-sm text-fg-secondary mb-8">
             These thresholds control when AgentGrade warns you that conversation quality is slipping.
           </p>
 
@@ -560,8 +560,8 @@ AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
               <div key={threshold.dimension}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{threshold.label}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{threshold.desc}</p>
+                    <p className="text-sm font-medium text-fg">{threshold.label}</p>
+                    <p className="text-xs text-fg-muted">{threshold.desc}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <input
@@ -577,7 +577,7 @@ AGENTGRADE_BEARER_SECRET=${webhookSecret}`}
                       }
                       className="glass-input w-16 px-2 py-1.5 text-sm text-center font-mono"
                     />
-                    <span className="text-xs text-[var(--text-muted)]">%</span>
+                    <span className="text-xs text-fg-muted">%</span>
                   </div>
                 </div>
               </div>

@@ -12,16 +12,22 @@ import {
   Settings,
   Sparkles,
   X,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/reports",        label: "This week",      icon: FileBarChart },
-  { href: "/conversations",  label: "Conversations",  icon: MessageSquare },
-  { href: "/patterns",       label: "Patterns",       icon: Sparkles },
-  { href: "/dashboard",      label: "Overview",       icon: Layers },
-  { href: "/settings",       label: "Settings",       icon: Settings },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  section?: string;
+}
+
+const navItems: NavItem[] = [
+  { href: "/reports",       label: "This week",     icon: FileBarChart, section: "monitor" },
+  { href: "/conversations", label: "Conversations",  icon: MessageSquare, section: "monitor" },
+  { href: "/patterns",      label: "Patterns",       icon: Sparkles, section: "analyze" },
+  { href: "/dashboard",     label: "Overview",       icon: Layers, section: "analyze" },
+  { href: "/settings",      label: "Settings",       icon: Settings, section: "configure" },
 ];
 
 function NavLink({
@@ -44,15 +50,23 @@ function NavLink({
       href={href}
       prefetch
       onClick={onNavigate}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all",
+        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-all duration-150",
         isActive
-          ? "bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.90)] font-semibold"
-          : "font-medium text-[rgba(255,255,255,0.40)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[rgba(255,255,255,0.70)]"
+          ? "bg-brand-muted text-brand-light font-semibold"
+          : "text-fg-muted hover:bg-surface-hover hover:text-fg-secondary font-medium"
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[rgba(255,255,255,0.70)]" : "text-[rgba(255,255,255,0.25)]")} />
-      <span className="flex-1">{label}</span>
+      {/* Active indicator pill */}
+      {isActive && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-brand" />
+      )}
+      <Icon className={cn(
+        "h-4 w-4 shrink-0 transition-colors",
+        isActive ? "text-brand-light" : "text-fg-faint group-hover:text-fg-muted"
+      )} />
+      <span className="flex-1 truncate">{label}</span>
     </Link>
   );
 }
@@ -72,60 +86,75 @@ export function Sidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const SidebarContent = () => (
+  // Group nav items by section
+  const sections = [
+    { key: "monitor", items: navItems.filter((i) => i.section === "monitor") },
+    { key: "analyze", items: navItems.filter((i) => i.section === "analyze") },
+    { key: "configure", items: navItems.filter((i) => i.section === "configure") },
+  ];
+
+  const SidebarInner = () => (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.06)]">
-          <Zap className="h-3.5 w-3.5 text-[rgba(255,255,255,0.50)]" />
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-muted">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="currentColor" className="text-brand-light" />
+          </svg>
         </div>
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold tracking-[-0.02em] text-[rgba(255,255,255,0.85)] truncate">
-            AgentGrade
-          </p>
-        </div>
+        <p className="text-[13px] font-bold tracking-[-0.02em] text-fg truncate">
+          AgentGrade
+        </p>
       </div>
 
-      {/* Separator */}
-      <div className="mx-3 border-t border-[rgba(255,255,255,0.04)]" />
-
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3">
-        <div className="space-y-0.5">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              pathname={pathname}
-              onNavigate={() => setMobileOpen(false)}
-            />
-          ))}
-        </div>
+      {/* Nav sections */}
+      <nav className="flex-1 overflow-y-auto px-2.5 pb-3">
+        {sections.map((section, i) => (
+          <div key={section.key}>
+            {i > 0 && <div className="mx-1 my-2 border-t border-edge" />}
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  pathname={pathname}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Bottom — version */}
-      <div className="px-4 py-3 border-t border-[rgba(255,255,255,0.04)]">
-        <p className="text-[10px] text-[rgba(255,255,255,0.20)]">v0.1 beta</p>
+      {/* Bottom — keyboard hint */}
+      <div className="px-4 py-3 border-t border-edge">
+        <div className="flex items-center gap-1.5 text-[11px] text-fg-faint">
+          <kbd className="rounded border border-edge bg-surface px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
+          <kbd className="rounded border border-edge bg-surface px-1 py-0.5 font-mono text-[10px]">K</kbd>
+          <span className="ml-1">Quick search</span>
+        </div>
       </div>
     </>
   );
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] bg-[rgba(10,10,15,0.95)] backdrop-blur-xl px-4 py-3 lg:hidden">
+      {/* Mobile top bar */}
+      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-edge bg-base/95 backdrop-blur-xl px-4 py-3 lg:hidden">
         <Link href="/reports" prefetch className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[rgba(255,255,255,0.06)]">
-            <Zap className="h-3 w-3 text-[rgba(255,255,255,0.50)]" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-muted">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="currentColor" className="text-brand-light" />
+            </svg>
           </div>
-          <span className="text-sm font-semibold text-[rgba(255,255,255,0.85)]">AgentGrade</span>
+          <span className="text-sm font-bold text-fg">AgentGrade</span>
         </Link>
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-md border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] p-1.5 text-[rgba(255,255,255,0.60)]"
+          className="rounded-lg border border-edge bg-surface p-1.5 text-fg-muted transition-colors hover:text-fg-secondary"
           aria-label="Toggle navigation"
         >
           {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -136,7 +165,7 @@ export function Sidebar() {
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-backdrop-in lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
         />
@@ -145,12 +174,12 @@ export function Sidebar() {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[13.5rem] flex-col bg-[rgba(255,255,255,0.02)] border-r border-[rgba(255,255,255,0.04)] transition-transform duration-200",
+          "fixed inset-y-0 left-0 z-50 flex w-[14rem] flex-col bg-base border-r border-edge transition-transform duration-200 ease-out",
           "lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <SidebarContent />
+        <SidebarInner />
       </aside>
     </>
   );

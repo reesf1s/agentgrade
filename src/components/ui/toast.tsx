@@ -68,15 +68,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     ? "score-good"
                     : t.type === "error"
                     ? "score-critical"
-                    : "text-[var(--text-secondary)]"
+                    : "text-fg-secondary"
                 )}
               />
-              <p className="text-sm text-[var(--text-primary)] flex-1 leading-snug">
+              <p className="text-sm text-fg flex-1 leading-snug">
                 {t.message}
               </p>
               <button
                 onClick={() => dismiss(t.id)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors mt-0.5"
+                className="text-fg-muted hover:text-fg transition-colors mt-0.5"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

@@ -60,7 +60,7 @@ const GROUP_ORDER = ["Needs attention", "Review", "Pending", "Healthy"];
 const RISK_COLOR: Record<string, string> = {
   "Needs attention": "text-[#EF4444]",
   "Review":          "text-[#F59E0B]",
-  "Pending":         "text-[var(--text-muted)]",
+  "Pending":         "text-fg-muted",
   "Healthy":         "text-[#10B981]",
 };
 
@@ -157,10 +157,10 @@ export default function ConversationsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Conversations</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
-            <span><strong className="text-[var(--text-primary)]">{total}</strong> total</span>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-fg-secondary">
+            <span><strong className="text-fg">{total}</strong> total</span>
             {stats.attention > 0 && <span><strong className="text-[#EF4444]">{stats.attention}</strong> need attention</span>}
-            {stats.pending > 0 && <span className="text-[var(--text-muted)]">{stats.pending} scoring</span>}
+            {stats.pending > 0 && <span className="text-fg-muted">{stats.pending} scoring</span>}
           </div>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function ConversationsPage() {
       <div className="glass-static p-3">
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
             <input
               type="text"
               placeholder="Search customer, ID, or issue…"
@@ -192,7 +192,7 @@ export default function ConversationsPage() {
                 onClick={() => setSortPreset(key)}
                 className={`operator-chip cursor-pointer transition-colors ${
                   sortPreset === key
-                    ? "!border-[rgba(255,255,255,0.15)] !bg-[rgba(255,255,255,0.06)] !text-[var(--text-primary)] font-semibold"
+                    ? "!border-edge-strong !bg-surface-elevated !text-fg font-semibold"
                     : ""
                 }`}
               >
@@ -211,7 +211,7 @@ export default function ConversationsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--divider)] pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-edge pt-3">
             <select
               value={scoreFilter}
               onChange={(e) => setScoreFilter(e.target.value)}
@@ -267,13 +267,13 @@ export default function ConversationsPage() {
             <section key={groupName}>
               {/* Group header */}
               <div className="mb-1.5 flex items-center gap-2">
-                <span className={`section-label ${RISK_COLOR[groupName] || "text-[var(--text-muted)]"}`}>
+                <span className={`section-label ${RISK_COLOR[groupName] || "text-fg-muted"}`}>
                   {groupName}
                 </span>
-                <span className="text-[10px] font-medium text-[var(--text-muted)]">
+                <span className="text-[10px] font-medium text-fg-muted">
                   {items.length}
                 </span>
-                <div className="ml-auto h-[2px] flex-1 max-w-[80px] rounded-full bg-[rgba(255,255,255,0.04)] overflow-hidden">
+                <div className="ml-auto h-[2px] flex-1 max-w-[80px] rounded-full bg-surface overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -287,7 +287,7 @@ export default function ConversationsPage() {
 
               {/* Table — NO actions column */}
               <div className="glass-static overflow-hidden">
-                <div className="grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] gap-0 border-b border-[var(--divider)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] gap-0 border-b border-edge px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   <span>Conversation</span>
                   <span>Insight</span>
                   <span>Score</span>
@@ -296,21 +296,21 @@ export default function ConversationsPage() {
                 {items.map((c, idx) => (
                   <Link key={c.id} href={`/conversations/${c.id}`} className="block">
                     <div
-                      className={`grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] items-center gap-0 px-4 py-2.5 hover:bg-[var(--table-row-hover)] transition-colors ${
-                        idx < items.length - 1 ? "border-b border-[var(--divider)]" : ""
+                      className={`grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] items-center gap-0 px-4 py-2.5 hover:bg-surface-hover transition-colors ${
+                        idx < items.length - 1 ? "border-b border-edge" : ""
                       }`}
                     >
                       <div className="min-w-0 pr-4">
-                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                        <p className="truncate text-sm font-medium text-fg">
                           {c.customer_identifier || c.external_id || "Unknown"}
                         </p>
-                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                        <p className="mt-0.5 text-xs text-fg-muted">
                           {formatDate(c.created_at)}
                           {c.quality_scores?.confidence_level && ` · ${c.quality_scores.confidence_level}`}
                         </p>
                       </div>
 
-                      <div className="pr-4 text-xs text-[var(--text-secondary)]">
+                      <div className="pr-4 text-xs text-fg-secondary">
                         {insightLabel(c)}
                       </div>
 
@@ -318,7 +318,7 @@ export default function ConversationsPage() {
                         {c.quality_scores ? (
                           <ScoreBadge score={c.quality_scores.overall_score} size="sm" />
                         ) : (
-                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                          <span className="text-xs text-fg-muted">—</span>
                         )}
                       </div>
                     </div>
@@ -331,11 +331,11 @@ export default function ConversationsPage() {
 
         {!loading && conversations.length === 0 && (
           <div className="glass-static py-16 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.04)]">
-              <Search className="h-4 w-4 text-[var(--text-muted)]" />
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface">
+              <Search className="h-4 w-4 text-fg-muted" />
             </div>
-            <p className="text-sm font-medium text-[var(--text-secondary)]">No conversations found</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Try adjusting your filters or search terms</p>
+            <p className="text-sm font-medium text-fg-secondary">No conversations found</p>
+            <p className="mt-1 text-xs text-fg-muted">Try adjusting your filters or search terms</p>
           </div>
         )}
       </div>

@@ -25,7 +25,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       ? { label: "Improved this week", Icon: TrendingUp,   color: "#10B981" }
       : trendDelta < -0.02
       ? { label: "Slipped this week",  Icon: TrendingDown, color: "#EF4444" }
-      : { label: "Steady this week",   Icon: Minus,        color: "rgba(255,255,255,0.40)" };
+      : { label: "Steady this week",   Icon: Minus,        color: "rgba(255,255,255,0.35)" };
 
   const avgScore   = summary?.avg_overall_score ?? 0;
   const scored     = summary?.total_scored ?? 0;
@@ -44,8 +44,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       label:      "Scored",
       value:      scored.toString(),
       sub:        "conversations",
-      valueColor: "rgba(255,255,255,0.90)",
-      subColor:   "rgba(255,255,255,0.30)",
+      valueColor: undefined,
+      subColor:   undefined,
     },
     {
       label:      "Risky replies",
@@ -71,20 +71,18 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         <div>
           <p className="page-eyebrow mb-1">Weekly report</p>
           <h1 className="page-title">This week</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          <p className="mt-1 text-sm text-fg-secondary">
             {report.week_start} → {report.week_end}
           </p>
         </div>
       </div>
 
       {/* Trend banner */}
-      <div
-        className="glass-static flex items-center gap-3 px-5 py-3"
-      >
+      <div className="glass-static relative flex items-center gap-3 px-5 py-3.5">
         <trendTone.Icon className="h-4 w-4 shrink-0" style={{ color: trendTone.color }} />
-        <p className="text-sm font-medium" style={{ color: trendTone.color }}>{trendTone.label}</p>
+        <p className="text-sm font-semibold" style={{ color: trendTone.color }}>{trendTone.label}</p>
         {trendDelta !== 0 && (
-          <span className="ml-auto text-xs font-semibold tabular-nums font-mono" style={{ color: trendTone.color }}>
+          <span className="ml-auto text-sm font-bold tabular-nums font-mono" style={{ color: trendTone.color }}>
             {trendDelta > 0 ? "+" : ""}{Math.round(trendDelta * 100)}%
           </span>
         )}
@@ -95,8 +93,8 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         {metrics.map((m) => (
           <div key={m.label} className="metric-card">
             <p className="metric-label">{m.label}</p>
-            <p className="metric-value" style={{ color: m.valueColor }}>{m.value}</p>
-            <p className="metric-sub" style={{ color: m.subColor }}>{m.sub}</p>
+            <p className="metric-value" style={m.valueColor ? { color: m.valueColor } : undefined}>{m.value}</p>
+            <p className="metric-sub" style={m.subColor ? { color: m.subColor } : undefined}>{m.sub}</p>
           </div>
         ))}
       </div>
@@ -105,106 +103,106 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       <div className="grid gap-4 lg:grid-cols-2">
 
         {/* Biggest risk */}
-        <div className="glass-static p-5">
+        <div className="glass-static relative p-5">
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-[#F59E0B]" />
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Biggest risk this week</p>
+            <AlertTriangle className="h-4 w-4 text-score-warning" />
+            <p className="text-sm font-semibold text-fg">Biggest risk this week</p>
           </div>
           {report.patterns[0] ? (
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <SeverityBadge severity={report.patterns[0].severity} />
-                <span className="text-sm font-semibold text-[var(--text-primary)]">{report.patterns[0].title}</span>
+                <span className="text-sm font-semibold text-fg">{report.patterns[0].title}</span>
               </div>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{report.patterns[0].description}</p>
+              <p className="text-sm text-fg-secondary leading-relaxed">{report.patterns[0].description}</p>
               {report.patterns[0].affected_conversation_ids?.length > 0 && (
-                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                <p className="mt-3 text-xs text-fg-muted">
                   {report.patterns[0].affected_conversation_ids.length} conversations affected
                 </p>
               )}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-[#10B981]" />
-              <p className="text-sm text-[var(--text-secondary)]">No critical risks detected this week.</p>
+              <CheckCircle2 className="h-4 w-4 text-score-good" />
+              <p className="text-sm text-fg-secondary">No critical risks detected this week.</p>
             </div>
           )}
         </div>
 
         {/* Best opportunity */}
-        <div className="glass-static p-5">
+        <div className="glass-static relative p-5">
           <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="h-4 w-4 text-[var(--text-muted)]" />
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Best improvement opportunity</p>
+            <CheckCircle2 className="h-4 w-4 text-brand-light" />
+            <p className="text-sm font-semibold text-fg">Best improvement opportunity</p>
           </div>
           {report.organization_recommendations[0] ? (
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)] mb-1">
+              <p className="text-sm font-medium text-fg mb-1">
                 {report.organization_recommendations[0].recommended_change}
               </p>
               {report.organization_recommendations[0].expected_impact && (
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                <p className="text-sm text-fg-secondary leading-relaxed">
                   {report.organization_recommendations[0].expected_impact}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-[var(--text-secondary)]">No clear org-wide fix this week.</p>
+            <p className="text-sm text-fg-secondary">No clear org-wide fix this week.</p>
           )}
         </div>
       </div>
 
-      {/* Trend chart — minimal, white data line, no grid */}
-      <div className="glass-static p-5">
+      {/* Trend chart */}
+      <div className="glass-static relative p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Quality trend</p>
-          <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[rgba(255,255,255,0.50)]" />Overall</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[#10B981]" />Accuracy</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[#F59E0B]" />Hallucination</span>
+          <p className="text-sm font-semibold text-fg">Quality trend</p>
+          <div className="flex items-center gap-4 text-[11px] text-fg-muted">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-brand" />Overall</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-score-good" />Accuracy</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-score-warning" />Hallucination</span>
           </div>
         </div>
 
         {trendData.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)] py-8 text-center">No trend data yet.</p>
+          <p className="text-sm text-fg-muted py-8 text-center">No trend data yet.</p>
         ) : (
-          <div className="h-52">
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradOverall" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0.15)" stopOpacity={1} />
-                    <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={1} />
+                    <stop offset="0%" stopColor="#6366F1" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
+                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.25)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
                   tickFormatter={(value) => value.slice(5)}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0.3, 1]}
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.25)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
                   tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#13131A",
+                    background: "#111118",
                     border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     fontSize: 12,
                     boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                   }}
                   formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
                 />
-                <Area type="monotone" dataKey="overall" stroke="rgba(255,255,255,0.50)" strokeWidth={1.5} fill="url(#gradOverall)" dot={false} />
-                <Area type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1} fill="transparent" dot={false} opacity={0.6} />
-                <Area type="monotone" dataKey="hallucination" stroke="#F59E0B" strokeWidth={1} fill="transparent" dot={false} opacity={0.6} />
+                <Area type="monotone" dataKey="overall" stroke="#6366F1" strokeWidth={2} fill="url(#gradOverall)" dot={false} activeDot={{ r: 4, fill: "#818CF8", stroke: "#6366F1", strokeWidth: 2 }} />
+                <Area type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
+                <Area type="monotone" dataKey="hallucination" stroke="#F59E0B" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -213,26 +211,28 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
 
       {/* Conversations to review */}
       {summary?.top_failures?.length ? (
-        <div className="glass-static overflow-hidden">
-          <div className="border-b border-[var(--divider)] px-5 py-3">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Conversations worth reviewing</p>
+        <div className="glass-static relative overflow-hidden">
+          <div className="border-b border-edge px-5 py-3.5">
+            <p className="text-sm font-semibold text-fg">Conversations worth reviewing</p>
           </div>
-          <div className="divide-y divide-[var(--divider)]">
+          <div className="divide-y divide-edge">
             {summary.top_failures.map((item) => (
               <Link
                 key={item.conversation_id}
                 href={`/conversations/${item.conversation_id}`}
-                className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-[var(--table-row-hover)] transition-colors"
+                className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-surface-hover transition-colors group"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--text-primary)] font-mono">{item.conversation_id.slice(0, 8)}</p>
+                  <p className="text-sm font-medium text-fg">
+                    Conversation #{item.conversation_id.slice(0, 6)}
+                  </p>
                   {item.summary && (
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">{item.summary}</p>
+                    <p className="mt-0.5 text-xs text-fg-secondary line-clamp-2 leading-relaxed">{item.summary}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {item.score !== undefined && <ScoreBadge score={item.score} size="sm" />}
-                  <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
+                  <ArrowRight className="h-4 w-4 text-fg-muted group-hover:text-fg-secondary transition-colors" />
                 </div>
               </Link>
             ))}

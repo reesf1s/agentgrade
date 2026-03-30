@@ -2,6 +2,8 @@
 import { cn } from "@/lib/utils";
 import { forwardRef } from "react";
 
+const labelClasses = "block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-muted";
+
 interface GlassInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
@@ -11,21 +13,17 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
   ({ label, error, className, ...props }, ref) => {
     return (
       <div className="space-y-1.5">
-        {label && (
-          <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {label}
-          </label>
-        )}
+        {label && <label className={labelClasses}>{label}</label>}
         <input
           ref={ref}
           className={cn(
-            "glass-input w-full px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]",
-            error && "border-red-300",
+            "glass-input w-full px-3.5 py-2 text-sm",
+            error && "border-score-critical/40 focus:border-score-critical",
             className
           )}
           {...props}
         />
-        {error && <p className="text-xs text-score-critical">{error}</p>}
+        {error && <p className="text-xs text-score-critical mt-1">{error}</p>}
       </div>
     );
   }
@@ -35,23 +33,22 @@ GlassInput.displayName = "GlassInput";
 interface GlassTextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
+  error?: string;
 }
 
-export function GlassTextarea({ label, className, ...props }: GlassTextareaProps) {
+export function GlassTextarea({ label, error, className, ...props }: GlassTextareaProps) {
   return (
     <div className="space-y-1.5">
-      {label && (
-        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </label>
-      )}
+      {label && <label className={labelClasses}>{label}</label>}
       <textarea
         className={cn(
-          "glass-input w-full px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] min-h-[100px] resize-y",
+          "glass-input w-full px-3.5 py-2 text-sm min-h-[100px] resize-y",
+          error && "border-score-critical/40 focus:border-score-critical",
           className
         )}
         {...props}
       />
+      {error && <p className="text-xs text-score-critical mt-1">{error}</p>}
     </div>
   );
 }
@@ -69,14 +66,10 @@ export function GlassSelect({
 }: GlassSelectProps) {
   return (
     <div className="space-y-1.5">
-      {label && (
-        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </label>
-      )}
+      {label && <label className={labelClasses}>{label}</label>}
       <select
         className={cn(
-          "glass-input w-full px-4 py-2.5 text-sm text-[var(--text-primary)]",
+          "glass-input w-full px-3.5 py-2 text-sm",
           className
         )}
         {...props}

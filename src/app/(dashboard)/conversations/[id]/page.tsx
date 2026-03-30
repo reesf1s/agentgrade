@@ -268,11 +268,11 @@ export default function ConversationDetailPage() {
   if (loading) {
     return (
       <div className="pb-8">
-        <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+        <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg">
           <ArrowLeft className="h-3.5 w-3.5" /> Conversations
         </Link>
         <div className="glass-static p-10 text-center">
-          <p className="text-sm text-[var(--text-muted)]">Loading…</p>
+          <p className="text-sm text-fg-muted">Loading…</p>
         </div>
       </div>
     );
@@ -281,11 +281,11 @@ export default function ConversationDetailPage() {
   if (notFound || !conv) {
     return (
       <div className="pb-8">
-        <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+        <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg">
           <ArrowLeft className="h-3.5 w-3.5" /> Conversations
         </Link>
         <div className="glass-static p-10 text-center">
-          <p className="text-sm text-[var(--text-muted)]">Conversation not found.</p>
+          <p className="text-sm text-fg-muted">Conversation not found.</p>
         </div>
       </div>
     );
@@ -303,11 +303,11 @@ export default function ConversationDetailPage() {
   const showKnowledgeAndPromptDetails = !groundingOnly;
 
   const msgConfig = {
-    customer:    { icon: User,      label: "Customer",     bubbleClass: "msg-customer", align: "start" as const },
-    agent:       { icon: Bot,       label: "AI agent",     bubbleClass: "msg-agent",    align: "end"   as const },
-    human_agent: { icon: Headphones,label: "Human agent",  bubbleClass: "msg-human",    align: "end"   as const },
-    tool:        { icon: Sparkles,  label: "Tool call",    bubbleClass: "msg-tool",     align: "center"as const },
-    system:      { icon: Sparkles,  label: "System",       bubbleClass: "msg-tool",     align: "center"as const },
+    customer:    { icon: User,      label: "Customer",     bubbleClass: "msg-customer", align: "start" as const, avatarBg: "bg-surface-elevated border-edge" },
+    agent:       { icon: Bot,       label: "AI agent",     bubbleClass: "msg-agent",    align: "end"   as const, avatarBg: "bg-brand-muted border-brand/20" },
+    human_agent: { icon: Headphones,label: "Human agent",  bubbleClass: "msg-human",    align: "end"   as const, avatarBg: "bg-green-500/10 border-green-500/20" },
+    tool:        { icon: Sparkles,  label: "Tool call",    bubbleClass: "msg-tool",     align: "center"as const, avatarBg: "bg-surface border-edge" },
+    system:      { icon: Sparkles,  label: "System",       bubbleClass: "msg-tool",     align: "center"as const, avatarBg: "bg-surface border-edge" },
   } as const;
 
   const scoreRows = qs ? [
@@ -322,7 +322,7 @@ export default function ConversationDetailPage() {
     <div className="space-y-4 pb-8">
       {/* Topnav */}
       <div className="flex items-center justify-between gap-4">
-        <Link href="/conversations" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+        <Link href="/conversations" className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-secondary hover:text-fg transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" />
           Conversations
         </Link>
@@ -353,15 +353,15 @@ export default function ConversationDetailPage() {
           {conv.was_escalated && <span className="insight-badge insight-badge-warning">Escalated</span>}
         </div>
 
-        <h1 className="text-xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">
+        <h1 className="text-xl font-bold tracking-[-0.02em] text-fg">
           {conv.customer_identifier || "Unknown customer"}
         </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">
           {displaySummary}
         </p>
 
         {(strengths.length > 0 || insights.length > 0) && (
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-[var(--divider)] pt-3.5 text-xs">
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-edge pt-3.5 text-xs">
             {strengths.slice(0, 2).map((s) => (
               <span key={s} className="flex items-center gap-1.5 font-medium text-[#10B981]">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -383,19 +383,19 @@ export default function ConversationDetailPage() {
 
         {/* Transcript */}
         <div className="glass-static overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--divider)] px-5 py-3">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
+          <div className="flex items-center justify-between gap-3 border-b border-edge px-5 py-3">
+            <p className="text-sm font-semibold text-fg">
               Transcript
-              <span className="ml-1.5 text-xs font-normal text-[var(--text-muted)]">{conv.messages.length} messages</span>
+              <span className="ml-1.5 text-xs font-normal text-fg-muted">{conv.messages.length} messages</span>
             </p>
             {evidenceLabel && <span className="operator-chip">{evidenceLabel}</span>}
           </div>
 
           {conv.messages.length === 0 ? (
-            <p className="p-5 text-sm text-[var(--text-muted)]">No messages recorded.</p>
+            <p className="p-5 text-sm text-fg-muted">No messages recorded.</p>
           ) : (
-            <div className="space-y-3 p-4">
-              {conv.messages.map((message) => {
+            <div className="space-y-4 p-5">
+              {conv.messages.map((message, idx) => {
                 const cfg = msgConfig[message.role as keyof typeof msgConfig] || msgConfig.system;
                 const Icon = cfg.icon;
                 const expanded = expandedMessages[message.id] || false;
@@ -403,28 +403,38 @@ export default function ConversationDetailPage() {
                 const preview = collapsible && !expanded ? `${message.content.slice(0, 520).trimEnd()}…` : message.content;
                 const isRight = cfg.align === "end";
                 const isCenter = cfg.align === "center";
+                const ts = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
                 return (
-                  <div key={message.id} className={`flex ${isRight ? "justify-end" : isCenter ? "justify-center" : "justify-start"}`}>
-                    <div className={`max-w-[85%] px-4 py-3 text-sm ${cfg.bubbleClass}`}>
-                      <div className={`mb-2 flex items-center gap-1.5 ${isRight ? "justify-end flex-row-reverse" : ""}`}>
-                        <Icon className="h-3 w-3 text-[var(--text-muted)] shrink-0" />
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                          {cfg.label}
-                        </span>
+                  <div key={message.id} className={`flex gap-2.5 ${isRight ? "flex-row-reverse" : isCenter ? "justify-center" : ""} animate-fade-in`} style={{ animationDelay: `${idx * 30}ms` }}>
+                    {/* Avatar */}
+                    {!isCenter && (
+                      <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 mt-1 ${cfg.avatarBg}`}>
+                        <Icon className="h-3.5 w-3.5 text-fg-secondary" />
                       </div>
-                      <p className={`whitespace-pre-wrap leading-relaxed text-[var(--text-primary)] ${isRight ? "text-right" : ""}`}>
-                        {preview}
-                      </p>
-                      {collapsible && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedMessages((cur) => ({ ...cur, [message.id]: !expanded }))}
-                          className="mt-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                        >
-                          {expanded ? "Show less" : "Show full response"}
-                        </button>
-                      )}
+                    )}
+
+                    {/* Bubble */}
+                    <div className={`max-w-[520px] ${isCenter ? "w-full" : ""}`}>
+                      <div className={`px-4 py-3 text-sm ${cfg.bubbleClass} transition-shadow hover:shadow-glass`}>
+                        <p className={`whitespace-pre-wrap leading-relaxed text-fg-secondary ${isRight ? "text-right" : ""}`}>
+                          {preview}
+                        </p>
+                        {collapsible && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedMessages((cur) => ({ ...cur, [message.id]: !expanded }))}
+                            className="mt-2 text-xs font-semibold text-brand-light hover:text-brand transition-colors"
+                          >
+                            {expanded ? "Show less" : "Show full response"}
+                          </button>
+                        )}
+                      </div>
+                      {/* Timestamp + role label */}
+                      <div className={`mt-1 flex items-center gap-2 ${isRight ? "justify-end" : ""}`}>
+                        <span className="text-[11px] font-medium text-fg-muted">{cfg.label}</span>
+                        {ts && <span className="text-[11px] text-fg-faint">{ts}</span>}
+                      </div>
                     </div>
                   </div>
                 );
@@ -440,7 +450,7 @@ export default function ConversationDetailPage() {
           <div className="glass-static p-4">
             <p className="section-label mb-3">Quality scores</p>
             {!qs ? (
-              <p className="text-sm text-[var(--text-secondary)]">
+              <p className="text-sm text-fg-secondary">
                 {conv.score_status === "waiting_for_completion"
                   ? "Waiting for conversation to end."
                   : conv.score_status === "refreshing"
@@ -454,7 +464,7 @@ export default function ConversationDetailPage() {
                   return (
                     <div key={label}>
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
+                        <span className="text-xs font-medium text-fg-secondary">{label}</span>
                         <span className={`text-xs font-semibold tabular-nums font-mono ${scoreColor(s)}`}>
                           {formatScore(s)}%
                         </span>
@@ -485,11 +495,11 @@ export default function ConversationDetailPage() {
                       ) : i.type === "warning" ? (
                         <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#F59E0B]" />
                       ) : (
-                        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-fg-muted" />
                       )}
                       <div>
-                        <p className="text-xs font-semibold text-[var(--text-primary)]">{i.title}</p>
-                        <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed">{i.body}</p>
+                        <p className="text-xs font-semibold text-fg">{i.title}</p>
+                        <p className="mt-0.5 text-xs text-fg-secondary leading-relaxed">{i.body}</p>
                       </div>
                     </div>
                   </div>
@@ -505,8 +515,8 @@ export default function ConversationDetailPage() {
               <div className="space-y-3">
                 {qs.prompt_improvements.slice(0, 2).map((improvement) => (
                   <div key={improvement.issue}>
-                    <p className="text-xs font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed">{improvement.expected_impact}</p>
+                    <p className="text-xs font-semibold text-fg">{improvement.issue}</p>
+                    <p className="mt-0.5 text-xs text-fg-secondary leading-relaxed">{improvement.expected_impact}</p>
                   </div>
                 ))}
               </div>
@@ -524,8 +534,8 @@ export default function ConversationDetailPage() {
                 confidenceLevel ? { k: "Confidence", v: confidenceLevel } : null,
               ].filter(Boolean).map((row) => row && (
                 <div key={row.k} className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-[var(--text-muted)]">{row.k}</span>
-                  <span className="text-xs font-medium capitalize text-[var(--text-secondary)]">{String(row.v)}</span>
+                  <span className="text-xs text-fg-muted">{row.k}</span>
+                  <span className="text-xs font-medium capitalize text-fg-secondary">{String(row.v)}</span>
                 </div>
               ))}
             </div>
@@ -546,7 +556,7 @@ export default function ConversationDetailPage() {
             <div className="drawer-header">
               <div>
                 <p className="page-eyebrow">Deep dive</p>
-                <h2 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                <h2 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-fg">
                   Claims, evidence &amp; calibration
                 </h2>
               </div>
@@ -559,13 +569,13 @@ export default function ConversationDetailPage() {
               {advancedClaimGroups.length > 0 && (
                 <div className="space-y-3">
                   {advancedClaimGroups.map((group) => (
-                    <div key={group.title} className="border-b border-[var(--divider)] pb-3 last:border-0">
-                      <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">{group.title}</p>
+                    <div key={group.title} className="border-b border-edge pb-3 last:border-0">
+                      <p className="text-sm font-semibold text-fg mb-2">{group.title}</p>
                       <div className="space-y-2">
                         {group.items.map((claim) => (
-                          <div key={`${group.title}-${claim.claim}`} className="border-b border-[var(--divider)] pb-2 last:border-0 last:pb-0">
-                            <p className="text-sm text-[var(--text-primary)]">{claim.claim}</p>
-                            <p className="mt-1 text-xs capitalize text-[var(--text-muted)]">{claim.verdict}</p>
+                          <div key={`${group.title}-${claim.claim}`} className="border-b border-edge pb-2 last:border-0 last:pb-0">
+                            <p className="text-sm text-fg">{claim.claim}</p>
+                            <p className="mt-1 text-xs capitalize text-fg-muted">{claim.verdict}</p>
                           </div>
                         ))}
                       </div>
@@ -576,13 +586,13 @@ export default function ConversationDetailPage() {
 
               {/* Prompt guidance */}
               {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.length ? (
-                <div className="border-b border-[var(--divider)] pb-3">
+                <div className="border-b border-edge pb-3">
                   <p className="section-label mb-2">Prompt guidance</p>
                   <div className="space-y-3">
                     {qs.prompt_improvements.slice(0, 3).map((improvement) => (
                       <div key={improvement.issue}>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{improvement.expected_impact}</p>
+                        <p className="text-sm font-semibold text-fg">{improvement.issue}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-fg-secondary">{improvement.expected_impact}</p>
                       </div>
                     ))}
                   </div>
@@ -591,13 +601,13 @@ export default function ConversationDetailPage() {
 
               {/* Knowledge gaps */}
               {showKnowledgeAndPromptDetails && qs?.knowledge_gaps?.length ? (
-                <div className="border-b border-[var(--divider)] pb-3">
+                <div className="border-b border-edge pb-3">
                   <p className="section-label mb-2">Knowledge gaps</p>
                   <div className="space-y-3">
                     {qs.knowledge_gaps.slice(0, 3).map((gap) => (
                       <div key={gap.topic}>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{gap.topic}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{gap.description}</p>
+                        <p className="text-sm font-semibold text-fg">{gap.topic}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-fg-secondary">{gap.description}</p>
                       </div>
                     ))}
                   </div>
@@ -605,8 +615,8 @@ export default function ConversationDetailPage() {
               ) : null}
 
               {/* Score override */}
-              <div className="border-b border-[var(--divider)] pb-3">
-                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Correct the score</p>
+              <div className="border-b border-edge pb-3">
+                <p className="text-sm font-semibold text-fg mb-2">Correct the score</p>
                 {showOverrideForm ? (
                   <div className="space-y-3">
                     <select value={overrideDimension} onChange={(e) => setOverrideDimension(e.target.value)} className="glass-input w-full px-3 py-2 text-sm">
@@ -635,7 +645,7 @@ export default function ConversationDetailPage() {
 
               {/* Training labels */}
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Train the scorer</p>
+                <p className="text-sm font-semibold text-fg mb-2">Train the scorer</p>
                 {showTrainingForm ? (
                   <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -645,7 +655,7 @@ export default function ConversationDetailPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       {Object.entries(trainingLabels).map(([key, value]) => (
                         <label key={key} className="space-y-1">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{key}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-muted">{key}</span>
                           <input type="number" min={0} max={100} value={value} onChange={(e) => setTrainingLabels((c) => ({ ...c, [key]: e.target.value }))} className="glass-input w-full px-3 py-2 text-sm" placeholder="%" />
                         </label>
                       ))}

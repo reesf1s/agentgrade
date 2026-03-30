@@ -248,9 +248,9 @@ function ConnectionsTab() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="enterprise-kicker">Connections</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">Setup</h2>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">Setup</h2>
           </div>
-          <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+          <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-fg-muted">
             5 minutes
           </div>
         </div>
@@ -269,19 +269,19 @@ function ConnectionsTab() {
           ].map((option) => (
             <button
               key={option.platform}
-              className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-left transition-colors hover:bg-[var(--surface-hover)]"
+              className="rounded-2xl border border-edge bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
               onClick={() => {
                 window.location.href = `/onboarding?platform=${option.platform}`;
               }}
             >
-              <p className="text-sm font-medium text-[var(--text-primary)]">{option.label}</p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">Connect</p>
+              <p className="text-sm font-medium text-fg">{option.label}</p>
+              <p className="mt-1 text-xs text-fg-secondary">Connect</p>
             </button>
           ))}
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Webhook endpoint</p>
+          <div className="rounded-2xl border border-edge bg-[var(--panel-subtle)] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Webhook endpoint</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <input
                 readOnly
@@ -298,30 +298,30 @@ function ConnectionsTab() {
             onClick={() => {
               window.location.href = "/onboarding?platform=csv";
             }}
-            className="rounded-2xl border-2 border-dashed border-[var(--border-subtle)] p-5 text-left transition-colors hover:border-[var(--border-strong)]"
+            className="rounded-2xl border-2 border-dashed border-edge p-5 text-left transition-colors hover:border-[var(--border-strong)]"
           >
-            <p className="text-sm font-medium text-[var(--text-primary)]">Upload past conversations</p>
-            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">CSV or JSON</p>
+            <p className="text-sm font-medium text-fg">Upload past conversations</p>
+            <p className="mt-2 text-xs leading-5 text-fg-secondary">CSV or JSON</p>
           </button>
         </div>
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Connected assistants</h2>
+        <h2 className="text-sm font-semibold text-fg mb-4">Connected assistants</h2>
         {loading ? (
-          <p className="text-sm text-[var(--text-muted)]">Loading connections...</p>
+          <p className="text-sm text-fg-muted">Loading connections...</p>
         ) : connections.length === 0 ? (
-          <div className="py-6 text-center text-sm text-[var(--text-muted)]">
+          <div className="py-6 text-center text-sm text-fg-muted">
             No live assistants connected yet. Use one of the setup options above to get started.
           </div>
         ) : (
           <div className="space-y-3 mb-6">
             {connections.map((conn) => (
-              <div key={conn.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+              <div key={conn.id} className="rounded-xl border border-edge bg-surface p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{conn.name}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5 capitalize">
+                    <p className="text-sm font-medium text-fg">{conn.name}</p>
+                    <p className="text-xs text-fg-muted mt-0.5 capitalize">
                       {conn.platform} &middot; {conn.is_active ? "Active" : "Inactive"}
                       {conn.last_sync_at ? ` &middot; Last sync: ${new Date(conn.last_sync_at).toLocaleString()}` : ""}
                     </p>
@@ -348,7 +348,7 @@ function ConnectionsTab() {
                     </GlassButton>
                     <button
                       onClick={() => deleteConnection(conn.id)}
-                      className="text-[var(--text-muted)] hover:text-score-critical transition-colors"
+                      className="text-fg-muted hover:text-score-critical transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -356,15 +356,15 @@ function ConnectionsTab() {
                 </div>
 
                 {expandedConnectionId === conn.id && setupByConnection[conn.id] && (
-                  <div className="mt-4 space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-5">
-                    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel)] p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <div className="mt-4 space-y-4 rounded-2xl border border-edge bg-[var(--panel-subtle)] p-5">
+                    <div className="rounded-2xl border border-edge bg-[var(--panel)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
                         Integration steps
                       </p>
-                      <ol className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+                      <ol className="mt-3 space-y-2 text-sm text-fg-secondary">
                         {setupByConnection[conn.id].install_steps.map((step, index) => (
                           <li key={step} className="flex gap-3">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-strong)] text-[11px] font-semibold text-[var(--text-primary)]">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-strong)] text-[11px] font-semibold text-fg">
                               {index + 1}
                             </span>
                             <span>{step}</span>
@@ -374,7 +374,7 @@ function ConnectionsTab() {
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Webhook endpoint</p>
+                      <p className="text-xs font-medium text-fg mb-1">Webhook endpoint</p>
                       <div className="flex gap-2">
                         <input
                           readOnly
@@ -388,7 +388,7 @@ function ConnectionsTab() {
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Bearer secret</p>
+                      <p className="text-xs font-medium text-fg mb-1">Bearer secret</p>
                       <div className="flex gap-2">
                         <input
                           readOnly
@@ -399,33 +399,33 @@ function ConnectionsTab() {
                           <Copy className="w-4 h-4" />
                         </GlassButton>
                       </div>
-                      <p className="mt-2 text-xs text-[var(--text-muted)]">
+                      <p className="mt-2 text-xs text-fg-muted">
                         Send every transcript update with `Authorization: Bearer &lt;secret&gt;`. Re-sending the same `conversation_id` now appends new messages and re-scores instead of being ignored.
                       </p>
                     </div>
 
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <p className="text-xs font-medium text-[var(--text-primary)]">Env vars for your app</p>
+                        <p className="text-xs font-medium text-fg">Env vars for your app</p>
                         <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].env_example)}>
                           Copy env vars
                         </GlassButton>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
+                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
                         {setupByConnection[conn.id].env_example}
                       </pre>
-                      <div className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+                      <div className="mt-2 space-y-1 text-xs text-fg-muted">
                         {Object.entries(setupByConnection[conn.id].env_help).map(([key, value]) => (
                           <p key={key}>
-                            <span className="font-mono text-[var(--text-primary)]">{key}</span>: {value}
+                            <span className="font-mono text-fg">{key}</span>: {value}
                           </p>
                         ))}
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-[var(--text-primary)] mb-1">Quick test</p>
-                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
+                      <p className="text-xs font-medium text-fg mb-1">Quick test</p>
+                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
 {`curl -X POST ${setupByConnection[conn.id].webhook_url} \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${setupByConnection[conn.id].api_key}" \\
@@ -443,12 +443,12 @@ function ConnectionsTab() {
 
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <p className="text-xs font-medium text-[var(--text-primary)]">JavaScript snippet</p>
+                        <p className="text-xs font-medium text-fg">JavaScript snippet</p>
                         <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].snippet)}>
                           Copy snippet
                         </GlassButton>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-3 text-xs text-[var(--text-secondary)]">
+                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
                         {setupByConnection[conn.id].snippet}
                       </pre>
                     </div>
@@ -517,17 +517,17 @@ function AlertsTab() {
 
   return (
     <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Alert Thresholds</h2>
-      <p className="text-xs text-[var(--text-muted)] mb-6">Get notified when quality drops below these thresholds.</p>
+      <h2 className="text-sm font-semibold text-fg mb-4">Alert Thresholds</h2>
+      <p className="text-xs text-fg-muted mb-6">Get notified when quality drops below these thresholds.</p>
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+        <p className="text-sm text-fg-muted">Loading...</p>
       ) : (
         <div className="space-y-4">
           {THRESHOLD_DIMS.map(({ dim, label }) => (
             <div key={dim} className="flex items-center justify-between">
-              <span className="text-sm text-[var(--text-primary)]">{label}</span>
+              <span className="text-sm text-fg">{label}</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)]">Alert below</span>
+                <span className="text-xs text-fg-muted">Alert below</span>
                 <input
                   type="number"
                   min={0}
@@ -538,7 +538,7 @@ function AlertsTab() {
                   }
                   className="glass-input w-16 px-2 py-1 text-sm text-center font-mono"
                 />
-                <span className="text-xs text-[var(--text-muted)]">%</span>
+                <span className="text-xs text-fg-muted">%</span>
               </div>
             </div>
           ))}
@@ -593,20 +593,20 @@ function TeamTab() {
 
   return (
     <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Team Members</h2>
+      <h2 className="text-sm font-semibold text-fg mb-4">Team Members</h2>
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+        <p className="text-sm text-fg-muted">Loading...</p>
       ) : members.length === 0 ? (
-        <p className="text-sm text-[var(--text-muted)] mb-6">No team members yet.</p>
+        <p className="text-sm text-fg-muted mb-6">No team members yet.</p>
       ) : (
         <div className="space-y-3 mb-6">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+            <div key={m.id} className="flex items-center justify-between rounded-xl border border-edge bg-surface p-3">
               <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <p className="text-sm font-medium text-fg">
                   {m.email || m.clerk_user_id}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] capitalize">{m.role}</p>
+                <p className="text-xs text-fg-muted capitalize">{m.role}</p>
               </div>
             </div>
           ))}
@@ -737,8 +737,8 @@ function KnowledgeTab() {
 
   return (
     <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Knowledge Base</h2>
-      <p className="text-xs text-[var(--text-muted)] mb-6">
+      <h2 className="text-sm font-semibold text-fg mb-2">Knowledge Base</h2>
+      <p className="text-xs text-fg-muted mb-6">
         Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
       </p>
       <input
@@ -757,16 +757,16 @@ function KnowledgeTab() {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="mb-4 w-full rounded-xl border-2 border-dashed border-[var(--border-subtle)] p-8 text-center transition-colors hover:border-[var(--border-strong)]"
+        className="mb-4 w-full rounded-xl border-2 border-dashed border-edge p-8 text-center transition-colors hover:border-[var(--border-strong)]"
       >
-        <BookOpen className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
-        <p className="text-sm text-[var(--text-secondary)]">
+        <BookOpen className="w-8 h-8 text-fg-muted mx-auto mb-2" />
+        <p className="text-sm text-fg-secondary">
           {uploadingFile ? "Uploading knowledge file..." : "Upload PDF, DOCX, TXT, Markdown, or JSON"}
         </p>
-        <p className="text-xs text-[var(--text-muted)] mt-1">Files are chunked and embedded for semantic search</p>
+        <p className="text-xs text-fg-muted mt-1">Files are chunked and embedded for semantic search</p>
       </button>
-      <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-        <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Or import a help center URL</p>
+      <div className="mb-4 rounded-xl border border-edge bg-[var(--panel-subtle)] p-4">
+        <p className="text-xs font-medium text-fg mb-3">Or import a help center URL</p>
         <div className="flex gap-2">
           <GlassInput
             value={sourceUrl}
@@ -780,8 +780,8 @@ function KnowledgeTab() {
         </div>
         {urlError ? <p className="mt-2 text-xs text-score-critical">{urlError}</p> : null}
       </div>
-      <div className="mb-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-        <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Sync from a connected help center</p>
+      <div className="mb-4 rounded-xl border border-edge bg-[var(--panel-subtle)] p-4">
+        <p className="text-xs font-medium text-fg mb-3">Sync from a connected help center</p>
         <div className="flex flex-wrap gap-2">
           <GlassButton
             onClick={() => syncHelpCenter("intercom")}
@@ -798,23 +798,23 @@ function KnowledgeTab() {
         </div>
       </div>
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+        <p className="text-sm text-fg-muted">Loading...</p>
       ) : sources.length === 0 ? (
-        <div className="py-4 text-center text-sm text-[var(--text-muted)]">
+        <div className="py-4 text-center text-sm text-fg-muted">
           No knowledge base items yet. Upload documents to improve accuracy scoring.
         </div>
       ) : (
         <div className="space-y-2">
           {sources.map((s) => (
-            <div key={s.id} className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+            <div key={s.id} className="flex items-center justify-between rounded-xl border border-edge bg-surface p-3">
               <div>
-                <p className="text-sm text-[var(--text-primary)]">{s.source}</p>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-sm text-fg">{s.source}</p>
+                <p className="text-xs text-fg-muted">
                   {s.chunks} chunk{s.chunks !== 1 ? "s" : ""} &middot; Uploaded {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
               <button
-                className="text-[var(--text-muted)] hover:text-score-critical transition-colors"
+                className="text-fg-muted hover:text-score-critical transition-colors"
                 onClick={() => deleteSource(s.id)}
               >
                 <Trash2 className="w-4 h-4" />
@@ -906,7 +906,7 @@ function BillingTab() {
   if (loading) {
     return (
       <GlassCard className="p-6">
-        <p className="text-sm text-[var(--text-muted)]">Loading billing...</p>
+        <p className="text-sm text-fg-muted">Loading billing...</p>
       </GlassCard>
     );
   }
@@ -920,7 +920,7 @@ function BillingTab() {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
+        <h2 className="text-sm font-semibold text-fg mb-4">Billing</h2>
 
         {successMsg && (
           <div className="mb-4 rounded-xl border border-[rgba(16,185,129,0.20)] bg-[rgba(16,185,129,0.06)] p-4 text-sm text-[#10B981]">
@@ -943,11 +943,11 @@ function BillingTab() {
         {billing ? (
           <>
             {/* Current plan + usage */}
-            <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+            <div className="mb-6 rounded-xl border border-edge bg-surface p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)] capitalize">{currentPlan} Plan</p>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-sm font-medium text-fg capitalize">{currentPlan} Plan</p>
+                  <p className="text-xs text-fg-muted">
                     {billing.price} &middot; {billing.limit ? billing.limit.toLocaleString() : "Unlimited"} conversations/mo
                   </p>
                 </div>
@@ -960,8 +960,8 @@ function BillingTab() {
               {billing.limit && (
                 <div className="mt-3">
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[var(--text-secondary)]">Usage this month</span>
-                    <span className="text-[var(--text-primary)] font-mono">
+                    <span className="text-fg-secondary">Usage this month</span>
+                    <span className="text-fg font-mono">
                       {(billing.usage ?? 0).toLocaleString()} / {billing.limit.toLocaleString()}
                     </span>
                   </div>
@@ -979,7 +979,7 @@ function BillingTab() {
             </div>
 
             {/* Plan picker */}
-            <h3 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-fg-secondary uppercase tracking-wider mb-3">
               {currentPlan === "starter" ? "Choose a plan" : "Available plans"}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -992,19 +992,19 @@ function BillingTab() {
                     className={`rounded-xl border p-4 transition-all ${
                       isCurrent
                         ? "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)]"
-                        : "border-[var(--border-subtle)] bg-[var(--surface)] hover:border-[rgba(255,255,255,0.10)]"
+                        : "border-edge bg-surface hover:border-[rgba(255,255,255,0.10)]"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
+                      <p className="text-sm font-medium text-fg">{p.name}</p>
                       {isCurrent && (
-                        <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] border border-[var(--border-subtle)] rounded px-1.5 py-0.5">
+                        <span className="text-[10px] uppercase tracking-wider text-fg-muted border border-edge rounded px-1.5 py-0.5">
                           Current
                         </span>
                       )}
                     </div>
-                    <p className="text-lg font-semibold text-[var(--text-primary)] font-mono">{p.price}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">{p.conversations} conversations/mo</p>
+                    <p className="text-lg font-semibold text-fg font-mono">{p.price}</p>
+                    <p className="text-xs text-fg-muted mt-1">{p.conversations} conversations/mo</p>
                     {!isCurrent && !isDowngrade && (
                       <GlassButton
                         size="sm"
@@ -1032,7 +1032,7 @@ function BillingTab() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-[var(--text-muted)]">Unable to load billing information.</p>
+          <p className="text-sm text-fg-muted">Unable to load billing information.</p>
         )}
       </GlassCard>
     </div>
@@ -1125,7 +1125,7 @@ function CalibrationTab() {
   if (loading) {
     return (
       <GlassCard className="p-6">
-        <p className="text-sm text-[var(--text-muted)]">Loading calibration tools...</p>
+        <p className="text-sm text-fg-muted">Loading calibration tools...</p>
       </GlassCard>
     );
   }
@@ -1136,41 +1136,41 @@ function CalibrationTab() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="enterprise-section-title">Training</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
               Improve scoring with examples your team agrees on
             </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+            <p className="mt-3 text-sm leading-6 text-fg-secondary">
               Add real or synthetic conversations, label them once, and AgentGrade uses those labels to calibrate scoring over time.
             </p>
           </div>
-          <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+          <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-fg-muted">
             {data?.scorer.training_stage.label}
           </div>
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Human labels</p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Human labels</p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
               {data?.scorer.labeled_examples || 0}
             </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">Across private and shared training sets</p>
+            <p className="mt-1 text-xs text-fg-secondary">Across private and shared training sets</p>
           </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Workspace learning</p>
-            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Workspace learning</p>
+            <p className="mt-2 text-sm font-semibold text-fg">
               {data?.scorer.learned_calibration.workspace_model.active ? "Active" : "Warming up"}
             </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            <p className="mt-1 text-xs text-fg-secondary">
               {data?.scorer.learned_calibration.workspace_private_labels || 0} private labels in this workspace
             </p>
           </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Scorer</p>
-            <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Scorer</p>
+            <p className="mt-2 text-sm font-semibold text-fg">
               {data?.scorer.evaluator_provider} / {data?.scorer.evaluator_model}
             </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            <p className="mt-1 text-xs text-fg-secondary">
               Version {data?.scorer.scoring_model_version}
             </p>
           </div>
@@ -1181,12 +1181,12 @@ function CalibrationTab() {
         <GlassCard id="training-example-form" className="p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Create a training example</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              <h2 className="text-sm font-semibold text-fg">Create a training example</h2>
+              <p className="mt-2 text-sm leading-6 text-fg-secondary">
                 Paste a transcript, add the scores a human would give it, and save it as a gold-set example.
               </p>
             </div>
-            <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+            <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-fg-muted">
               {exampleKind === "synthetic" ? "Synthetic" : "Real"}
             </div>
           </div>
@@ -1230,7 +1230,7 @@ function CalibrationTab() {
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             {data?.scorer.supported_dimensions.map((dimension) => (
               <div key={dimension.key}>
-                <p className="mb-1 text-xs text-[var(--text-secondary)]">{dimension.label}</p>
+                <p className="mb-1 text-xs text-fg-secondary">{dimension.label}</p>
                 <input
                   type="number"
                   min={0}
@@ -1249,8 +1249,8 @@ function CalibrationTab() {
             ))}
           </div>
 
-          <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--text-primary)]">
+          <details className="mt-4 rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-fg">
               Add reviewer notes and sharing details
             </summary>
             <GlassTextarea
@@ -1259,13 +1259,13 @@ function CalibrationTab() {
               className="mt-4 min-h-[96px]"
               placeholder="Explain the correct judgment. Capture groundedness, user intent, escalation quality, and any org context."
             />
-            <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+            <p className="mt-3 text-xs leading-5 text-fg-muted">
               Shared learning uses anonymized score features plus your labels. Raw transcript text stays private.
             </p>
           </details>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-fg-muted">
               {data?.scorer.calibration_note}
             </p>
             <GlassButton className="sm:min-w-[220px]" onClick={submitCalibrationExample} disabled={saving}>
@@ -1278,20 +1278,20 @@ function CalibrationTab() {
 
         <div className="space-y-4">
           <GlassCard className="p-5">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Where to focus next</h2>
+            <h2 className="text-sm font-semibold text-fg">Where to focus next</h2>
             <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Next private milestone</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Next private milestone</p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
                   {data?.scorer.training_insights.roadmap.next_workspace_label_milestone || 30}
                 </p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">Private labels needed to strengthen the workspace scorer</p>
+                <p className="mt-1 text-xs text-fg-secondary">Private labels needed to strengthen the workspace scorer</p>
               </div>
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Best next steps</p>
+              <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Best next steps</p>
                 <div className="mt-3 space-y-2">
                   {data?.scorer.training_insights.roadmap.best_next_steps.map((step) => (
-                    <p key={step} className="text-sm leading-6 text-[var(--text-secondary)]">• {step}</p>
+                    <p key={step} className="text-sm leading-6 text-fg-secondary">• {step}</p>
                   ))}
                 </div>
               </div>
@@ -1299,25 +1299,25 @@ function CalibrationTab() {
           </GlassCard>
 
           <GlassCard id="review-queue" className="p-5">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Label real conversations next</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            <h2 className="text-sm font-semibold text-fg">Label real conversations next</h2>
+            <p className="mt-2 text-sm leading-6 text-fg-secondary">
               These are the highest-value conversations to review if you want the scorer to improve quickly.
             </p>
             <div className="mt-4 space-y-3">
               {data?.scorer.training_insights.review_queue.length ? data.scorer.training_insights.review_queue.map((item) => (
-                <div key={item.conversation_id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <div key={item.conversation_id} className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      <p className="text-sm font-semibold text-fg">
                         {item.customer_identifier || item.conversation_id}
                       </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                      <p className="mt-1 text-xs text-fg-muted capitalize">
                         {item.platform || "custom"} · Score {(item.overall_score * 100).toFixed(0)}% · Confidence {item.confidence_level}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.reason}</p>
+                      <p className="mt-2 text-sm leading-6 text-fg-secondary">{item.reason}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <span className="rounded-full bg-[var(--panel)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <span className="rounded-full bg-[var(--panel)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-fg-muted">
                         Priority {item.priority_score.toFixed(2)}
                       </span>
                       <GlassButton size="sm" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
@@ -1327,42 +1327,42 @@ function CalibrationTab() {
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-[var(--text-muted)]">No high-value unlabeled conversations right now.</p>
+                <p className="text-sm text-fg-muted">No high-value unlabeled conversations right now.</p>
               )}
             </div>
           </GlassCard>
         </div>
       </div>
 
-      <details className="group rounded-[1.25rem] border border-[var(--border-subtle)] bg-[var(--panel)] p-6">
+      <details className="group rounded-[1.25rem] border border-edge bg-[var(--panel)] p-6">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Model details and coverage</h2>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            <h2 className="text-sm font-semibold text-fg">Model details and coverage</h2>
+            <p className="mt-1 text-xs text-fg-secondary">
               Open this when you want to inspect coverage, privacy, and how the scorer is currently built.
             </p>
           </div>
-          <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] group-open:hidden">
+          <span className="rounded-full border border-edge bg-surface px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-fg-muted group-open:hidden">
             Expand
           </span>
         </summary>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Coverage snapshot</p>
-            <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
+          <div className="rounded-2xl border border-edge bg-surface p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Coverage snapshot</p>
+            <div className="mt-3 space-y-2 text-xs text-fg-secondary">
               <p>Private examples: {data?.scorer.training_insights.label_coverage.private_examples || 0}</p>
               <p>Shared examples: {data?.scorer.training_insights.label_coverage.shared_examples || 0}</p>
               <p>Real examples: {data?.scorer.training_insights.label_coverage.real_examples || 0}</p>
               <p>Synthetic examples: {data?.scorer.training_insights.label_coverage.synthetic_examples || 0}</p>
             </div>
           </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Coverage by score dimension</p>
+          <div className="rounded-2xl border border-edge bg-surface p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Coverage by score dimension</p>
             <div className="mt-3 space-y-2">
               {data?.scorer.training_insights.label_coverage.dimensions.map((dimension) => (
                 <div key={dimension.key} className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--text-secondary)]">{dimension.label}</span>
+                  <span className="text-fg-secondary">{dimension.label}</span>
                   <span className={dimension.healthy ? "score-good" : "score-warning"}>
                     {dimension.label_count} labels
                   </span>
@@ -1372,57 +1372,57 @@ function CalibrationTab() {
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">What runs in production</p>
-            <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+          <div className="rounded-2xl border border-edge bg-surface p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">What runs in production</p>
+            <p className="mt-2 text-sm font-medium text-fg">
               {data?.scorer.model_card.base_evaluator.provider} / {data?.scorer.model_card.base_evaluator.model}
             </p>
             <div className="mt-3 space-y-2">
               {data?.scorer.model_card.strengths.map((item) => (
-                <p key={item} className="text-xs leading-5 text-[var(--text-secondary)]">• {item}</p>
+                <p key={item} className="text-xs leading-5 text-fg-secondary">• {item}</p>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Privacy posture</p>
+          <div className="rounded-2xl border border-edge bg-surface p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Privacy posture</p>
             <div className="mt-3 space-y-2">
-              <p className="text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.model_card.privacy.workspace_private}</p>
-              <p className="text-xs leading-5 text-[var(--text-secondary)]">{data?.scorer.model_card.privacy.global_anonymous}</p>
+              <p className="text-xs leading-5 text-fg-secondary">{data?.scorer.model_card.privacy.workspace_private}</p>
+              <p className="text-xs leading-5 text-fg-secondary">{data?.scorer.model_card.privacy.global_anonymous}</p>
             </div>
           </div>
         </div>
-        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--panel-subtle)] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Roadmap to a proprietary scorer</p>
+        <div className="mt-4 rounded-2xl border border-edge bg-[var(--panel-subtle)] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Roadmap to a proprietary scorer</p>
           <div className="mt-3 space-y-2">
             {data?.scorer.model_card.path_to_proprietary_model.map((item) => (
-              <p key={item} className="text-xs leading-5 text-[var(--text-secondary)]">• {item}</p>
+              <p key={item} className="text-xs leading-5 text-fg-secondary">• {item}</p>
             ))}
           </div>
         </div>
       </details>
 
       <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Recent training activity</h2>
+        <h2 className="mb-3 text-sm font-semibold text-fg">Recent training activity</h2>
         <div className="space-y-3">
           {data?.recent_labels?.length ? data.recent_labels.map((label) => (
-            <div key={label.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+            <div key={label.id} className="rounded-2xl border border-edge bg-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[var(--text-primary)]">{label.customer_identifier || label.conversation_id}</p>
+                <p className="text-sm font-medium text-fg">{label.customer_identifier || label.conversation_id}</p>
                 <div className="flex items-center gap-2 text-[11px]">
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-[var(--text-muted)]">{label.source}</span>
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-[var(--text-muted)]">{label.example_kind}</span>
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-[var(--text-muted)]">
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-fg-muted">{label.source}</span>
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-fg-muted">{label.example_kind}</span>
+                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-fg-muted">
                     {label.share_scope === "global_anonymous" ? "shared" : "private"}
                   </span>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              <p className="mt-1 text-xs text-fg-secondary">
                 {label.dimension} · {(label.override_score * 100).toFixed(0)}%
               </p>
-              {label.reason ? <p className="mt-2 text-xs text-[var(--text-muted)]">{label.reason}</p> : null}
+              {label.reason ? <p className="mt-2 text-xs text-fg-muted">{label.reason}</p> : null}
             </div>
           )) : (
-            <p className="text-sm text-[var(--text-muted)]">No human labels yet.</p>
+            <p className="text-sm text-fg-muted">No human labels yet.</p>
           )}
         </div>
       </GlassCard>
@@ -1503,7 +1503,7 @@ export default function SettingsPage() {
               key={`summary-${tab.id}`}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`operator-chip ${activeTab === tab.id ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""}`}
+              className={`operator-chip ${activeTab === tab.id ? "border-[var(--border-strong)] bg-[var(--panel)] text-fg" : ""}`}
             >
               {activeTab === tab.id ? "▼" : tab.id === "connections" || tab.id === "knowledge" ? "✓" : "–"} {tab.label}
             </button>
@@ -1528,12 +1528,12 @@ export default function SettingsPage() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-subtle)]">
-                  <Icon className="h-4 w-4 text-[var(--text-primary)]" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-edge bg-[var(--panel-subtle)]">
+                  <Icon className="h-4 w-4 text-fg" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">{tab.description}</p>
+                  <p className="text-sm font-semibold text-fg">{tab.label}</p>
+                  <p className="text-xs text-fg-secondary">{tab.description}</p>
                 </div>
               </div>
             </button>
@@ -1544,7 +1544,7 @@ export default function SettingsPage() {
       <GlassCard className="rounded-[1.2rem] p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-base font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{activeTabConfig.label}</p>
+            <p className="text-base font-semibold tracking-[-0.03em] text-fg">{activeTabConfig.label}</p>
           </div>
           <span className="operator-chip">{activeTabConfig.description}</span>
         </div>

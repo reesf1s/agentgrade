@@ -16,11 +16,11 @@ const STATE_LABELS: Record<IssueWorkflowState, string> = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  New:        "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,255,255,0.40)]",
-  Monitoring: "border-[rgba(245,158,11,0.20)] bg-[rgba(245,158,11,0.10)] text-[#F59E0B]",
-  "In progress": "border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.80)]",
-  Quieted:    "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,255,255,0.30)]",
-  Resolved:   "border-[rgba(16,185,129,0.20)] bg-[rgba(16,185,129,0.10)] text-[#10B981]",
+  New:        "border-edge bg-surface text-fg-muted",
+  Monitoring: "border-amber-500/20 bg-amber-500/10 text-amber-500",
+  "In progress": "border-white/12 bg-white/[0.06] text-fg",
+  Quieted:    "border-edge bg-surface text-fg-muted",
+  Resolved:   "border-emerald-500/20 bg-emerald-500/10 text-emerald-500",
 };
 
 function issueStateLabel(pattern: FailurePattern, saved?: IssueWorkflowState): string {
@@ -85,7 +85,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       <div className="page-header">
         <div>
           <h1 className="page-title">Issues</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          <p className="mt-1 text-sm text-fg-secondary">
             Recurring failure patterns detected across conversations
           </p>
         </div>
@@ -102,12 +102,12 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
 
       {patterns.length === 0 ? (
         <div className="glass-static py-12 text-center">
-          <p className="text-sm text-[var(--text-muted)]">No issues detected this week.</p>
+          <p className="text-sm text-fg-muted">No issues detected this week.</p>
         </div>
       ) : (
         <div className="glass-static overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] gap-0 border-b border-[var(--border-subtle)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <div className="grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] gap-0 border-b border-edge px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
             <span>Issue</span>
             <span>Severity</span>
             <span>Volume</span>
@@ -122,23 +122,23 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             return (
               <div
                 key={pattern.id}
-                className={`grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] items-start gap-0 px-4 py-3 hover:bg-[var(--table-row-hover)] transition-colors ${
-                  idx < patterns.length - 1 ? "border-b border-[var(--border-subtle)]" : ""
+                className={`grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] items-start gap-0 px-4 py-3 hover:bg-surface-hover transition-colors ${
+                  idx < patterns.length - 1 ? "border-b border-edge" : ""
                 }`}
               >
                 {/* Title + description */}
                 <div className="min-w-0 pr-6">
                   <button
                     type="button"
-                    className="text-left text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--btn-primary-bg)] transition-colors"
+                    className="text-left text-sm font-semibold text-fg hover:text-[var(--btn-primary-bg)] transition-colors"
                     onClick={() => setSelectedPattern(pattern)}
                   >
                     {pattern.title}
                   </button>
-                  <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                  <p className="mt-0.5 text-xs text-fg-secondary line-clamp-2 leading-relaxed">
                     {pattern.description}
                   </p>
-                  <p className="mt-1 text-xs font-medium text-[var(--text-primary)]">
+                  <p className="mt-1 text-xs font-medium text-fg">
                     → {nextAction(pattern)}
                   </p>
                 </div>
@@ -149,9 +149,9 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </div>
 
                 {/* Volume */}
-                <div className="pt-0.5 text-sm font-medium text-[var(--text-primary)]">
+                <div className="pt-0.5 text-sm font-medium text-fg">
                   {pattern.affected_conversation_ids.length}
-                  <span className="ml-1 text-xs text-[var(--text-muted)]">convs</span>
+                  <span className="ml-1 text-xs text-fg-muted">convs</span>
                 </div>
 
                 {/* Status */}
@@ -214,7 +214,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             <div className="drawer-header">
               <div className="min-w-0">
                 <p className="page-eyebrow">Issue detail</p>
-                <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.03em] text-fg">
                   {selectedPattern.title}
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -240,14 +240,14 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             <div className="drawer-body space-y-4">
               <div className="compact-list-item">
                 <p className="section-label mb-2">What is happening</p>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                <p className="text-sm leading-relaxed text-fg-secondary">
                   {selectedPattern.description}
                 </p>
               </div>
 
               <div className="compact-list-item">
                 <p className="section-label mb-2">Recommended action</p>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <p className="text-sm font-medium text-fg">
                   {nextAction(selectedPattern)}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -282,11 +282,11 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     <Link
                       key={id}
                       href={`/conversations/${id}`}
-                      className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm hover:bg-[var(--table-row-hover)] transition-colors"
+                      className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm hover:bg-surface-hover transition-colors"
                       onClick={() => setSelectedPattern(null)}
                     >
-                      <span className="font-mono text-xs text-[var(--text-secondary)]">{id.slice(0, 12)}…</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                      <span className="font-mono text-xs text-fg-secondary">{id.slice(0, 12)}…</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-fg-muted" />
                     </Link>
                   ))}
                 </div>

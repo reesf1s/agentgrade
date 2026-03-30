@@ -19,21 +19,21 @@ export function SetupEmptyState({
     <div className="pb-10">
       <GlassCard className="rounded-[1.35rem] p-8 md:p-10">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
-            <Bot className="h-5 w-5 text-[var(--text-primary)]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-edge bg-surface">
+            <Bot className="h-5 w-5 text-fg" />
           </div>
           <div>
             <p className="enterprise-kicker">Setup required</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
               {title}
             </h1>
           </div>
         </div>
 
-        <p className="max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">{description}</p>
+        <p className="max-w-2xl text-sm leading-7 text-fg-secondary">{description}</p>
 
-        <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
-          <div className="mb-2 flex items-center gap-2 text-[var(--text-primary)]">
+        <div className="mt-6 rounded-2xl border border-edge bg-surface p-4 text-sm text-fg-secondary">
+          <div className="mb-2 flex items-center gap-2 text-fg">
             <Sparkles className="h-4 w-4" />
             <span className="font-medium">What happens next</span>
           </div>

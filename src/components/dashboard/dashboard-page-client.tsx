@@ -37,7 +37,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       label: "Scored",
       value: reviewed.toString(),
       sub:   "conversations",
-      color: "rgba(255,255,255,0.90)",
+      color: undefined,
     },
     {
       label: "Hallucination",
@@ -60,7 +60,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Overview</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">Quality summary across all conversations</p>
+          <p className="mt-1 text-sm text-fg-secondary">Quality summary across all conversations</p>
         </div>
         <Link
           href="/reports"
@@ -72,7 +72,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       </div>
 
       {/* Hero score */}
-      <div className="glass-static p-6 flex items-center gap-6">
+      <div className="glass-static relative p-6 flex items-center gap-6">
         <div className="relative">
           <div
             className="score-ring"
@@ -81,31 +81,31 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
               '--ring-color': scoreAccent(avgScore),
             } as React.CSSProperties}
           >
-            <div className="score-ring-label" style={{ width: 'var(--size)', height: 'var(--size)', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="score-ring-label">
               <span className="text-lg font-bold" style={{ color: scoreAccent(avgScore) }}>{pct(avgScore)}</span>
             </div>
           </div>
         </div>
         <div>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Overall quality</p>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          <p className="text-sm font-semibold text-fg">Overall quality</p>
+          <p className="mt-1 text-sm text-fg-secondary">
             {trendDelta > 0.02 ? 'Improving this week' : trendDelta < -0.02 ? 'Declining this week' : 'Holding steady'}
           </p>
           <div className="mt-2 flex items-center gap-3">
             {trendDelta > 0.02 ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#10B981]">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-score-good">
                 <TrendingUp className="h-3 w-3" /> +{Math.round(trendDelta * 100)}%
               </span>
             ) : trendDelta < -0.02 ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#EF4444]">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-score-critical">
                 <TrendingDown className="h-3 w-3" /> {Math.round(trendDelta * 100)}%
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-fg-muted">
                 <Minus className="h-3 w-3" /> Steady
               </span>
             )}
-            <span className="text-xs text-[var(--text-muted)]">{reviewed} scored</span>
+            <span className="text-xs text-fg-muted">{reviewed} scored</span>
           </div>
         </div>
       </div>
@@ -115,7 +115,7 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         {metrics.map((m) => (
           <div key={m.label} className="metric-card">
             <p className="metric-label">{m.label}</p>
-            <p className="metric-value" style={{ color: m.color }}>{m.value}</p>
+            <p className="metric-value" style={m.color ? { color: m.color } : undefined}>{m.value}</p>
             <p className="metric-sub">{m.sub}</p>
           </div>
         ))}
@@ -125,38 +125,38 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
 
         {/* Needs attention */}
-        <div className="glass-static p-5">
+        <div className="glass-static relative p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
+            <p className="text-sm font-semibold text-fg">
               Needs attention
               {lowScoreCount > 0 && (
-                <span className="ml-2 text-xs font-medium text-[var(--accent-red)]">{lowScoreCount}</span>
+                <span className="ml-2 rounded-full bg-red-soft px-2 py-0.5 text-xs font-semibold text-score-critical">{lowScoreCount}</span>
               )}
             </p>
-            <Link href="/conversations" className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+            <Link href="/conversations" className="text-xs font-medium text-fg-muted hover:text-fg-secondary transition-colors">
               View all →
             </Link>
           </div>
 
           {lowScoreCount === 0 ? (
-            <p className="py-4 text-sm text-[var(--text-muted)]">All conversations looking healthy.</p>
+            <p className="py-6 text-center text-sm text-fg-muted">All conversations looking healthy.</p>
           ) : (
-            <div className="divide-y divide-[var(--divider)]">
+            <div className="divide-y divide-edge">
               {data.conversations
                 .filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.65)
                 .slice(0, 4)
                 .map((c) => (
                   <Link key={c.id} href={`/conversations/${c.id}`}>
-                    <div className="flex items-center justify-between gap-4 py-2.5 hover:bg-[var(--table-row-hover)] -mx-1 px-1 rounded-lg transition-colors">
+                    <div className="flex items-center justify-between gap-4 py-3 hover:bg-surface-hover -mx-2 px-2 rounded-lg transition-colors">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">
-                          {c.customer_identifier || c.id.slice(0, 8)}
+                        <p className="truncate text-sm font-medium text-fg">
+                          {c.customer_identifier || `Conversation #${c.id.slice(0, 6)}`}
                         </p>
-                        <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
+                        <p className="mt-0.5 truncate text-xs text-fg-secondary">
                           {c.quality_scores?.summary || "Needs review"}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs font-mono font-semibold" style={{ color: scoreAccent(c.quality_scores?.overall_score ?? 0) }}>
+                      <span className="shrink-0 text-xs font-mono font-bold tabular-nums" style={{ color: scoreAccent(c.quality_scores?.overall_score ?? 0) }}>
                         {pct(c.quality_scores?.overall_score ?? 0)}
                       </span>
                     </div>
@@ -168,81 +168,81 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
         {/* Sidebar cards */}
         <div className="space-y-3">
-          <div className="glass-static p-4">
-            <p className="mb-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Top pattern</p>
+          <div className="glass-static relative p-4">
+            <p className="mb-2 section-label">Top pattern</p>
             {criticalPattern ? (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-[var(--text-primary)] leading-snug">{criticalPattern.title}</p>
+                <p className="text-sm font-medium text-fg leading-snug">{criticalPattern.title}</p>
                 <div className="flex items-center gap-2">
                   <SeverityBadge severity={criticalPattern.severity} />
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-xs text-fg-muted">
                     {criticalPattern.affected_conversation_ids.length} affected
                   </span>
                 </div>
-                <Link href="/patterns" className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                <Link href="/patterns" className="text-xs font-medium text-brand-light hover:text-brand transition-colors">
                   View details →
                 </Link>
               </div>
             ) : (
-              <p className="text-xs text-[var(--text-muted)]">No patterns detected.</p>
+              <p className="text-xs text-fg-muted">No patterns detected.</p>
             )}
           </div>
 
-          <div className="glass-static p-4">
-            <p className="mb-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Healthy</p>
-            <p className="text-sm text-[var(--text-secondary)]">
+          <div className="glass-static relative p-4">
+            <p className="mb-2 section-label">Healthy</p>
+            <p className="text-sm text-fg-secondary">
               {safeCount > 0 ? `${safeCount} conversations scoring well.` : "No high-scoring conversations yet."}
             </p>
           </div>
 
           {criticalPattern?.recommendation && (
-            <div className="glass-static p-4">
-              <p className="mb-1 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Suggested fix</p>
-              <p className="text-sm text-[var(--text-secondary)] leading-snug">{criticalPattern.recommendation}</p>
+            <div className="glass-static relative p-4">
+              <p className="mb-1 section-label">Suggested fix</p>
+              <p className="text-sm text-fg-secondary leading-snug">{criticalPattern.recommendation}</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Trend chart */}
-      <div className="glass-static p-5">
+      <div className="glass-static relative p-5">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Quality trend</p>
+            <p className="text-sm font-semibold text-fg">Quality trend</p>
             {trendDelta > 0.02 ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#10B981]">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-score-good">
                 <TrendingUp className="h-3 w-3" /> Improving
               </span>
             ) : trendDelta < -0.02 ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#EF4444]">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-score-critical">
                 <TrendingDown className="h-3 w-3" /> Declining
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-fg-muted">
                 <Minus className="h-3 w-3" /> Steady
               </span>
             )}
           </div>
-          <span className="text-[10px] font-medium text-[var(--text-muted)] border border-[var(--border-subtle)] rounded-md px-2 py-0.5">30d</span>
+          <span className="text-[11px] font-medium text-fg-muted border border-edge rounded-md px-2 py-0.5">30d</span>
         </div>
 
         {data.trend_data.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--text-muted)]">No trend data yet.</p>
+          <p className="py-8 text-center text-sm text-fg-muted">No trend data yet.</p>
         ) : (
-          <div className="h-48">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.trend_data} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.30)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
                   tickFormatter={(v) => v.slice(5)}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0.3, 1]}
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.30)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
                   tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
                   axisLine={false}
                   tickLine={false}
@@ -250,9 +250,9 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#13131A",
+                    background: "#111118",
                     border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     fontSize: 12,
                     boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                   }}
@@ -261,19 +261,19 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                 <Line
                   type="monotone"
                   dataKey="overall"
-                  stroke="rgba(255,255,255,0.60)"
-                  strokeWidth={1.5}
+                  stroke="#6366F1"
+                  strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 3, fill: "rgba(255,255,255,0.80)" }}
+                  activeDot={{ r: 4, fill: "#818CF8", stroke: "#6366F1", strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-[var(--divider)] pt-3 text-xs text-[var(--text-muted)]">
-          <span>Escalations <strong className="text-[var(--text-secondary)]">{pct(escalationRate)}</strong></span>
-          <span>Hallucinations <strong className="text-[var(--text-secondary)]">{pct(hallucinationRate)}</strong></span>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-edge pt-3 text-xs text-fg-muted">
+          <span>Escalations <strong className="text-fg-secondary">{pct(escalationRate)}</strong></span>
+          <span>Hallucinations <strong className="text-fg-secondary">{pct(hallucinationRate)}</strong></span>
         </div>
       </div>
     </div>
