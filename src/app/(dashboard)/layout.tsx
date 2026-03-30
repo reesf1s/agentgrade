@@ -11,27 +11,27 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <Sidebar />
-      <main className="relative min-h-screen px-4 pb-8 pt-20 lg:ml-[17rem] lg:px-6 lg:pt-5">
-        <div className="mx-auto max-w-[104rem]">
-          <div className="workspace-frame min-h-[calc(100vh-2.5rem)] px-4 py-4 sm:px-5 lg:px-6 lg:py-5">
-            <div className="workspace-toolbar mb-5 flex items-center justify-between gap-4 px-4 py-3">
+      <main className="relative min-h-screen px-4 pb-6 pt-20 lg:ml-[16rem] lg:px-5 lg:pt-5">
+        <div className="mx-auto max-w-[96rem]">
+          <div className="workspace-frame min-h-[calc(100vh-2rem)] px-4 py-4 sm:px-5 lg:px-5 lg:py-5">
+            <div className="workspace-toolbar mb-4 flex items-center justify-between gap-4 px-4 py-3">
               <div className="min-w-0">
                 <p className="page-eyebrow">AgentGrade</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <span className="font-medium text-[var(--text-primary)]">Quality operations</span>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-[var(--text-primary)]">Quality ops</span>
                   <span className="hidden text-[var(--text-muted)] sm:inline">·</span>
-                  <span>Review real conversations, spot repeat issues, and keep the assistant improving.</span>
+                  <span className="text-[var(--text-secondary)]">Review faster. Fix what matters.</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="operator-chip hidden sm:inline-flex">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                  Live workspace
+                  Live
                 </div>
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1.5">
+                <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1.5">
                   <ThemeToggle />
                 </div>
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-2 py-1.5">
+                <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-2 py-1.5">
                   <UserButton
                     appearance={{
                       elements: {
@@ -46,7 +46,7 @@ export default function DashboardLayout({
                 </div>
               </div>
             </div>
-            <div>{children}</div>
+            <div className="dense-grid">{children}</div>
           </div>
         </div>
       </main>

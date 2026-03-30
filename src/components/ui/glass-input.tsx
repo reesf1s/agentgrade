@@ -12,7 +12,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label className="text-sm font-medium text-[var(--text-secondary)]">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {label}
           </label>
         )}
@@ -41,7 +41,7 @@ export function GlassTextarea({ label, className, ...props }: GlassTextareaProps
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="text-sm font-medium text-[var(--text-secondary)]">
+        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
           {label}
         </label>
       )}
@@ -70,7 +70,7 @@ export function GlassSelect({
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="text-sm font-medium text-[var(--text-secondary)]">
+        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
           {label}
         </label>
       )}

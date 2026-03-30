@@ -24,6 +24,7 @@ export function GlassCard({
       className={cn(
         elevated ? "glass-elevated" : hoverable ? "glass" : "glass-static",
         onClick && "cursor-pointer",
+        "overflow-hidden",
         className
       )}
     >
@@ -41,20 +42,20 @@ interface StatCardProps {
 
 export function StatCard({ label, value, subtitle, scoreColor }: StatCardProps) {
   return (
-    <GlassCard className="rounded-[1rem] p-4">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+    <GlassCard className="rounded-[0.95rem] p-3.5">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
         {label}
       </p>
       <p
         className={cn(
-          "text-[1.95rem] font-semibold tracking-[-0.05em]",
+          "text-[1.65rem] font-semibold tracking-[-0.05em]",
           scoreColor || "text-[var(--text-primary)]"
         )}
       >
         {value}
       </p>
       {subtitle && (
-        <p className="mt-1.5 text-[13px] leading-5 text-[var(--text-secondary)]">{subtitle}</p>
+        <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">{subtitle}</p>
       )}
     </GlassCard>
   );

@@ -15,16 +15,16 @@ export function GlassButton({
   ...props
 }: GlassButtonProps) {
   const sizeClasses = {
-    sm: "text-sm px-3 py-2 rounded-xl",
-    md: "text-sm px-4 py-2.5 rounded-xl",
-    lg: "text-base px-5 py-3 rounded-2xl",
+    sm: "text-sm px-3 py-1.5 rounded-lg",
+    md: "text-sm px-3.5 py-2 rounded-lg",
+    lg: "text-base px-4.5 py-2.5 rounded-xl",
   };
 
   const variantClasses = {
     default: "glass-button",
     primary: "glass-button glass-button-primary",
     ghost:
-      "bg-transparent border border-transparent hover:bg-[var(--surface)] rounded-xl px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer",
+      "bg-transparent border border-transparent hover:bg-[var(--surface)] rounded-lg px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer",
   };
 
   return (

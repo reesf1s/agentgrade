@@ -9,15 +9,15 @@ interface ScoreBadgeProps {
 
 export function ScoreBadge({ score, label, size = "md" }: ScoreBadgeProps) {
   const sizeClasses = {
-    sm: "text-xs px-2 py-0.5",
-    md: "text-sm px-3 py-1",
-    lg: "text-base px-4 py-1.5 font-semibold",
+    sm: "text-[11px] px-2 py-0.5",
+    md: "text-xs px-2.5 py-1",
+    lg: "text-sm px-3 py-1.5 font-semibold",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-transparent font-mono font-semibold",
+        "inline-flex items-center gap-1.5 rounded-full border border-transparent font-semibold tabular-nums",
         scoreBgColor(score),
         scoreColor(score),
         sizeClasses[size]
