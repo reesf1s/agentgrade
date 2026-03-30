@@ -26,7 +26,7 @@ export async function GET(
     const { id } = await params;
 
     const { data: fix, error: fetchError } = await supabaseAdmin
-      .from("suggested_fixes")
+      .from("ag_suggested_fixes")
       .select("*")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -55,14 +55,14 @@ export async function GET(
 
     // Get scores for source conversations (before fix)
     const { data: sourceScores } = await supabaseAdmin
-      .from("quality_scores")
+      .from("ag_quality_scores")
       .select("overall_score, accuracy_score, hallucination_score, resolution_score, scored_at")
       .in("conversation_id", sourceConvIds.slice(0, 50)); // limit for performance
 
     // Get scores for conversations created after the fix was pushed
     const { data: afterScores } = await supabaseAdmin
-      .from("conversations")
-      .select("quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
+      .from("ag_conversations")
+      .select("quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score)")
       .eq("workspace_id", ctx.workspace.id)
       .gte("created_at", pushedAt.toISOString())
       .not("quality_scores", "is", null)
@@ -145,7 +145,7 @@ export async function POST(
     const { id } = await params;
 
     const { data: updated, error } = await supabaseAdmin
-      .from("suggested_fixes")
+      .from("ag_suggested_fixes")
       .update({
         status: "verified",
         verified_at: new Date().toISOString(),

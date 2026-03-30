@@ -41,9 +41,16 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const offset = (page - 1) * limit;
 
+    // When filtering by score, use an INNER join so we can filter at the DB level.
+    // This ensures paginated results are correct regardless of conversation volume.
+    const useInnerJoin = scoreFilter !== "all";
+    const joinClause = useInnerJoin
+      ? "quality_scores:quality_scores!inner(overall_score,accuracy_score,hallucination_score,resolution_score,flags,summary,confidence_level)"
+      : "quality_scores:ag_quality_scores(overall_score,accuracy_score,hallucination_score,resolution_score,flags,summary,confidence_level)";
+
     let query = supabaseAdmin
-      .from("conversations")
-      .select("*, quality_scores:quality_scores(*)", { count: "exact" })
+      .from("ag_conversations")
+      .select(`*, ${joinClause}`, { count: "exact" })
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -69,6 +76,17 @@ export async function GET(request: NextRequest) {
       query = query.lte("created_at", dateTo);
     }
 
+    // DB-level score filtering (works because of the inner join above)
+    if (scoreFilter === "critical") {
+      query = query.lt("quality_scores.overall_score", 0.4);
+    } else if (scoreFilter === "warning") {
+      query = query
+        .gte("quality_scores.overall_score", 0.4)
+        .lt("quality_scores.overall_score", 0.7);
+    } else if (scoreFilter === "good") {
+      query = query.gte("quality_scores.overall_score", 0.7);
+    }
+
     const { data, count, error } = await query;
 
     if (error) {
@@ -76,25 +94,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
     }
 
-    // Apply score filter in memory (needs joining quality_scores)
+    // Flag filter is still applied in-memory (flag text search on a JSON array)
     let conversations = data || [];
-    if (scoreFilter !== "all" || flag) {
+    if (flag) {
       conversations = conversations.filter((c) => {
-        const qs = c.quality_scores as {
-          overall_score?: number;
-          flags?: string[];
-        } | null;
-        const score = qs?.overall_score ?? null;
-        const matchesFlag = flag
-          ? (qs?.flags || []).some((item) => item.toLowerCase().includes(flag.toLowerCase()))
-          : true;
-        if (!matchesFlag) return false;
-        if (scoreFilter === "all") return true;
-        if (score === null) return false;
-        if (scoreFilter === "critical") return score < 0.4;
-        if (scoreFilter === "warning") return score >= 0.4 && score < 0.7;
-        if (scoreFilter === "good") return score >= 0.7;
-        return true;
+        const qs = c.quality_scores as { flags?: string[] } | null;
+        return (qs?.flags || []).some((item) => item.toLowerCase().includes(flag.toLowerCase()));
       });
     }
 

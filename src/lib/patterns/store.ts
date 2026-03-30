@@ -13,7 +13,7 @@ export async function syncFailurePatterns(
   const dedupedNextPatterns = dedupeFailurePatterns(nextPatterns);
 
   const { data: existingPatterns } = await supabaseAdmin
-    .from("failure_patterns")
+    .from("ag_failure_patterns")
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("is_resolved", false);
@@ -35,7 +35,7 @@ export async function syncFailurePatterns(
     const existingGroup = existingByFingerprint.get(fingerprint) || [];
 
     if (existingGroup.length === 0) {
-      await supabaseAdmin.from("failure_patterns").insert({
+      await supabaseAdmin.from("ag_failure_patterns").insert({
         workspace_id: workspaceId,
         pattern_type: pattern.pattern_type,
         title: pattern.title,
@@ -53,7 +53,7 @@ export async function syncFailurePatterns(
     const primary = existingGroup.find((candidate) => candidate.id === canonical.id) || existingGroup[0];
 
     await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .update({
         title: pattern.title,
         description: pattern.description,
@@ -72,7 +72,7 @@ export async function syncFailurePatterns(
 
     if (duplicateIds.length > 0) {
       await supabaseAdmin
-        .from("failure_patterns")
+        .from("ag_failure_patterns")
         .update({
           is_resolved: true,
           resolved_at: new Date().toISOString(),
@@ -90,7 +90,7 @@ export async function syncFailurePatterns(
     if (staleIds.length === 0) continue;
 
     await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .update({
         is_resolved: true,
         resolved_at: new Date().toISOString(),

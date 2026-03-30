@@ -14,7 +14,7 @@ import { syncFailurePatterns } from "@/lib/patterns/store";
 
 async function loadUsableScoreMap(conversationIds: string[]) {
   const { data } = await supabaseAdmin
-    .from("quality_scores")
+    .from("ag_quality_scores")
     .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
     .in("conversation_id", conversationIds);
 
@@ -54,7 +54,7 @@ export async function GET() {
 
     // Return existing unresolved patterns
     const { data: patterns, error } = await supabaseAdmin
-      .from("failure_patterns")
+      .from("ag_failure_patterns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
@@ -110,8 +110,8 @@ async function detectAndStorePatterns(workspaceId: string) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: convs } = await supabaseAdmin
-    .from("conversations")
-    .select("id, created_at, quality_scores:quality_scores(*)")
+    .from("ag_conversations")
+    .select("id, created_at, quality_scores:ag_quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
     .not("quality_scores", "is", null);

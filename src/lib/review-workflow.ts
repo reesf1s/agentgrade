@@ -20,83 +20,47 @@ export type IssueWorkflowState =
   | "quieted"
   | "resolved";
 
-type WorkflowStore = {
-  conversationDisposition?: Record<string, ReviewDisposition>;
-  queueState?: Record<string, QueueWorkflowState>;
-  issueState?: Record<string, IssueWorkflowState>;
-};
-
 export interface ConversationWorkflowRecord {
   disposition?: ReviewDisposition;
   queue_state?: QueueWorkflowState;
   updated_at?: string;
 }
 
-const STORAGE_KEY = "agentgrade-review-workflow";
+export const REVIEW_DISPOSITIONS = [
+  "safe",
+  "watch",
+  "action_needed",
+  "escalate_issue",
+  "ignore",
+] as const satisfies readonly ReviewDisposition[];
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+export const QUEUE_WORKFLOW_STATES = [
+  "new",
+  "needs_review",
+  "reviewed",
+  "escalated",
+  "safe",
+  "snoozed",
+] as const satisfies readonly QueueWorkflowState[];
+
+export const ISSUE_WORKFLOW_STATES = [
+  "new",
+  "monitoring",
+  "actioning",
+  "quieted",
+  "resolved",
+] as const satisfies readonly IssueWorkflowState[];
+
+export function isReviewDisposition(value: unknown): value is ReviewDisposition {
+  return typeof value === "string" && REVIEW_DISPOSITIONS.includes(value as ReviewDisposition);
 }
 
-function readStore(): WorkflowStore {
-  if (!canUseStorage()) return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as WorkflowStore;
-  } catch {
-    return {};
-  }
+export function isQueueWorkflowState(value: unknown): value is QueueWorkflowState {
+  return typeof value === "string" && QUEUE_WORKFLOW_STATES.includes(value as QueueWorkflowState);
 }
 
-function writeStore(next: WorkflowStore) {
-  if (!canUseStorage()) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-}
-
-export function getConversationDispositionMap() {
-  return readStore().conversationDisposition || {};
-}
-
-export function setConversationDisposition(conversationId: string, disposition: ReviewDisposition) {
-  const store = readStore();
-  writeStore({
-    ...store,
-    conversationDisposition: {
-      ...(store.conversationDisposition || {}),
-      [conversationId]: disposition,
-    },
-  });
-}
-
-export function getQueueStateMap() {
-  return readStore().queueState || {};
-}
-
-export function setQueueState(conversationId: string, state: QueueWorkflowState) {
-  const store = readStore();
-  writeStore({
-    ...store,
-    queueState: {
-      ...(store.queueState || {}),
-      [conversationId]: state,
-    },
-  });
-}
-
-export function getIssueStateMap() {
-  return readStore().issueState || {};
-}
-
-export function setIssueState(issueId: string, state: IssueWorkflowState) {
-  const store = readStore();
-  writeStore({
-    ...store,
-    issueState: {
-      ...(store.issueState || {}),
-      [issueId]: state,
-    },
-  });
+export function isIssueWorkflowState(value: unknown): value is IssueWorkflowState {
+  return typeof value === "string" && ISSUE_WORKFLOW_STATES.includes(value as IssueWorkflowState);
 }
 
 export function getConversationWorkflow(metadata?: Record<string, unknown> | null): ConversationWorkflowRecord | null {
@@ -107,10 +71,8 @@ export function getConversationWorkflow(metadata?: Record<string, unknown> | nul
 
   const record = workflow as Record<string, unknown>;
   return {
-    disposition:
-      typeof record.disposition === "string" ? (record.disposition as ReviewDisposition) : undefined,
-    queue_state:
-      typeof record.queue_state === "string" ? (record.queue_state as QueueWorkflowState) : undefined,
+    disposition: isReviewDisposition(record.disposition) ? record.disposition : undefined,
+    queue_state: isQueueWorkflowState(record.queue_state) ? record.queue_state : undefined,
     updated_at: typeof record.updated_at === "string" ? record.updated_at : undefined,
   };
 }

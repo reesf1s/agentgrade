@@ -20,7 +20,7 @@ export async function PUT(
 
     // Verify alert belongs to this workspace
     const { data: alert, error: fetchError } = await supabaseAdmin
-      .from("alerts")
+      .from("ag_alerts")
       .select("id, acknowledged_at")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -35,7 +35,7 @@ export async function PUT(
     }
 
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("alerts")
+      .from("ag_alerts")
       .update({
         acknowledged_at: new Date().toISOString(),
         acknowledged_by: ctx.member.clerk_user_id,

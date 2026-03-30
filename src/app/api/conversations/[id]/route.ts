@@ -4,7 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import type { PromptImprovement, QualityScore } from "@/lib/db/types";
-import type { QueueWorkflowState, ReviewDisposition } from "@/lib/review-workflow";
+import {
+  isQueueWorkflowState,
+  isReviewDisposition,
+  type QueueWorkflowState,
+  type ReviewDisposition,
+} from "@/lib/review-workflow";
 
 function sanitizeReplayArtifactSignals(
   qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
@@ -53,20 +58,20 @@ export async function GET(
 
     const [convRes, messagesRes, scoreRes] = await Promise.all([
       supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .select("*")
         .eq("id", id)
         .eq("workspace_id", ctx.workspace.id)
         .single(),
 
       supabaseAdmin
-        .from("messages")
+        .from("ag_messages")
         .select("*")
         .eq("conversation_id", id)
         .order("timestamp", { ascending: true }),
 
       supabaseAdmin
-        .from("quality_scores")
+        .from("ag_quality_scores")
         .select("*")
         .eq("conversation_id", id)
         .single(),
@@ -136,9 +141,23 @@ export async function PATCH(
       disposition?: ReviewDisposition;
       queue_state?: QueueWorkflowState;
     };
+    const disposition = body.disposition;
+    const queueState = body.queue_state;
+
+    if (disposition !== undefined && !isReviewDisposition(disposition)) {
+      return NextResponse.json({ error: "Invalid disposition" }, { status: 400 });
+    }
+
+    if (queueState !== undefined && !isQueueWorkflowState(queueState)) {
+      return NextResponse.json({ error: "Invalid queue state" }, { status: 400 });
+    }
+
+    if (disposition === undefined && queueState === undefined) {
+      return NextResponse.json({ error: "No workflow update provided" }, { status: 400 });
+    }
 
     const { data: conversation, error: fetchError } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .select("id, metadata")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -158,8 +177,8 @@ export async function PATCH(
       ...currentMetadata,
       review_workflow: {
         ...currentWorkflow,
-        ...(body.disposition ? { disposition: body.disposition } : {}),
-        ...(body.queue_state ? { queue_state: body.queue_state } : {}),
+        ...(disposition ? { disposition } : {}),
+        ...(queueState ? { queue_state: queueState } : {}),
         updated_at: new Date().toISOString(),
       },
     };
@@ -168,12 +187,12 @@ export async function PATCH(
       metadata: nextMetadata,
     };
 
-    if (body.disposition === "escalate_issue" || body.queue_state === "escalated") {
+    if (disposition === "escalate_issue" || queueState === "escalated") {
       updatePayload.was_escalated = true;
     }
 
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("conversations")
+      .from("ag_conversations")
       .update(updatePayload)
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)

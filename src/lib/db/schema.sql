@@ -117,6 +117,8 @@ create table failure_patterns (
   prompt_fix text,
   knowledge_base_suggestion text,
   detected_at timestamptz not null default now(),
+  workflow_state text not null default 'new' check (workflow_state in ('new', 'monitoring', 'actioning', 'quieted', 'resolved')),
+  workflow_updated_at timestamptz not null default now(),
   is_resolved boolean not null default false,
   resolved_at timestamptz
 );

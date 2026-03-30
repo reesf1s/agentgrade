@@ -162,7 +162,10 @@ interface CalibrationInfo {
 function ConnectionsTab() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [setupLoading, setSetupLoading] = useState<string | null>(null);
   const [expandedConnectionId, setExpandedConnectionId] = useState<string | null>(null);
@@ -171,21 +174,29 @@ function ConnectionsTab() {
     ? `${window.location.origin}/api/webhooks/ingest`
     : "/api/webhooks/ingest";
 
-  useEffect(() => {
+  function loadConnections() {
+    setLoadError(false);
     fetch("/api/connections")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => setConnections(d.connections || []))
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadConnections(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function syncConnection(id: string) {
     setSyncing(id);
     try {
       await fetch(`/api/connections/${id}/sync`, { method: "POST" });
       const r = await fetch("/api/connections");
-      const d = await r.json();
-      setConnections(d.connections || []);
+      if (r.ok) {
+        const d = await r.json();
+        setConnections(d.connections || []);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -194,9 +205,18 @@ function ConnectionsTab() {
   }
 
   async function deleteConnection(id: string) {
-    if (!confirm("Remove this connection?")) return;
-    await fetch(`/api/connections/${id}`, { method: "DELETE" });
-    setConnections((prev) => prev.filter((c) => c.id !== id));
+    setDeleting(id);
+    setConfirmDeleteId(null);
+    try {
+      const r = await fetch(`/api/connections/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        setConnections((prev) => prev.filter((c) => c.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeleting(null);
+    }
   }
 
   function copyWebhook() {
@@ -310,6 +330,11 @@ function ConnectionsTab() {
         <h2 className="text-sm font-semibold text-fg mb-4">Connected assistants</h2>
         {loading ? (
           <p className="text-sm text-fg-muted">Loading connections...</p>
+        ) : loadError ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-fg-secondary">Could not load connections.</p>
+            <GlassButton size="sm" className="mt-3" onClick={loadConnections}>Retry</GlassButton>
+          </div>
         ) : connections.length === 0 ? (
           <div className="py-6 text-center text-sm text-fg-muted">
             No live assistants connected yet. Use one of the setup options above to get started.
@@ -323,7 +348,7 @@ function ConnectionsTab() {
                     <p className="text-sm font-medium text-fg">{conn.name}</p>
                     <p className="text-xs text-fg-muted mt-0.5 capitalize">
                       {conn.platform} &middot; {conn.is_active ? "Active" : "Inactive"}
-                      {conn.last_sync_at ? ` &middot; Last sync: ${new Date(conn.last_sync_at).toLocaleString()}` : ""}
+                      {conn.last_sync_at ? ` · Last sync: ${new Date(conn.last_sync_at).toLocaleString()}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -346,12 +371,30 @@ function ConnectionsTab() {
                         "Sync now"
                       )}
                     </GlassButton>
-                    <button
-                      onClick={() => deleteConnection(conn.id)}
-                      className="text-fg-muted hover:text-score-critical transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {confirmDeleteId === conn.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-fg-secondary">Remove?</span>
+                        <GlassButton
+                          size="sm"
+                          variant="danger"
+                          loading={deleting === conn.id}
+                          onClick={() => deleteConnection(conn.id)}
+                        >
+                          Yes
+                        </GlassButton>
+                        <GlassButton size="sm" onClick={() => setConfirmDeleteId(null)}>
+                          No
+                        </GlassButton>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(conn.id)}
+                        className="text-fg-muted hover:text-score-critical transition-colors"
+                        aria-label="Remove connection"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -475,12 +518,18 @@ const THRESHOLD_DIMS = [
 function AlertsTab() {
   const [configs, setConfigs] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
-  useEffect(() => {
+  function loadThresholds() {
+    setLoadError(false);
     fetch("/api/alerts/config")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
         const map: Record<string, number> = {};
         for (const cfg of d.configs || []) {
@@ -488,14 +537,17 @@ function AlertsTab() {
         }
         setConfigs(map);
       })
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadThresholds(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveThresholds() {
     setSaving(true);
+    setSaveError(false);
     try {
-      await fetch("/api/alerts/config", {
+      const r = await fetch("/api/alerts/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -506,10 +558,11 @@ function AlertsTab() {
           })),
         }),
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -521,6 +574,11 @@ function AlertsTab() {
       <p className="text-xs text-fg-muted mb-6">Get notified when quality drops below these thresholds.</p>
       {loading ? (
         <p className="text-sm text-fg-muted">Loading...</p>
+      ) : loadError ? (
+        <div className="py-4 text-center">
+          <p className="text-sm text-fg-secondary">Could not load alert thresholds.</p>
+          <GlassButton size="sm" className="mt-3" onClick={loadThresholds}>Retry</GlassButton>
+        </div>
       ) : (
         <div className="space-y-4">
           {THRESHOLD_DIMS.map(({ dim, label }) => (
@@ -544,7 +602,10 @@ function AlertsTab() {
           ))}
         </div>
       )}
-      <GlassButton className="mt-6" onClick={saveThresholds} disabled={saving || loading}>
+      {saveError && (
+        <p className="mt-3 text-xs text-score-critical">Failed to save thresholds. Try again.</p>
+      )}
+      <GlassButton className="mt-3" onClick={saveThresholds} disabled={saving || loading || loadError}>
         {saved ? "Saved!" : saving ? "Saving..." : "Save thresholds"}
       </GlassButton>
     </GlassCard>
@@ -556,17 +617,24 @@ function AlertsTab() {
 function TeamTab() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadTeam() {
+    setLoadError(false);
     fetch("/api/team")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => setMembers(d.members || []))
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadTeam(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function invite() {
     if (!inviteEmail) return;
@@ -596,6 +664,11 @@ function TeamTab() {
       <h2 className="text-sm font-semibold text-fg mb-4">Team Members</h2>
       {loading ? (
         <p className="text-sm text-fg-muted">Loading...</p>
+      ) : loadError ? (
+        <div className="py-4 text-center mb-4">
+          <p className="text-sm text-fg-secondary">Could not load team members.</p>
+          <GlassButton size="sm" className="mt-3" onClick={loadTeam}>Retry</GlassButton>
+        </div>
       ) : members.length === 0 ? (
         <p className="text-sm text-fg-muted mb-6">No team members yet.</p>
       ) : (
@@ -635,6 +708,9 @@ function TeamTab() {
 function KnowledgeTab() {
   const [sources, setSources] = useState<KBSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [confirmDeleteKbId, setConfirmDeleteKbId] = useState<string | null>(null);
+  const [deletingKb, setDeletingKb] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [sourceUrl, setSourceUrl] = useState("");
   const [syncingUrl, setSyncingUrl] = useState(false);
@@ -642,18 +718,33 @@ function KnowledgeTab() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  function loadSources() {
+    setLoadError(false);
     fetch("/api/knowledge-base")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => setSources(d.sources || []))
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadSources(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteSource(id: string) {
-    if (!confirm("Delete this knowledge base item?")) return;
-    await fetch(`/api/knowledge-base/${id}`, { method: "DELETE" });
-    setSources((prev) => prev.filter((s) => s.id !== id));
+    setDeletingKb(id);
+    setConfirmDeleteKbId(null);
+    try {
+      const r = await fetch(`/api/knowledge-base/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        setSources((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingKb(null);
+    }
   }
 
   async function ingestUrl() {
@@ -799,6 +890,11 @@ function KnowledgeTab() {
       </div>
       {loading ? (
         <p className="text-sm text-fg-muted">Loading...</p>
+      ) : loadError ? (
+        <div className="py-4 text-center">
+          <p className="text-sm text-fg-secondary">Could not load knowledge base.</p>
+          <GlassButton size="sm" className="mt-3" onClick={loadSources}>Retry</GlassButton>
+        </div>
       ) : sources.length === 0 ? (
         <div className="py-4 text-center text-sm text-fg-muted">
           No knowledge base items yet. Upload documents to improve accuracy scoring.
@@ -810,15 +906,24 @@ function KnowledgeTab() {
               <div>
                 <p className="text-sm text-fg">{s.source}</p>
                 <p className="text-xs text-fg-muted">
-                  {s.chunks} chunk{s.chunks !== 1 ? "s" : ""} &middot; Uploaded {new Date(s.created_at).toLocaleDateString()}
+                  {s.chunks} chunk{s.chunks !== 1 ? "s" : ""} · Uploaded {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <button
-                className="text-fg-muted hover:text-score-critical transition-colors"
-                onClick={() => deleteSource(s.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {confirmDeleteKbId === s.id ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-fg-secondary">Delete?</span>
+                  <GlassButton size="sm" variant="danger" loading={deletingKb === s.id} onClick={() => deleteSource(s.id)}>Yes</GlassButton>
+                  <GlassButton size="sm" onClick={() => setConfirmDeleteKbId(null)}>No</GlassButton>
+                </div>
+              ) : (
+                <button
+                  className="text-fg-muted hover:text-score-critical transition-colors"
+                  onClick={() => setConfirmDeleteKbId(s.id)}
+                  aria-label="Delete knowledge base item"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -838,28 +943,35 @@ const PLANS = [
 function BillingTab() {
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  function loadBilling() {
+    setLoadError(false);
+    fetch("/api/billing")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d) => setBilling(d))
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }
 
   useEffect(() => {
     // Check URL for success/cancel params
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "1") {
       setSuccessMsg("Your subscription has been updated. Changes may take a moment to reflect.");
-      // Clean up URL
       const url = new URL(window.location.href);
       url.searchParams.delete("success");
       window.history.replaceState({}, "", url.toString());
     }
-
-    fetch("/api/billing")
-      .then((r) => r.json())
-      .then((d) => setBilling(d))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    loadBilling();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function openPortal() {
     setPortalLoading(true);
@@ -907,6 +1019,15 @@ function BillingTab() {
     return (
       <GlassCard className="p-6">
         <p className="text-sm text-fg-muted">Loading billing...</p>
+      </GlassCard>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <GlassCard className="p-6 text-center">
+        <p className="text-sm text-fg-secondary">Could not load billing information.</p>
+        <GlassButton size="sm" className="mt-3" onClick={loadBilling}>Retry</GlassButton>
       </GlassCard>
     );
   }

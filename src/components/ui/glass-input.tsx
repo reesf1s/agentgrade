@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils";
 import { forwardRef } from "react";
 
-const labelClasses = "block text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-muted";
+const labelClasses = "block text-[11px] font-semibold tracking-[0.01em] text-fg-secondary";
 
 interface GlassInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;

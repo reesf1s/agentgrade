@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, RefreshCw, X } from "lucide-react";
 import { SeverityBadge } from "@/components/ui/score-badge";
+import { useToast } from "@/components/ui/toast";
 import type { FailurePattern } from "@/lib/db/types";
-import { getIssueStateMap, setIssueState, type IssueWorkflowState } from "@/lib/review-workflow";
+import { ISSUE_WORKFLOW_STATES, type IssueWorkflowState } from "@/lib/review-workflow";
 
 const STATE_LABELS: Record<IssueWorkflowState, string> = {
   new:        "New",
@@ -23,12 +24,9 @@ const STATE_COLORS: Record<string, string> = {
   Resolved:   "border-emerald-500/20 bg-emerald-500/10 text-emerald-500",
 };
 
-function issueStateLabel(pattern: FailurePattern, saved?: IssueWorkflowState): string {
-  if (saved) return STATE_LABELS[saved];
+function issueStateLabel(pattern: FailurePattern): string {
   if (pattern.is_resolved) return "Resolved";
-  if (pattern.severity === "critical" || pattern.severity === "high") return "In progress";
-  if (pattern.affected_conversation_ids.length >= 6) return "Monitoring";
-  return "New";
+  return STATE_LABELS[pattern.workflow_state] || "New";
 }
 
 function nextAction(pattern: FailurePattern) {
@@ -41,28 +39,81 @@ function nextAction(pattern: FailurePattern) {
 }
 
 export function PatternsPageClient({ initialPatterns }: { initialPatterns: FailurePattern[] }) {
+  const { success, error } = useToast();
   const [patterns, setPatterns]           = useState(initialPatterns);
   const [resolving, setResolving]         = useState<string | null>(null);
   const [refreshing, setRefreshing]       = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<FailurePattern | null>(null);
-  const [issueStates, setIssueStates]     = useState<Record<string, IssueWorkflowState>>({});
+  const [stateSaving, setStateSaving]     = useState<string | null>(null);
 
-  useEffect(() => { setIssueStates(getIssueStateMap()); }, []);
+  useEffect(() => {
+    setPatterns(initialPatterns);
+  }, [initialPatterns]);
 
-  function updateState(id: string, state: IssueWorkflowState) {
-    setIssueState(id, state);
-    setIssueStates((cur) => ({ ...cur, [id]: state }));
+  async function updateState(id: string, state: IssueWorkflowState) {
+    setStateSaving(id);
+    const previous = patterns;
+    const optimisticPatterns = patterns.map((pattern) =>
+      pattern.id === id
+        ? {
+            ...pattern,
+            workflow_state: state,
+            workflow_updated_at: new Date().toISOString(),
+            is_resolved: state === "resolved",
+            resolved_at: state === "resolved" ? new Date().toISOString() : pattern.resolved_at,
+          }
+        : pattern
+    );
+    const nextPatterns =
+      state === "resolved"
+        ? optimisticPatterns.filter((pattern) => pattern.id !== id)
+        : optimisticPatterns;
+
+    setPatterns(nextPatterns);
+    if (selectedPattern?.id === id) {
+      const nextSelected =
+        state === "resolved"
+          ? null
+          : nextPatterns.find((pattern) => pattern.id === id) || null;
+      setSelectedPattern(nextSelected);
+    }
+
+    try {
+      const response = await fetch(`/api/patterns/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflow_state: state }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to persist issue state");
+      }
+      const updated = (await response.json()) as FailurePattern;
+      setPatterns((current) =>
+        state === "resolved"
+          ? current.filter((pattern) => pattern.id !== id)
+          : current.map((pattern) => (pattern.id === id ? updated : pattern))
+      );
+      if (selectedPattern?.id === id) {
+        setSelectedPattern(state === "resolved" ? null : updated);
+      }
+      success(state === "resolved" ? "Issue resolved" : "Issue updated");
+    } catch (err) {
+      console.error(err);
+      setPatterns(previous);
+      if (selectedPattern?.id === id) {
+        const previousSelected = previous.find((pattern) => pattern.id === id) || null;
+        setSelectedPattern(previousSelected);
+      }
+      error("Could not update issue state");
+    } finally {
+      setStateSaving(null);
+    }
   }
 
   async function resolvePattern(id: string) {
     setResolving(id);
     try {
-      const res = await fetch(`/api/patterns/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_resolved: true }),
-      });
-      if (res.ok) setPatterns((cur) => cur.filter((p) => p.id !== id));
+      await updateState(id, "resolved");
     } finally {
       setResolving(null);
     }
@@ -71,8 +122,14 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
   async function refreshPatterns() {
     setRefreshing(true);
     try {
-      await fetch("/api/patterns", { method: "POST" });
+      const response = await fetch("/api/patterns", { method: "POST" });
+      if (!response.ok) {
+        throw new Error("Failed to refresh issues");
+      }
       window.location.reload();
+    } catch (err) {
+      console.error(err);
+      error("Could not refresh issues");
     } finally {
       setRefreshing(false);
     }
@@ -116,7 +173,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
           </div>
 
           {patterns.map((pattern, idx) => {
-            const stateLabel = issueStateLabel(pattern, issueStates[pattern.id]);
+            const stateLabel = issueStateLabel(pattern);
             const stateStyle = STATE_COLORS[stateLabel] || STATE_COLORS["New"];
 
             return (
@@ -130,7 +187,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 <div className="min-w-0 pr-6">
                   <button
                     type="button"
-                    className="text-left text-sm font-semibold text-fg hover:text-[var(--btn-primary-bg)] transition-colors"
+                    className="text-left text-sm font-semibold text-fg transition-colors hover:text-[var(--brand)]"
                     onClick={() => setSelectedPattern(pattern)}
                   >
                     {pattern.title}
@@ -157,15 +214,16 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 {/* Status */}
                 <div className="pt-0.5">
                   <select
-                    value={issueStates[pattern.id] || ""}
+                    value={pattern.workflow_state}
                     onChange={(e) => updateState(pattern.id, e.target.value as IssueWorkflowState)}
+                    disabled={stateSaving === pattern.id}
                     className={`rounded-md border px-2 py-0.5 text-xs font-medium cursor-pointer ${stateStyle}`}
                   >
-                    <option value="new">New</option>
-                    <option value="monitoring">Monitoring</option>
-                    <option value="actioning">In progress</option>
-                    <option value="quieted">Quieted</option>
-                    <option value="resolved">Resolved</option>
+                    {ISSUE_WORKFLOW_STATES.map((state) => (
+                      <option key={state} value={state}>
+                        {STATE_LABELS[state]}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -182,6 +240,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     type="button"
                     className="glass-button py-0.5 px-2 text-xs"
                     onClick={() => updateState(pattern.id, "actioning")}
+                    disabled={stateSaving === pattern.id}
                   >
                     Track fix
                   </button>
@@ -220,7 +279,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <SeverityBadge severity={selectedPattern.severity} />
                   <span className="operator-chip">
-                    {issueStateLabel(selectedPattern, issueStates[selectedPattern.id])}
+                    {issueStateLabel(selectedPattern)}
                   </span>
                   <span className="operator-chip">
                     {selectedPattern.affected_conversation_ids.length} affected
@@ -255,6 +314,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     type="button"
                     className="glass-button py-1 px-2.5 text-xs"
                     onClick={() => updateState(selectedPattern.id, "actioning")}
+                    disabled={stateSaving === selectedPattern.id}
                   >
                     Track fix
                   </button>
@@ -262,6 +322,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     type="button"
                     className="glass-button py-1 px-2.5 text-xs"
                     onClick={() => updateState(selectedPattern.id, "quieted")}
+                    disabled={stateSaving === selectedPattern.id}
                   >
                     Recheck next week
                   </button>
@@ -269,6 +330,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     type="button"
                     className="glass-button glass-button-primary py-1 px-2.5 text-xs"
                     onClick={() => updateState(selectedPattern.id, "resolved")}
+                    disabled={stateSaving === selectedPattern.id}
                   >
                     Mark resolved
                   </button>

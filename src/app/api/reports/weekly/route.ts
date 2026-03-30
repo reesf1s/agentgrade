@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
       // Try cached first
       const { data: cached } = await supabaseAdmin
-        .from("weekly_reports")
+        .from("ag_weekly_reports")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("week_start", weekStartParam)
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Return the last N weeks of reports
     const { data: existingReports } = await supabaseAdmin
-      .from("weekly_reports")
+      .from("ag_weekly_reports")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("week_start", { ascending: false })
@@ -107,15 +107,15 @@ async function generateWeeklyReport(
 
   const [thisWeekRes, priorWeekRes] = await Promise.all([
     supabaseAdmin
-      .from("conversations")
-      .select("*, quality_scores:quality_scores(*)")
+      .from("ag_conversations")
+      .select("*, quality_scores:ag_quality_scores(*)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", weekStart.toISOString())
       .lt("created_at", weekEnd.toISOString()),
 
     supabaseAdmin
-      .from("conversations")
-      .select("quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
+      .from("ag_conversations")
+      .select("quality_scores:ag_quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorWeekStart.toISOString())
       .lt("created_at", weekStart.toISOString()),
@@ -208,7 +208,7 @@ async function generateWeeklyReport(
 
   // Cache in weekly_reports (upsert)
   const { data: saved } = await supabaseAdmin
-    .from("weekly_reports")
+    .from("ag_weekly_reports")
     .upsert(
       {
         workspace_id: workspaceId,

@@ -67,7 +67,7 @@ export async function createAlert(
   recentCutoff.setHours(recentCutoff.getHours() - ALERT_DEDUPE_WINDOW_HOURS);
 
   const { data: existing } = await supabaseAdmin
-    .from("alerts")
+    .from("ag_alerts")
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("alert_type", alertType)
@@ -80,7 +80,7 @@ export async function createAlert(
   }
 
   const { data, error } = await supabaseAdmin
-    .from("alerts")
+    .from("ag_alerts")
     .insert({
       workspace_id: workspaceId,
       alert_type: alertType,
@@ -118,7 +118,7 @@ export async function checkThresholds(
 
   // Fetch all enabled alert configs for this workspace
   const { data: configs, error } = await supabaseAdmin
-    .from("alert_configs")
+    .from("ag_alert_configs")
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("enabled", true);
@@ -177,7 +177,7 @@ export async function sendAlertEmail(
 
   // Fetch alert details
   const { data: alert, error: alertError } = await supabaseAdmin
-    .from("alerts")
+    .from("ag_alerts")
     .select("*")
     .eq("id", alertId)
     .single();
@@ -191,13 +191,13 @@ export async function sendAlertEmail(
 
   // Fetch workspace name and owner email
   const { data: workspaceData } = await supabaseAdmin
-    .from("workspaces")
+    .from("ag_workspaces")
     .select("name")
     .eq("id", workspaceId)
     .single();
 
   const { data: ownerData } = await supabaseAdmin
-    .from("workspace_members")
+    .from("ag_workspace_members")
     .select("clerk_user_id")
     .eq("workspace_id", workspaceId)
     .eq("role", "owner")

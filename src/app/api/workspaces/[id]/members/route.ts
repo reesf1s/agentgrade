@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { data, error } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .select("id, clerk_user_id, email, role, created_at")
       .eq("workspace_id", id)
       .order("created_at", { ascending: true });
@@ -83,7 +83,7 @@ export async function POST(
 
     // Check if user is already a member
     const { data: existing } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .select("id, role")
       .eq("workspace_id", id)
       .eq("clerk_user_id", clerk_user_id)
@@ -97,7 +97,7 @@ export async function POST(
     }
 
     const { data: member, error: memberError } = await supabaseAdmin
-      .from("workspace_members")
+      .from("ag_workspace_members")
       .insert({
         workspace_id: id,
         clerk_user_id,

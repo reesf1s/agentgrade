@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: connections, error: connError } = await supabaseAdmin
-      .from("agent_connections")
+      .from("ag_agent_connections")
       .select("id, workspace_id, platform, is_active")
       .eq("webhook_secret", webhookSecret)
       .limit(1);

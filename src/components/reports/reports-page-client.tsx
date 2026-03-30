@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -11,235 +11,287 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { SeverityBadge, ScoreBadge } from "@/components/ui/score-badge";
+import { ScoreBadge, SeverityBadge } from "@/components/ui/score-badge";
+import { GlassCard } from "@/components/ui/glass-card";
 import { scoreAccent } from "@/lib/utils";
 import type { ReportData } from "@/lib/dashboard-data";
+
+function trendState(delta: number) {
+  if (delta > 0.02) return { label: "Quality improved", Icon: TrendingUp, color: "#10B981" };
+  if (delta < -0.02) return { label: "Quality slipped", Icon: TrendingDown, color: "#EF4444" };
+  return { label: "Quality steady", Icon: Minus, color: "#6B7280" };
+}
 
 export function ReportsPageClient({ report }: { report: ReportData }) {
   const summary = report.summary;
   const trendData = report.trend_data || [];
-  const trendDelta = summary?.score_trend ?? 0;
+  const delta = summary?.score_trend ?? 0;
+  const trend = trendState(delta);
+  const TrendIcon = trend.Icon;
 
-  const trendTone =
-    trendDelta > 0.02
-      ? { label: "Improved this week", Icon: TrendingUp,   color: "#10B981" }
-      : trendDelta < -0.02
-      ? { label: "Slipped this week",  Icon: TrendingDown, color: "#EF4444" }
-      : { label: "Steady this week",   Icon: Minus,        color: "rgba(255,255,255,0.35)" };
+  const avgScore = summary?.avg_overall_score ?? 0;
+  const riskyReplies = summary?.hallucination_count ?? 0;
+  const scored = summary?.total_scored ?? 0;
+  const primaryPattern = report.patterns[0];
+  const primaryRecommendation = report.organization_recommendations[0];
 
-  const avgScore   = summary?.avg_overall_score ?? 0;
-  const scored     = summary?.total_scored ?? 0;
-  const risky      = summary?.hallucination_count ?? 0;
-  const escalated  = summary?.escalation_count ?? 0;
+  if (scored === 0) {
+    return (
+      <div className="space-y-6 pb-8">
+        <div className="page-header">
+          <div>
+            <p className="page-eyebrow mb-2">Weekly memo</p>
+            <h1 className="page-title">This week</h1>
+            <p className="page-subtitle mt-2">
+              {report.week_start} to {report.week_end}
+            </p>
+          </div>
+        </div>
 
-  const metrics = [
-    {
-      label:      "Avg quality",
-      value:      `${Math.round(avgScore * 100)}%`,
-      sub:        avgScore >= 0.75 ? "Healthy" : avgScore >= 0.55 ? "Needs attention" : "Critical",
-      valueColor: scoreAccent(avgScore),
-      subColor:   scoreAccent(avgScore),
-    },
-    {
-      label:      "Scored",
-      value:      scored.toString(),
-      sub:        "conversations",
-      valueColor: undefined,
-      subColor:   undefined,
-    },
-    {
-      label:      "Risky replies",
-      value:      risky.toString(),
-      sub:        risky === 0 ? "None this week" : "need verification",
-      valueColor: risky === 0 ? "#10B981" : "#F59E0B",
-      subColor:   risky === 0 ? "#10B981" : "#F59E0B",
-    },
-    {
-      label:      "Escalations",
-      value:      escalated.toString(),
-      sub:        escalated === 0 ? "None this week" : "escalated",
-      valueColor: escalated === 0 ? "#10B981" : "#EF4444",
-      subColor:   escalated === 0 ? "#10B981" : "#EF4444",
-    },
-  ];
+        <GlassCard elevated className="p-6 sm:p-7">
+          <div className="assessment-hero">
+            <div>
+              <p className="page-eyebrow">Report status</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-fg">
+                Not enough scored data yet
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-fg-secondary">
+                Reports will become useful once the workspace has usable scores for this period.
+              </p>
+            </div>
+            <div className="assessment-score-card rounded-[20px] border border-white/70 bg-white/60 p-5">
+              <p className="page-eyebrow">Next step</p>
+              <p className="mt-3 text-base font-semibold text-fg">
+                Review new conversations and let scoring complete.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/conversations" className="glass-button glass-button-primary text-sm">
+                  Open queue
+                </Link>
+                <Link href="/dashboard" className="glass-button text-sm">
+                  Back to overview
+                </Link>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-5 pb-8">
-
-      {/* Page header */}
+    <div className="space-y-6 pb-8">
       <div className="page-header">
         <div>
-          <p className="page-eyebrow mb-1">Weekly report</p>
+          <p className="page-eyebrow mb-2">Weekly memo</p>
           <h1 className="page-title">This week</h1>
-          <p className="mt-1 text-sm text-fg-secondary">
-            {report.week_start} → {report.week_end}
+          <p className="page-subtitle mt-2">
+            {report.week_start} to {report.week_end}
           </p>
         </div>
       </div>
 
-      {/* Trend banner */}
-      <div className="glass-static relative flex items-center gap-3 px-5 py-3.5">
-        <trendTone.Icon className="h-4 w-4 shrink-0" style={{ color: trendTone.color }} />
-        <p className="text-sm font-semibold" style={{ color: trendTone.color }}>{trendTone.label}</p>
-        {trendDelta !== 0 && (
-          <span className="ml-auto text-sm font-bold tabular-nums font-mono" style={{ color: trendTone.color }}>
-            {trendDelta > 0 ? "+" : ""}{Math.round(trendDelta * 100)}%
-          </span>
-        )}
-      </div>
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {metrics.map((m) => (
-          <div key={m.label} className="metric-card">
-            <p className="metric-label">{m.label}</p>
-            <p className="metric-value" style={m.valueColor ? { color: m.valueColor } : undefined}>{m.value}</p>
-            <p className="metric-sub" style={m.subColor ? { color: m.subColor } : undefined}>{m.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Two-column: biggest risk + best opportunity */}
-      <div className="grid gap-4 lg:grid-cols-2">
-
-        {/* Biggest risk */}
-        <div className="glass-static relative p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-score-warning" />
-            <p className="text-sm font-semibold text-fg">Biggest risk this week</p>
-          </div>
-          {report.patterns[0] ? (
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <SeverityBadge severity={report.patterns[0].severity} />
-                <span className="text-sm font-semibold text-fg">{report.patterns[0].title}</span>
+      <section className="assessment-hero">
+        <GlassCard elevated className="p-6 sm:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="max-w-2xl">
+              <div className="token-row">
+                <span className="token-pill">{scored} scored</span>
+                <span className="token-pill" style={{ color: trend.color }}>
+                  <TrendIcon className="h-3.5 w-3.5" />
+                  {trend.label}
+                </span>
               </div>
-              <p className="text-sm text-fg-secondary leading-relaxed">{report.patterns[0].description}</p>
-              {report.patterns[0].affected_conversation_ids?.length > 0 && (
-                <p className="mt-3 text-xs text-fg-muted">
-                  {report.patterns[0].affected_conversation_ids.length} conversations affected
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-score-good" />
-              <p className="text-sm text-fg-secondary">No critical risks detected this week.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Best opportunity */}
-        <div className="glass-static relative p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="h-4 w-4 text-brand-light" />
-            <p className="text-sm font-semibold text-fg">Best improvement opportunity</p>
-          </div>
-          {report.organization_recommendations[0] ? (
-            <div>
-              <p className="text-sm font-medium text-fg mb-1">
-                {report.organization_recommendations[0].recommended_change}
+              <p className="mt-5 text-sm font-medium text-fg-secondary">At a glance</p>
+              <p className="mt-3 assessment-title" style={{ color: scoreAccent(avgScore) }}>
+                {Math.round(avgScore * 100)}%
               </p>
-              {report.organization_recommendations[0].expected_impact && (
-                <p className="text-sm text-fg-secondary leading-relaxed">
-                  {report.organization_recommendations[0].expected_impact}
-                </p>
+              <p className="mt-4 text-xl leading-8 tracking-[-0.02em] text-fg">
+                {delta > 0.02
+                  ? "Quality improved, but review the remaining risky reply."
+                  : delta < -0.02
+                    ? "Quality slipped. Review the top issue first."
+                    : "Quality is steady. Keep the weekly loop running."}
+              </p>
+            </div>
+
+            <div className="assessment-score-card rounded-xl border border-edge bg-surface-secondary p-5">
+              <p className="page-eyebrow">This week</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="value-block">
+                  <span className="value-key">Scored</span>
+                  <span className="value-text">{scored}</span>
+                </div>
+                <div className="value-block">
+                  <span className="value-key">Risky</span>
+                  <span className="value-text">{riskyReplies}</span>
+                </div>
+                <div className="value-block">
+                  <span className="value-key">Trend</span>
+                  <span className="value-text">{trend.label.replace("Quality ", "")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="space-y-5">
+            <div>
+              <p className="page-eyebrow">Biggest risk</p>
+              {primaryPattern ? (
+                <>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <SeverityBadge severity={primaryPattern.severity} />
+                    <span className="text-sm text-fg-secondary">
+                      {primaryPattern.affected_conversation_ids.length} affected
+                    </span>
+                  </div>
+                  <p className="mt-3 text-lg font-semibold tracking-[-0.03em] text-fg">
+                    {primaryPattern.title}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-fg-secondary">
+                    {primaryPattern.description}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-lg font-semibold tracking-[-0.03em] text-fg">No repeated issue</p>
+                  <p className="mt-2 text-sm leading-6 text-fg-secondary">Nothing is clustering into a major org-wide problem.</p>
+                </>
               )}
             </div>
+
+            <div className="light-divider pt-5">
+              <p className="page-eyebrow">Best opportunity</p>
+              <p className="mt-3 text-base font-semibold tracking-[-0.02em] text-fg">
+                {primaryRecommendation?.recommended_change || "No clear org-wide fix yet."}
+              </p>
+              {primaryRecommendation?.expected_impact ? (
+                <p className="mt-2 text-sm leading-6 text-fg-secondary">
+                  {primaryRecommendation.expected_impact}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </GlassCard>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="page-eyebrow">Quality trend</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-fg">Movement over time</h2>
+            </div>
+            <span className="operator-chip">30d</span>
+          </div>
+
+          {trendData.length === 0 ? (
+            <p className="empty-inline mt-8">Trend data will appear once more conversations are scored.</p>
           ) : (
-            <p className="text-sm text-fg-secondary">No clear org-wide fix this week.</p>
+            <div className="mt-5 h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 4, right: 6, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="reportOverall" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#5E6AD2" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#5E6AD2" stopOpacity={0.01} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.3)" }}
+                    tickFormatter={(value) => value.slice(5)}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0.3, 1]}
+                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.3)" }}
+                    tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "rgba(14,14,20,0.95)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                      fontSize: 12,
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                    formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="overall"
+                    stroke="#5E6AD2"
+                    strokeWidth={2}
+                    fill="url(#reportOverall)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: "#7178E0", stroke: "rgba(255,255,255,0.2)", strokeWidth: 2 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="accuracy"
+                    stroke="#10B981"
+                    strokeWidth={1.8}
+                    fill="transparent"
+                    dot={false}
+                    opacity={0.7}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="hallucination"
+                    stroke="#F59E0B"
+                    strokeWidth={1.8}
+                    fill="transparent"
+                    dot={false}
+                    opacity={0.7}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           )}
-        </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <p className="page-eyebrow">Worth reviewing</p>
+          <div className="mt-4 compact-list">
+            {summary?.top_failures?.length ? (
+              summary.top_failures.slice(0, 4).map((item) => (
+                <Link
+                  key={item.conversation_id}
+                  href={`/conversations/${item.conversation_id}`}
+                  className="compact-list-item flex items-start justify-between gap-4"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-fg">
+                      Conversation #{item.conversation_id.slice(0, 6)}
+                    </p>
+                    {item.summary ? (
+                      <p className="mt-1 text-sm leading-6 text-fg-secondary">{item.summary}</p>
+                    ) : null}
+                  </div>
+                  {item.score !== undefined ? <ScoreBadge score={item.score} size="sm" /> : null}
+                </Link>
+              ))
+            ) : (
+              <p className="empty-inline py-10">No priority conversations this week.</p>
+            )}
+          </div>
+          <Link
+            href="/conversations"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-light"
+          >
+            Open review queue
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </GlassCard>
       </div>
-
-      {/* Trend chart */}
-      <div className="glass-static relative p-5">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <p className="text-sm font-semibold text-fg">Quality trend</p>
-          <div className="flex items-center gap-4 text-[11px] text-fg-muted">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-brand" />Overall</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-score-good" />Accuracy</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-3 rounded-sm bg-score-warning" />Hallucination</span>
-          </div>
-        </div>
-
-        {trendData.length === 0 ? (
-          <p className="text-sm text-fg-muted py-8 text-center">No trend data yet.</p>
-        ) : (
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradOverall" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366F1" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
-                  tickFormatter={(value) => value.slice(5)}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0.3, 1]}
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.35)" }}
-                  tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#111118",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "8px",
-                    fontSize: 12,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                  }}
-                  formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
-                />
-                <Area type="monotone" dataKey="overall" stroke="#6366F1" strokeWidth={2} fill="url(#gradOverall)" dot={false} activeDot={{ r: 4, fill: "#818CF8", stroke: "#6366F1", strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
-                <Area type="monotone" dataKey="hallucination" stroke="#F59E0B" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {/* Conversations to review */}
-      {summary?.top_failures?.length ? (
-        <div className="glass-static relative overflow-hidden">
-          <div className="border-b border-edge px-5 py-3.5">
-            <p className="text-sm font-semibold text-fg">Conversations worth reviewing</p>
-          </div>
-          <div className="divide-y divide-edge">
-            {summary.top_failures.map((item) => (
-              <Link
-                key={item.conversation_id}
-                href={`/conversations/${item.conversation_id}`}
-                className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-surface-hover transition-colors group"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-fg">
-                    Conversation #{item.conversation_id.slice(0, 6)}
-                  </p>
-                  {item.summary && (
-                    <p className="mt-0.5 text-xs text-fg-secondary line-clamp-2 leading-relaxed">{item.summary}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {item.score !== undefined && <ScoreBadge score={item.score} size="sm" />}
-                  <ArrowRight className="h-4 w-4 text-fg-muted group-hover:text-fg-secondary transition-colors" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
     </div>
   );
 }

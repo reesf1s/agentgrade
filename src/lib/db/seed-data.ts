@@ -214,6 +214,8 @@ export const SEED_PATTERNS: FailurePattern[] = [
     recommendation: "Update the agent's system prompt with an exhaustive list of actual integrations.",
     prompt_fix: "Add to system prompt: 'Our current integrations are: Slack, Google Workspace, Jira, GitHub, and Zapier. If asked about any other integration, say: \"We don't currently offer a [name] integration, but I can check our roadmap for you.\"'",
     knowledge_base_suggestion: "Create a document listing all integrations with setup instructions",
+    workflow_state: "actioning",
+    workflow_updated_at: daysAgo(1),
     detected_at: daysAgo(1), is_resolved: false,
   },
   {
@@ -226,6 +228,8 @@ export const SEED_PATTERNS: FailurePattern[] = [
     recommendation: "Add amount verification step to the agent's billing conversation flow.",
     prompt_fix: "Add to system prompt: 'For any billing-related action (refund, credit, adjustment), ALWAYS confirm the exact amount with the customer before proceeding. Say: \"I can see a charge of $[exact amount] on [date]. Is this the charge you're referring to?\"'",
     knowledge_base_suggestion: undefined,
+    workflow_state: "monitoring",
+    workflow_updated_at: daysAgo(1),
     detected_at: daysAgo(1), is_resolved: false,
   },
   {
@@ -238,6 +242,8 @@ export const SEED_PATTERNS: FailurePattern[] = [
     recommendation: "Prioritize accuracy over speed for billing conversations. Add a verification step.",
     prompt_fix: "Add to system prompt: 'For billing inquiries, take extra care to verify amounts before responding. A wrong number about money will immediately lose the customer's trust.'",
     knowledge_base_suggestion: undefined,
+    workflow_state: "new",
+    workflow_updated_at: daysAgo(2),
     detected_at: daysAgo(2), is_resolved: false,
   },
 ];

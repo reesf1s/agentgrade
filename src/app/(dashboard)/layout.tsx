@@ -7,29 +7,55 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-base">
+    <div className="min-h-screen" style={{ background: "#161618" }}>
       <Sidebar />
 
-      {/* Main content — offset by sidebar width on lg */}
-      <div className="flex flex-1 flex-col lg:pl-[14rem]">
-
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-edge bg-base-white/90 backdrop-blur-xl px-5 pt-14 lg:pt-0">
-          {/* Left — breadcrumb area */}
-          <div className="hidden lg:flex items-center gap-2 text-sm text-fg-muted">
-            {/* Placeholder for future breadcrumbs / cmd-k */}
+      <div className="flex min-h-screen flex-col lg:pl-56">
+        <header
+          className="dashboard-topbar sticky top-0 z-30 flex h-[46px] items-center justify-between gap-4 px-5 pt-14 lg:px-6 lg:pt-0"
+        >
+          <div className="hidden items-center gap-2 lg:flex">
+            <span
+              className="text-[11px] font-medium tracking-[0.06em] uppercase"
+              style={{ color: "rgba(255,255,255,0.28)" }}
+            >
+              Quality Ops
+            </span>
           </div>
 
-          {/* Right — user */}
-          <div className="ml-auto flex items-center gap-3">
-            <div className="rounded-lg border border-edge bg-surface px-2.5 py-1.5 transition-colors hover:border-edge-strong">
+          <div className="ml-auto flex items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{
+                background: "rgba(78,167,107,0.08)",
+                border: "1px solid rgba(78,167,107,0.15)",
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full animate-pulse-soft"
+                style={{ background: "#4EA76B" }}
+              />
+              <span className="text-[11px] font-medium" style={{ color: "#4EA76B" }}>
+                Live
+              </span>
+            </div>
+            <div
+              className="rounded-md px-1.5 py-1 transition-colors"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+            >
               <UserButton
                 appearance={{
                   elements: {
-                    userButtonBox: "flex items-center gap-2",
-                    userButtonTrigger: "rounded-md focus-visible:ring-2 focus-visible:ring-brand/50",
-                    userButtonAvatarBox: "w-6 h-6",
-                    userButtonOuterIdentifier: "text-xs font-medium text-fg-secondary hidden xl:block",
+                    userButtonBox:             "flex items-center gap-2",
+                    userButtonTrigger:         "rounded-md",
+                    userButtonAvatarBox:       "w-5 h-5",
+                    userButtonOuterIdentifier: "text-[12px] font-medium hidden xl:block",
+                  },
+                  variables: {
+                    colorText: "rgba(255,255,255,0.6)",
                   },
                 }}
                 showName
@@ -38,9 +64,8 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 px-5 py-6 lg:px-8">
-          <div className="mx-auto max-w-5xl animate-fade-in">
+        <main className="flex-1 px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
+          <div className="mx-auto w-full max-w-[1160px] animate-fade-in">
             {children}
           </div>
         </main>

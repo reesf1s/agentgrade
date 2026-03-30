@@ -34,7 +34,7 @@ export async function POST(
     const { id } = await params;
 
     const { data: fix, error: fetchError } = await supabaseAdmin
-      .from("suggested_fixes")
+      .from("ag_suggested_fixes")
       .select("*")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -81,7 +81,7 @@ export async function POST(
 
     // Mark fix as pushed
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("suggested_fixes")
+      .from("ag_suggested_fixes")
       .update({
         status: "pushed",
         pushed_at: new Date().toISOString(),
@@ -121,7 +121,7 @@ async function pushKnowledgeGapToIntercom(
 ): Promise<Record<string, unknown>> {
   // Find the Intercom connection for this workspace
   const { data: connections } = await supabaseAdmin
-    .from("agent_connections")
+    .from("ag_agent_connections")
     .select("api_key_encrypted, config")
     .eq("workspace_id", workspaceId)
     .eq("platform", "intercom")

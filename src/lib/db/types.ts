@@ -161,6 +161,8 @@ export interface FailurePattern {
   prompt_fix?: string;
   knowledge_base_suggestion?: string;
   detected_at: string;
+  workflow_state: "new" | "monitoring" | "actioning" | "quieted" | "resolved";
+  workflow_updated_at: string;
   is_resolved: boolean;
   resolved_at?: string;
 }

@@ -19,10 +19,10 @@ export function GlassButton({
   ...props
 }: GlassButtonProps) {
   const sizeClasses = {
-    sm: "text-xs px-2.5 py-1.5 gap-1.5",
-    md: "text-sm px-3.5 py-2 gap-2",
-    lg: "text-sm px-5 py-2.5 gap-2",
-    icon: "p-2",
+    sm:   "text-[12px] px-2.5 py-1.5 gap-1.5",
+    md:   "text-[13px] px-3 py-1.5 gap-2",
+    lg:   "text-[13px] px-4 py-2 gap-2",
+    icon: "p-1.5",
   };
 
   const variantClasses = {
@@ -31,15 +31,14 @@ export function GlassButton({
     ghost: [
       "inline-flex items-center justify-center",
       "border border-transparent bg-transparent",
-      "text-fg-secondary hover:bg-surface-hover hover:text-fg",
-      "rounded-lg text-sm font-medium",
-      "transition-all duration-150 cursor-pointer",
-      "focus-visible:shadow-[var(--focus-ring)]",
+      "text-[rgba(255,255,255,0.48)] hover:bg-[rgba(255,255,255,0.05)] hover:text-[rgba(255,255,255,0.72)]",
+      "rounded-md text-[13px] font-medium",
+      "transition-all duration-100 cursor-pointer",
     ].join(" "),
     danger: [
       "glass-button",
-      "border-[rgba(239,68,68,0.20)] text-[#EF4444]",
-      "hover:bg-[rgba(239,68,68,0.08)] hover:border-[rgba(239,68,68,0.30)]",
+      "border-[rgba(220,91,91,0.2)] text-[#DC5B5B]",
+      "hover:bg-[rgba(220,91,91,0.08)] hover:border-[rgba(220,91,91,0.3)]",
     ].join(" "),
   };
 
@@ -49,7 +48,7 @@ export function GlassButton({
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+      {loading && <Loader2 className="h-3 w-3 animate-spin" />}
       {children}
     </button>
   );

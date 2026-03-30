@@ -318,6 +318,11 @@ export function detectPatterns(
   const patterns: Omit<FailurePattern, "workspace_id">[] = [];
 
   const now = new Date().toISOString();
+  const basePatternState = {
+    workflow_state: "new" as const,
+    workflow_updated_at: now,
+    is_resolved: false,
+  };
 
   // Only analyze conversations that have scores
   const scored = conversations.filter((c) => c.quality_score?.overall_score !== undefined);
@@ -351,7 +356,7 @@ export function detectPatterns(
       prompt_fix: promptImprovements[0]?.recommended_prompt_change,
       knowledge_base_suggestion: knowledgeGaps[0]?.suggested_content,
       detected_at: now,
-      is_resolved: false,
+      ...basePatternState,
     });
   }
 
@@ -387,7 +392,7 @@ export function detectPatterns(
         "always better to acknowledge uncertainty than to provide incorrect information.'",
       knowledge_base_suggestion: allGaps[0]?.suggested_content,
       detected_at: now,
-      is_resolved: false,
+      ...basePatternState,
     });
   }
 
@@ -422,7 +427,7 @@ export function detectPatterns(
           "issue before the customer considers escalating.'",
         knowledge_base_suggestion: undefined,
         detected_at: now,
-        is_resolved: false,
+        ...basePatternState,
       });
     }
   }
@@ -452,7 +457,7 @@ export function detectPatterns(
         "are always appropriate when the customer is upset.'",
       knowledge_base_suggestion: undefined,
       detected_at: now,
-      is_resolved: false,
+      ...basePatternState,
     });
   }
 
@@ -484,7 +489,7 @@ export function detectPatterns(
         `Create a "${failure.type} Resolution Playbook" KB article with step-by-step procedures ` +
         `for common ${failure.type} scenarios, including escalation criteria and required information.`,
       detected_at: now,
-      is_resolved: false,
+      ...basePatternState,
     });
   }
 
@@ -508,7 +513,7 @@ export function detectPatterns(
       prompt_fix: undefined,
       knowledge_base_suggestion: undefined,
       detected_at: now,
-      is_resolved: false,
+      ...basePatternState,
     });
   }
 

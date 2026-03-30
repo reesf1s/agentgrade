@@ -42,7 +42,7 @@ function originalScoreForDimension(
 
 async function ensureQualityScore(conversationId: string) {
   const { data: existing } = await supabaseAdmin
-    .from("quality_scores")
+    .from("ag_quality_scores")
     .select("*")
     .eq("conversation_id", conversationId)
     .maybeSingle();
@@ -52,7 +52,7 @@ async function ensureQualityScore(conversationId: string) {
   const { score } = await scoreConversation(conversationId);
 
   const { data: created } = await supabaseAdmin
-    .from("quality_scores")
+    .from("ag_quality_scores")
     .select("*")
     .eq("conversation_id", conversationId)
     .maybeSingle();
@@ -69,13 +69,13 @@ export async function GET() {
 
     const [manualConversationsRes, overridesRes, learnedSummary, trainingInsights] = await Promise.all([
       supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .select("id, customer_identifier, created_at, metadata")
         .eq("workspace_id", ctx.workspace.id)
         .order("created_at", { ascending: false })
         .limit(100),
       supabaseAdmin
-        .from("quality_overrides")
+        .from("ag_quality_overrides")
         .select("id, quality_score_id, dimension, override_score, reason, overridden_by, created_at")
         .order("created_at", { ascending: false })
         .limit(200),
@@ -90,7 +90,7 @@ export async function GET() {
     const qualityScoreIds = [...new Set((overridesRes.data || []).map((override) => override.quality_score_id))];
     const { data: qualityScores } = qualityScoreIds.length
       ? await supabaseAdmin
-          .from("quality_scores")
+          .from("ag_quality_scores")
           .select("id, conversation_id")
           .in("id", qualityScoreIds)
       : { data: [] as Array<{ id: string; conversation_id: string }> };
@@ -98,7 +98,7 @@ export async function GET() {
     const conversationIds = [...new Set((qualityScores || []).map((score) => score.conversation_id))];
     const { data: conversations } = conversationIds.length
       ? await supabaseAdmin
-          .from("conversations")
+          .from("ag_conversations")
           .select("id, workspace_id, customer_identifier, metadata, created_at")
           .in("id", conversationIds)
       : { data: [] as Array<{ id: string; workspace_id: string; customer_identifier?: string; metadata?: Record<string, unknown>; created_at: string }> };
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     if (conversationId) {
       const { data: conversation } = await supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .select("id, metadata")
         .eq("id", conversationId)
         .eq("workspace_id", ctx.workspace.id)
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       }
 
       await supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .update({
           metadata: buildCalibrationMetadataPatch({
             existing: (conversation.metadata as Record<string, unknown> | null) || null,
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { data: createdConversation, error: conversationError } = await supabaseAdmin
-        .from("conversations")
+        .from("ag_conversations")
         .insert({
           workspace_id: ctx.workspace.id,
           platform: "custom",
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
 
       conversationId = createdConversation.id;
 
-      const { error: messageError } = await supabaseAdmin.from("messages").insert(
+      const { error: messageError } = await supabaseAdmin.from("ag_messages").insert(
         messages.map((message) => ({
           conversation_id: conversationId,
           ...message,
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
       overridden_by: ctx.member.clerk_user_id,
     }));
 
-    const { error: overrideError } = await supabaseAdmin.from("quality_overrides").insert(rows);
+    const { error: overrideError } = await supabaseAdmin.from("ag_quality_overrides").insert(rows);
     if (overrideError) {
       console.error("Calibration override insert error:", overrideError);
       return NextResponse.json({ error: "Failed to save calibration labels" }, { status: 500 });

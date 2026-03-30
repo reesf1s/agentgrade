@@ -51,11 +51,11 @@ export function truncate(str: string, len: number): string {
   return str.slice(0, len) + "...";
 }
 
-/** Returns hex color for score: green/amber/red */
+/** Returns hex color for score: green/amber/red (Linear palette) */
 export function scoreAccent(score: number): string {
-  if (score >= 0.75) return "#10B981";
-  if (score >= 0.55) return "#F59E0B";
-  return "#EF4444";
+  if (score >= 0.75) return "#4EA76B";
+  if (score >= 0.55) return "#D98832";
+  return "#DC5B5B";
 }
 
 export function pct(v: number): string {
