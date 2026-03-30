@@ -55,7 +55,7 @@ function NavLink({
       prefetch
       onClick={onNavigate}
       className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+        "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-all",
         isActive
           ? "bg-[var(--surface)] text-[var(--text-primary)]"
           : "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]"
@@ -63,11 +63,11 @@ function NavLink({
     >
       <span
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--panel-subtle)]",
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--panel-subtle)]",
           isActive && "border-[var(--border-strong)] bg-[var(--panel)]"
         )}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-3.5 w-3.5" />
       </span>
       <span className="flex-1 font-medium">{label}</span>
       {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> : null}
@@ -96,15 +96,13 @@ export function Sidebar() {
     <>
       <div className="fixed left-4 right-4 top-4 z-50 lg:hidden">
         <div className="workspace-toolbar flex items-center justify-between px-4 py-3">
-          <Link href="/dashboard" prefetch className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
-              <Zap className="h-4 w-4" />
+          <Link href="/dashboard" prefetch className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
+              <Zap className="h-3.5 w-3.5" />
             </div>
             <div>
-              <p className="page-eyebrow">
-                AgentGrade
-              </p>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Quality ops</p>
+              <p className="page-eyebrow">AgentGrade</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Review loop</p>
             </div>
           </Link>
           <button
@@ -134,35 +132,30 @@ export function Sidebar() {
         )}
       >
         <div className="mb-4 px-2">
-          <Link href="/dashboard" prefetch className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
-              <Zap className="h-4 w-4" />
+          <Link href="/dashboard" prefetch className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-primary)]">
+              <Zap className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0">
-              <p className="page-eyebrow">
-                AgentGrade
-              </p>
-              <p className="truncate text-[15px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+              <p className="page-eyebrow">AgentGrade</p>
+              <p className="truncate text-[13px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                 Review loop
               </p>
+            </div>
+            <div className="operator-chip ml-auto shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Live
             </div>
           </Link>
         </div>
 
-        <div className="mb-4 px-2">
-          <div className="operator-chip">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Live
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-4 overflow-y-auto px-1 pr-1">
+        <nav className="flex-1 space-y-3 overflow-y-auto px-1 pr-1">
           {navSections.map((section) => (
             <div key={section.title}>
-              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 {section.title}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <NavLink
                     key={item.href}
@@ -177,10 +170,6 @@ export function Sidebar() {
             </div>
           ))}
         </nav>
-
-        <div className="mt-4 border-t border-[var(--border-subtle)] px-2 pt-3">
-          <p className="text-xs text-[var(--text-secondary)]">Review fast. Fix clearly.</p>
-        </div>
       </aside>
     </>
   );

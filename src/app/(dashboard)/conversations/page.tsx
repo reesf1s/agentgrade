@@ -245,31 +245,36 @@ export default function ConversationsPage() {
   return (
     <div className="space-y-6 pb-10">
       <section className="glass-static rounded-[1.25rem] p-4 sm:p-5">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="page-eyebrow">Review queue</p>
-            <h1 className="mt-2 page-title">Review inbox.</h1>
+            <h1 className="mt-1.5 page-title">Review inbox.</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <span className="operator-chip">
+              <span className="font-semibold text-[var(--text-primary)]">{stats.reviewNext}</span>
+              &nbsp;to review
+            </span>
+            {conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length > 0 && (
+              <span className="operator-chip score-critical">
+                {conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length} high risk
+              </span>
+            )}
+            {stats.reviewed > 0 && (
+              <span className="operator-chip">
+                {stats.reviewed} done
+              </span>
+            )}
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <span className="text-[var(--text-primary)]">Visible: {total}</span>
-          <span className="text-[var(--text-primary)]">Review: {stats.reviewNext}</span>
-          <span className="text-[var(--text-primary)]">Waiting: {stats.pending}</span>
-          <span className="text-[var(--text-primary)]">Processed: {stats.reviewed}</span>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <span>{stats.reviewNext} to review</span>
-          <span>•</span>
-          <span>{conversations.filter((conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.5).length} high risk</span>
-          <span>•</span>
-          <span>~{Math.max(1, stats.reviewNext)} min</span>
-        </div>
-        <div className="mt-3 h-1.5 rounded-full bg-[var(--surface)]">
-          <div
-            className="h-full rounded-full bg-[var(--text-primary)]"
-            style={{ width: `${total > 0 ? Math.min(100, (stats.reviewed / total) * 100) : 0}%` }}
-          />
-        </div>
+        {total > 0 && (
+          <div className="mt-3 h-1 rounded-full bg-[var(--surface)]">
+            <div
+              className="h-full rounded-full bg-[var(--text-primary)] transition-all"
+              style={{ width: `${Math.min(100, (stats.reviewed / (total + stats.reviewed)) * 100)}%` }}
+            />
+          </div>
+        )}
       </section>
 
       <section className="space-y-3 border-b border-[var(--divider)] pb-4">
@@ -367,40 +372,45 @@ export default function ConversationsPage() {
                 <span className="text-xs text-[var(--text-muted)]">{items.length}</span>
               </div>
 
-              <div className="space-y-1">
+              {/* Column headers */}
+              <div className="hidden xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(130px,1fr)_minmax(80px,0.5fr)_minmax(160px,1fr)] xl:items-center xl:gap-3 xl:px-0.5 xl:pb-1.5">
+                <p className="section-label">Conversation</p>
+                <p className="section-label">Issue</p>
+                <p className="section-label">Score</p>
+                <p className="section-label">Actions</p>
+              </div>
+
+              <div className="space-y-0">
                 {items.map((conversation) => (
                   <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
                     <div className="stack-row group">
-                      <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_minmax(120px,0.65fr)_minmax(110px,0.65fr)_minmax(110px,0.65fr)_minmax(180px,1fr)] xl:items-center">
+                      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,2fr)_minmax(130px,1fr)_minmax(80px,0.5fr)_minmax(160px,1fr)] xl:items-center xl:gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                             {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
                           </p>
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">{formatDate(conversation.created_at)} · {conversation.quality_scores?.confidence_level || "pending"}</p>
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                            {formatDate(conversation.created_at)}
+                            {conversation.quality_scores?.confidence_level && (
+                              <> · {conversation.quality_scores.confidence_level} conf</>
+                            )}
+                          </p>
                         </div>
 
-                        <div className="min-w-0 text-sm text-[var(--text-secondary)]">{priorityReason(conversation)}</div>
-
-                        <div className="min-w-0 text-xs text-[var(--text-muted)]">
-                          {conversation.quality_scores
-                            ? `Acc ${Math.round((conversation.quality_scores.accuracy_score ?? 0) * 100)} · Hall ${Math.round((conversation.quality_scores.hallucination_score ?? 0) * 100)} · Res ${Math.round((conversation.quality_scores.resolution_score ?? 0) * 100)}`
-                            : "Pending"}
+                        <div className="min-w-0 text-xs font-medium text-[var(--text-secondary)]">
+                          {priorityReason(conversation)}
                         </div>
 
-                        <div className="text-sm text-[var(--text-secondary)]">
-                          {(conversation.quality_scores?.overall_score ?? 1) < 0.5
-                            ? "High"
-                            : (conversation.quality_scores?.overall_score ?? 1) < 0.72
-                              ? "Moderate"
-                              : "Low"}
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-2">
-                          {conversation.quality_scores ? <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" /> : null}
+                        <div className="flex items-center gap-2">
+                          {conversation.quality_scores ? (
+                            <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
+                          ) : (
+                            <span className="text-xs text-[var(--text-muted)]">Pending</span>
+                          )}
                         </div>
 
                         <div
-                          className="flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
+                          className="flex flex-wrap gap-1.5"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -412,7 +422,7 @@ export default function ConversationsPage() {
                             disabled={savingActionId === conversation.id}
                             onClick={() => updateQueueState(conversation.id, "safe")}
                           >
-                            {savingActionId === conversation.id ? "Saving..." : "Safe"}
+                            {savingActionId === conversation.id ? "···" : "Safe"}
                           </button>
                           <button
                             type="button"
@@ -440,7 +450,6 @@ export default function ConversationsPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-[var(--text-muted)]">{statusLabel(conversation)}</div>
                     </div>
                   </Link>
                 ))}

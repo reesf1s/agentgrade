@@ -35,7 +35,7 @@
   --table-row-hover: rgba(17, 24, 39, 0.025);
   --sidebar-accent: #eef2f7;
   --reading-width: 72rem;
-  --content-gap: 1.25rem;
+  --content-gap: 1rem;
 }
 
 /* ─── Dark Theme ────────────────────────────────────────────────── */
@@ -127,7 +127,7 @@ body {
 
 html {
   background: var(--background);
-  font-size: 93.75%;
+  font-size: 80%;
 }
 
 .dark .glass-sidebar {
@@ -231,7 +231,7 @@ html {
 }
 
 .glass-table tbody td {
-  padding: 14px 16px;
+  padding: 11px 14px;
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -334,10 +334,10 @@ html {
 
 .stack-row {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.35rem;
   border-bottom: 1px solid var(--divider);
   background: transparent;
-  padding: 0.7rem 0.1rem;
+  padding: 0.55rem 0.1rem;
 }
 
 .stack-row:hover {
