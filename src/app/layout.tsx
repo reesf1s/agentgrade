@@ -54,12 +54,9 @@ export default function RootLayout({
             dangerouslySetInnerHTML={{
               __html: `
               try {
-                var t = localStorage.getItem('agentgrade-theme');
-                var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var next = t || (systemDark ? 'dark' : 'light');
-                document.documentElement.classList.toggle('dark', next === 'dark');
-                document.documentElement.dataset.theme = next;
-                document.documentElement.style.colorScheme = next;
+                document.documentElement.classList.remove('dark');
+                document.documentElement.dataset.theme = 'light';
+                document.documentElement.style.colorScheme = 'light';
               } catch(e) {}
             `,
             }}

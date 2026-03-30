@@ -416,7 +416,7 @@ export default function ConversationDetailPage() {
 
                     {/* Bubble */}
                     <div className={`max-w-[520px] ${isCenter ? "w-full" : ""}`}>
-                      <div className={`px-4 py-3 text-sm ${cfg.bubbleClass} transition-shadow hover:shadow-glass`}>
+                      <div className={`px-4 py-3 text-sm ${cfg.bubbleClass} transition-shadow hover:shadow-card`}>
                         <p className={`whitespace-pre-wrap leading-relaxed text-fg-secondary ${isRight ? "text-right" : ""}`}>
                           {preview}
                         </p>

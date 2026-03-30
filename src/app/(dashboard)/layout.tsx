@@ -14,7 +14,7 @@ export default function DashboardLayout({
       <div className="flex flex-1 flex-col lg:pl-[14rem]">
 
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-edge bg-base/80 backdrop-blur-xl px-5 pt-14 lg:pt-0">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-edge bg-base-white/90 backdrop-blur-xl px-5 pt-14 lg:pt-0">
           {/* Left — breadcrumb area */}
           <div className="hidden lg:flex items-center gap-2 text-sm text-fg-muted">
             {/* Placeholder for future breadcrumbs / cmd-k */}

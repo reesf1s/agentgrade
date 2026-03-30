@@ -105,8 +105,8 @@ export default async function LandingPage() {
       {/* Dashboard Preview */}
       <section className="pb-16 md:pb-28 px-6">
         <div className="max-w-5xl mx-auto animate-fade-in [animation-delay:400ms]">
-          <div className="rounded-2xl border border-edge bg-surface/50 p-1 backdrop-blur-sm shadow-glass-elevated">
-            <div className="rounded-xl border border-edge bg-base-raised p-6 md:p-8 space-y-5">
+          <div className="rounded-2xl border border-edge bg-surface/50 p-1 backdrop-blur-sm shadow-elevated">
+            <div className="rounded-xl border border-edge bg-surface p-6 md:p-8 space-y-5">
               {/* Metrics row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
@@ -174,7 +174,7 @@ export default async function LandingPage() {
               { icon: FileText, step: "02", title: "Upload conversations", desc: "Drop a CSV or JSON file. Works with any AI agent — chatbots, copilots, internal tools." },
               { icon: Zap, step: "03", title: "Webhook any agent", desc: "Send conversations via our webhook URL. Works with any custom-built AI agent." },
             ].map((item, i) => (
-              <div key={i} className="group rounded-2xl border border-edge bg-surface/50 p-6 transition-all hover:border-edge-strong hover:shadow-glass-hover hover:-translate-y-0.5">
+              <div key={i} className="group rounded-2xl border border-edge bg-surface/50 p-6 transition-all hover:border-edge-strong hover:shadow-card-hover hover:-translate-y-0.5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-brand-muted flex items-center justify-center transition-shadow group-hover:shadow-glow-sm">
                     <item.icon className="w-5 h-5 text-brand-light" />
@@ -205,7 +205,7 @@ export default async function LandingPage() {
               { icon: BarChart3, title: "Benchmarks", desc: "See how your agent compares to similar companies after one month of data." },
               { icon: FileText, title: "Knowledge Gaps", desc: "Identifies topics your agent can't answer well and recommends exactly what to add to your knowledge base." },
             ].map((feature, i) => (
-              <div key={i} className="group rounded-2xl border border-edge bg-surface/50 p-6 transition-all hover:border-edge-strong hover:shadow-glass-hover hover:-translate-y-0.5">
+              <div key={i} className="group rounded-2xl border border-edge bg-surface/50 p-6 transition-all hover:border-edge-strong hover:shadow-card-hover hover:-translate-y-0.5">
                 <div className="w-10 h-10 rounded-xl bg-brand-muted flex items-center justify-center mb-4 transition-shadow group-hover:shadow-glow-sm">
                   <feature.icon className="w-5 h-5 text-brand-light" />
                 </div>
@@ -239,7 +239,7 @@ export default async function LandingPage() {
             ].map((tier) => (
               <div
                 key={tier.plan}
-                className={`relative flex flex-col rounded-2xl border p-6 transition-all hover:shadow-glass-hover ${
+                className={`relative flex flex-col rounded-2xl border p-6 transition-all hover:shadow-card-hover ${
                   tier.featured
                     ? "border-brand/30 bg-brand-muted/30 shadow-glow-sm"
                     : "border-edge bg-surface/50"

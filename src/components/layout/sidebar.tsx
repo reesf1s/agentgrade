@@ -54,17 +54,16 @@ function NavLink({
       className={cn(
         "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-all duration-150",
         isActive
-          ? "bg-brand-muted text-brand-light font-semibold"
-          : "text-fg-muted hover:bg-surface-hover hover:text-fg-secondary font-medium"
+          ? "bg-brand-muted text-brand font-semibold"
+          : "text-fg-secondary hover:bg-surface-hover hover:text-fg font-medium"
       )}
     >
-      {/* Active indicator pill */}
       {isActive && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-brand" />
       )}
       <Icon className={cn(
         "h-4 w-4 shrink-0 transition-colors",
-        isActive ? "text-brand-light" : "text-fg-faint group-hover:text-fg-muted"
+        isActive ? "text-brand" : "text-fg-muted group-hover:text-fg-secondary"
       )} />
       <span className="flex-1 truncate">{label}</span>
     </Link>
@@ -86,7 +85,6 @@ export function Sidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Group nav items by section
   const sections = [
     { key: "monitor", items: navItems.filter((i) => i.section === "monitor") },
     { key: "analyze", items: navItems.filter((i) => i.section === "analyze") },
@@ -96,13 +94,13 @@ export function Sidebar() {
   const SidebarInner = () => (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-muted">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="currentColor" className="text-brand-light" />
+      <div className="flex items-center gap-2.5 px-4 pt-5 pb-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand shadow-glow-sm">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="white" />
           </svg>
         </div>
-        <p className="text-[13px] font-bold tracking-[-0.02em] text-fg truncate">
+        <p className="text-[15px] font-bold tracking-[-0.02em] text-fg truncate">
           AgentGrade
         </p>
       </div>
@@ -111,7 +109,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-2.5 pb-3">
         {sections.map((section, i) => (
           <div key={section.key}>
-            {i > 0 && <div className="mx-1 my-2 border-t border-edge" />}
+            {i > 0 && <div className="mx-1 my-2.5 border-t border-edge" />}
             <div className="space-y-0.5">
               {section.items.map((item) => (
                 <NavLink
@@ -127,26 +125,17 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-
-      {/* Bottom — keyboard hint */}
-      <div className="px-4 py-3 border-t border-edge">
-        <div className="flex items-center gap-1.5 text-[11px] text-fg-faint">
-          <kbd className="rounded border border-edge bg-surface px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
-          <kbd className="rounded border border-edge bg-surface px-1 py-0.5 font-mono text-[10px]">K</kbd>
-          <span className="ml-1">Quick search</span>
-        </div>
-      </div>
     </>
   );
 
   return (
     <>
       {/* Mobile top bar */}
-      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-edge bg-base/95 backdrop-blur-xl px-4 py-3 lg:hidden">
+      <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-edge bg-base-white/90 backdrop-blur-xl px-4 py-3 lg:hidden">
         <Link href="/reports" prefetch className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-muted">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="currentColor" className="text-brand-light" />
+              <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="white" />
             </svg>
           </div>
           <span className="text-sm font-bold text-fg">AgentGrade</span>
@@ -165,7 +154,7 @@ export function Sidebar() {
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-backdrop-in lg:hidden"
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm animate-backdrop-in lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
         />
@@ -174,7 +163,7 @@ export function Sidebar() {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[14rem] flex-col bg-base border-r border-edge transition-transform duration-200 ease-out",
+          "fixed inset-y-0 left-0 z-50 flex w-[14rem] flex-col bg-base-white border-r border-edge transition-transform duration-200 ease-out",
           "lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
