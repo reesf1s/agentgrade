@@ -4,35 +4,35 @@
 
 /* ─── Light Theme ─────────────────────────────────────────────────── */
 :root {
-  --background:        #EEF1F6;
-  --foreground:        #0F172A;
+  --background:        #F4F5F7;
+  --foreground:        #111827;
   --page-shell:        #FFFFFF;
-  --page-shell-border: #DDE2EA;
+  --page-shell-border: #E5E7EB;
   --panel:             #FFFFFF;
-  --panel-subtle:      #F6F8FB;
-  --surface:           #E8ECF2;
-  --surface-strong:    #DCE0E8;
-  --surface-soft:      #F6F8FB;
-  --border-subtle:     #DDE2EA;
-  --border-strong:     #B9C2CE;
+  --panel-subtle:      #F9FAFB;
+  --surface:           #F3F4F6;
+  --surface-strong:    #E5E7EB;
+  --surface-soft:      #F9FAFB;
+  --border-subtle:     #E5E7EB;
+  --border-strong:     #D1D5DB;
   --glass-bg:          #FFFFFF;
-  --glass-bg-hover:    #F6F8FB;
+  --glass-bg-hover:    #F9FAFB;
   --glass-bg-elevated: #FFFFFF;
-  --glass-border:      #DDE2EA;
-  --glass-border-hover:#B9C2CE;
-  --glass-shadow:      0 1px 2px rgba(15, 23, 42, 0.05);
-  --glass-shadow-elevated: 0 4px 16px rgba(15, 23, 42, 0.08);
-  --text-primary:      #0F172A;
+  --glass-border:      #E5E7EB;
+  --glass-border-hover:#D1D5DB;
+  --glass-shadow:      0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass-shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --text-primary:      #111827;
   --text-secondary:    #4B5563;
-  --text-muted:        #94A3B8;
-  --surface-hover:     #E4E8EF;
-  --divider:           #DDE2EA;
+  --text-muted:        #9CA3AF;
+  --surface-hover:     #F3F4F6;
+  --divider:           #E5E7EB;
   --btn-primary-bg:    #2563EB;
   --btn-primary-hover: #1D4ED8;
   --btn-primary-text:  #FFFFFF;
   --focus-ring:        rgba(37, 99, 235, 0.18);
   --app-shell-shadow:  none;
-  --table-row-hover:   #F6F8FB;
+  --table-row-hover:   #F9FAFB;
   --sidebar-accent-bg: #EFF6FF;
   --sidebar-accent-fg: #1D4ED8;
   --sidebar-accent-bd: #BFDBFE;
@@ -118,7 +118,7 @@ body {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  box-shadow: var(--glass-shadow);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .glass-sidebar {
@@ -315,8 +315,77 @@ body {
 
 /* ─── Metric card ─────────────────────────────────────────────────── */
 .metric-card {
-  background: var(--surface-soft);
+  background: var(--panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 14px 16px;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  tabular-nums: true;
+}
+
+.metric-sub {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─── Score bars ──────────────────────────────────────────────────── */
+.score-bar-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* ─── Transcript message bubbles ─────────────────────────────────── */
+.msg-customer {
+  background: var(--surface);
   border: 1px solid var(--border-subtle);
+  border-radius: 12px 12px 12px 4px;
+}
+
+.msg-agent {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 12px 12px 4px 12px;
+}
+
+.dark .msg-agent {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.msg-human {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px 12px 4px 12px;
+}
+
+.msg-tool {
+  background: var(--surface-soft);
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
 }
 
@@ -432,6 +501,41 @@ body {
   border-radius: 10px;
   background: var(--surface-soft);
   border: 1px solid var(--border-subtle);
+}
+
+/* ─── Action button - disposition state ─────────────────────────── */
+.disposition-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+  background: var(--panel);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.disposition-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.disposition-btn-active {
+  border-color: #2563EB;
+  background: #EFF6FF;
+}
+
+.disposition-btn-active .disposition-label {
+  color: #1D4ED8;
+}
+
+.dark .disposition-btn-active {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark .disposition-btn-active .disposition-label {
+  color: #93C5FD;
 }
 
 /* ─── Misc labels ─────────────────────────────────────────────────── */

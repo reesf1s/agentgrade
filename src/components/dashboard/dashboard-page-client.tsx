@@ -67,13 +67,13 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       label: "Hallucination",
       value: pct(hallucinationRate),
       sub:   hallucinationRate > 0.1 ? "Above threshold" : "Within range",
-      color: hallucinationRate > 0.1 ? "score-critical" : hallucinationRate > 0.05 ? "score-warning" : "score-good",
+      color: hallucinationRate > 0.1 ? "text-score-critical" : hallucinationRate > 0.05 ? "text-score-warning" : "text-score-good",
     },
     {
       label: "Escalation rate",
       value: pct(escalationRate),
       sub:   escalationRate > 0.12 ? "Above threshold" : "Within range",
-      color: escalationRate > 0.12 ? "score-critical" : escalationRate > 0.06 ? "score-warning" : "score-good",
+      color: escalationRate > 0.12 ? "text-score-critical" : escalationRate > 0.06 ? "text-score-warning" : "text-score-good",
     },
   ];
 
@@ -98,12 +98,10 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metrics.map((m) => (
-          <div key={m.label} className="metric-card px-4 py-3.5">
-            <p className="section-label mb-2">{m.label}</p>
-            <p className={`text-[1.75rem] font-semibold tabular-nums leading-none tracking-tight ${m.color}`}>
-              {m.value}
-            </p>
-            <p className="mt-1.5 text-xs text-[var(--text-muted)]">{m.sub}</p>
+          <div key={m.label} className="metric-card">
+            <p className="metric-label">{m.label}</p>
+            <p className={`metric-value ${m.color}`}>{m.value}</p>
+            <p className="metric-sub">{m.sub}</p>
           </div>
         ))}
       </div>
