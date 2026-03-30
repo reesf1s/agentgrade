@@ -4,15 +4,8 @@ import Link from "next/link";
 import { ArrowRight, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { SeverityBadge } from "@/components/ui/score-badge";
+import { scoreAccent, pct } from "@/lib/utils";
 import type { DashboardData } from "@/lib/dashboard-data";
-
-function pct(v: number) { return `${Math.round(v * 100)}%`; }
-
-function scoreAccent(score: number) {
-  if (score >= 0.75) return "#10B981";
-  if (score >= 0.55) return "#F59E0B";
-  return "#EF4444";
-}
 
 export function DashboardPageClient({ data }: { data: DashboardData }) {
   const avgScore        = data.stats.avg_score ?? 0;

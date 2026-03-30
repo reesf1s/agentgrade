@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils";
 
 interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "primary" | "ghost";
+  variant?: "default" | "primary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
@@ -24,6 +24,7 @@ export function GlassButton({
     default: "glass-button",
     primary: "glass-button glass-button-primary",
     ghost:   "border border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] rounded-md px-3 py-1.5 text-sm font-medium transition-all cursor-pointer",
+    danger:  "glass-button !border-[rgba(239,68,68,0.20)] !text-[#EF4444] hover:!bg-[rgba(239,68,68,0.08)] hover:!border-[rgba(239,68,68,0.30)]",
   };
 
   return (

@@ -18,7 +18,7 @@ import {
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { scoreColor, formatScore } from "@/lib/utils";
+import { scoreColor, formatScore, scoreAccent } from "@/lib/utils";
 import type { ClaimAnalysis, Message, QualityScore } from "@/lib/db/types";
 import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
 
@@ -157,11 +157,6 @@ function isLongMessage(content: string) {
   return content.length > 520 || content.split("\n").length > 10;
 }
 
-function scoreAccent(score: number) {
-  if (score >= 0.75) return "#10B981";
-  if (score >= 0.5)  return "#F59E0B";
-  return "#EF4444";
-}
 
 export default function ConversationDetailPage() {
   const params = useParams();

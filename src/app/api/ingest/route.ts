@@ -55,6 +55,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Connection is inactive" }, { status: 403 });
     }
 
+    // --- Monthly conversation quota enforcement ---
+    const { data: workspace } = await supabaseAdmin
+      .from("workspaces")
+      .select("monthly_conversation_limit, plan")
+      .eq("id", connection.workspace_id)
+      .single();
+
+    if (workspace && workspace.monthly_conversation_limit > 0) {
+      const now = new Date();
+      const firstOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+      const { count } = await supabaseAdmin
+        .from("conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", connection.workspace_id)
+        .gte("created_at", firstOfMonth);
+
+      const used = count ?? 0;
+      if (used >= workspace.monthly_conversation_limit) {
+        return NextResponse.json(
+          {
+            error: "Monthly conversation limit reached",
+            limit: workspace.monthly_conversation_limit,
+            used,
+            plan: workspace.plan,
+            upgrade_url: "/settings?tab=billing",
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const body = await request.json();
     const explicitCompletion = deriveCompletionState(body);
 

@@ -12,13 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import { SeverityBadge, ScoreBadge } from "@/components/ui/score-badge";
+import { scoreAccent } from "@/lib/utils";
 import type { ReportData } from "@/lib/dashboard-data";
-
-function scoreAccent(score: number) {
-  if (score >= 0.75) return "#10B981";
-  if (score >= 0.55) return "#F59E0B";
-  return "#EF4444";
-}
 
 export function ReportsPageClient({ report }: { report: ReportData }) {
   const summary = report.summary;

@@ -1352,7 +1352,15 @@ function WorkspaceTab() {
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("connections");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "billing") return "workspace";
+      if (tab && ["connections", "knowledge", "alerts", "calibration", "workspace"].includes(tab)) return tab;
+    }
+    return "connections";
+  });
 
   const tabs = [
     {
