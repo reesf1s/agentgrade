@@ -17,7 +17,7 @@ export function ScoreBadge({ score, label, size = "md" }: ScoreBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md font-semibold tabular-nums border",
+        "inline-flex items-center gap-1 rounded-md font-semibold tabular-nums font-mono border",
         scoreBgColor(score),
         scoreColor(score),
         sizeClasses[size]
@@ -35,16 +35,16 @@ interface SeverityBadgeProps {
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
   const styles: Record<string, string> = {
-    low:      "border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-muted)]",
-    medium:   "border border-amber-200 bg-amber-50 text-amber-700",
-    high:     "border border-orange-200 bg-orange-50 text-orange-700",
-    critical: "border border-red-200 bg-red-50 text-red-700",
+    low:      "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,255,255,0.40)]",
+    medium:   "border-[rgba(245,158,11,0.20)] bg-[rgba(245,158,11,0.10)] text-[#F59E0B]",
+    high:     "border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.10)] text-[#EF4444]",
+    critical: "border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.15)] text-[#EF4444]",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize",
+        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize border",
         styles[severity] || styles.low
       )}
     >

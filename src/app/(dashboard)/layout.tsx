@@ -1,5 +1,4 @@
 import { Sidebar } from "@/components/layout/sidebar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { UserButton } from "@clerk/nextjs";
 
 export default function DashboardLayout({
@@ -14,19 +13,16 @@ export default function DashboardLayout({
       {/* Main content — offset by sidebar width on lg */}
       <div className="flex flex-1 flex-col lg:pl-[13.5rem]">
 
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-xl px-4 pt-14 pb-2 lg:pt-0">
-          <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1.5">
-            <ThemeToggle />
-          </div>
-          <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-2 py-1.5">
+        {/* Top bar — minimal */}
+        <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-2 border-b border-[rgba(255,255,255,0.04)] bg-[rgba(10,10,15,0.80)] backdrop-blur-xl px-4 pt-14 pb-2 lg:pt-0">
+          <div className="rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] px-2 py-1.5">
             <UserButton
               appearance={{
                 elements: {
                   userButtonBox: "flex items-center gap-2",
                   userButtonTrigger: "rounded-md",
                   userButtonAvatarBox: "w-6 h-6",
-                  userButtonOuterIdentifier: "text-xs font-medium text-[var(--text-primary)] hidden xl:block",
+                  userButtonOuterIdentifier: "text-xs font-medium text-[rgba(255,255,255,0.70)] hidden xl:block",
                 },
               }}
               showName

@@ -16,11 +16,11 @@ const STATE_LABELS: Record<IssueWorkflowState, string> = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  New:        "border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-muted)]",
-  Monitoring: "border-amber-200 bg-amber-50 text-amber-700",
-  "In progress": "border-blue-200 bg-blue-50 text-blue-700",
-  Quieted:    "border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-muted)]",
-  Resolved:   "border-emerald-200 bg-emerald-50 text-emerald-700",
+  New:        "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,255,255,0.40)]",
+  Monitoring: "border-[rgba(245,158,11,0.20)] bg-[rgba(245,158,11,0.10)] text-[#F59E0B]",
+  "In progress": "border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.80)]",
+  Quieted:    "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,255,255,0.30)]",
+  Resolved:   "border-[rgba(16,185,129,0.20)] bg-[rgba(16,185,129,0.10)] text-[#10B981]",
 };
 
 function issueStateLabel(pattern: FailurePattern, saved?: IssueWorkflowState): string {

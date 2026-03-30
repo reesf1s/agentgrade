@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2, BarChart2 } from "lucide-react";
+import { ArrowRight, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -14,6 +14,12 @@ import {
 import { SeverityBadge, ScoreBadge } from "@/components/ui/score-badge";
 import type { ReportData } from "@/lib/dashboard-data";
 
+function scoreAccent(score: number) {
+  if (score >= 0.75) return "#10B981";
+  if (score >= 0.55) return "#F59E0B";
+  return "#EF4444";
+}
+
 export function ReportsPageClient({ report }: { report: ReportData }) {
   const summary = report.summary;
   const trendData = report.trend_data || [];
@@ -21,10 +27,10 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
 
   const trendTone =
     trendDelta > 0.02
-      ? { label: "Improved this week", Icon: TrendingUp,   color: "#16A34A", bg: "#F0FDF4", border: "#BBF7D0" }
+      ? { label: "Improved this week", Icon: TrendingUp,   color: "#10B981" }
       : trendDelta < -0.02
-      ? { label: "Slipped this week",  Icon: TrendingDown, color: "#DC2626", bg: "#FEF2F2", border: "#FECACA" }
-      : { label: "Steady this week",   Icon: Minus,        color: "#6B7280", bg: "var(--surface-soft)", border: "var(--border-subtle)" };
+      ? { label: "Slipped this week",  Icon: TrendingDown, color: "#EF4444" }
+      : { label: "Steady this week",   Icon: Minus,        color: "rgba(255,255,255,0.40)" };
 
   const avgScore   = summary?.avg_overall_score ?? 0;
   const scored     = summary?.total_scored ?? 0;
@@ -36,29 +42,29 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       label:      "Avg quality",
       value:      `${Math.round(avgScore * 100)}%`,
       sub:        avgScore >= 0.75 ? "Healthy" : avgScore >= 0.55 ? "Needs attention" : "Critical",
-      valueColor: avgScore >= 0.75 ? "#16A34A" : avgScore >= 0.55 ? "#D97706" : "#DC2626",
-      subColor:   avgScore >= 0.75 ? "#16A34A" : avgScore >= 0.55 ? "#D97706" : "#DC2626",
+      valueColor: scoreAccent(avgScore),
+      subColor:   scoreAccent(avgScore),
     },
     {
       label:      "Scored",
       value:      scored.toString(),
       sub:        "conversations",
-      valueColor: "var(--text-primary)",
-      subColor:   "var(--text-muted)",
+      valueColor: "rgba(255,255,255,0.90)",
+      subColor:   "rgba(255,255,255,0.30)",
     },
     {
       label:      "Risky replies",
       value:      risky.toString(),
       sub:        risky === 0 ? "None this week" : "need verification",
-      valueColor: risky === 0 ? "#16A34A" : "#D97706",
-      subColor:   risky === 0 ? "#16A34A" : "#D97706",
+      valueColor: risky === 0 ? "#10B981" : "#F59E0B",
+      subColor:   risky === 0 ? "#10B981" : "#F59E0B",
     },
     {
       label:      "Escalations",
       value:      escalated.toString(),
       sub:        escalated === 0 ? "None this week" : "escalated",
-      valueColor: escalated === 0 ? "#16A34A" : "#DC2626",
-      subColor:   escalated === 0 ? "#16A34A" : "#DC2626",
+      valueColor: escalated === 0 ? "#10B981" : "#EF4444",
+      subColor:   escalated === 0 ? "#10B981" : "#EF4444",
     },
   ];
 
@@ -68,14 +74,25 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       {/* Page header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Weekly report</h1>
+          <p className="page-eyebrow mb-1">Weekly report</p>
+          <h1 className="page-title">This week</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {report.week_start} → {report.week_end}
           </p>
         </div>
-        <button type="button" className="glass-button glass-button-primary inline-flex items-center gap-1.5">
-          Export PDF
-        </button>
+      </div>
+
+      {/* Trend banner */}
+      <div
+        className="glass-static flex items-center gap-3 px-5 py-3"
+      >
+        <trendTone.Icon className="h-4 w-4 shrink-0" style={{ color: trendTone.color }} />
+        <p className="text-sm font-medium" style={{ color: trendTone.color }}>{trendTone.label}</p>
+        {trendDelta !== 0 && (
+          <span className="ml-auto text-xs font-semibold tabular-nums font-mono" style={{ color: trendTone.color }}>
+            {trendDelta > 0 ? "+" : ""}{Math.round(trendDelta * 100)}%
+          </span>
+        )}
       </div>
 
       {/* Metric cards */}
@@ -89,27 +106,13 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         ))}
       </div>
 
-      {/* Trend banner */}
-      <div
-        className="glass-static flex items-center gap-3 px-4 py-3"
-        style={{ borderColor: trendTone.border, background: trendTone.bg }}
-      >
-        <trendTone.Icon className="h-4 w-4 shrink-0" style={{ color: trendTone.color }} />
-        <p className="text-sm font-medium" style={{ color: trendTone.color }}>{trendTone.label}</p>
-        {trendDelta !== 0 && (
-          <span className="ml-auto text-xs font-semibold tabular-nums" style={{ color: trendTone.color }}>
-            {trendDelta > 0 ? "+" : ""}{Math.round(trendDelta * 100)}%
-          </span>
-        )}
-      </div>
-
       {/* Two-column: biggest risk + best opportunity */}
       <div className="grid gap-4 lg:grid-cols-2">
 
         {/* Biggest risk */}
         <div className="glass-static p-5">
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-[#D97706]" />
+            <AlertTriangle className="h-4 w-4 text-[#F59E0B]" />
             <p className="text-sm font-semibold text-[var(--text-primary)]">Biggest risk this week</p>
           </div>
           {report.patterns[0] ? (
@@ -127,7 +130,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-[#16A34A]" />
+              <CheckCircle2 className="h-4 w-4 text-[#10B981]" />
               <p className="text-sm text-[var(--text-secondary)]">No critical risks detected this week.</p>
             </div>
           )}
@@ -136,7 +139,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         {/* Best opportunity */}
         <div className="glass-static p-5">
           <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="h-4 w-4 text-[#2563EB]" />
+            <CheckCircle2 className="h-4 w-4 text-[var(--text-muted)]" />
             <p className="text-sm font-semibold text-[var(--text-primary)]">Best improvement opportunity</p>
           </div>
           {report.organization_recommendations[0] ? (
@@ -156,17 +159,14 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
         </div>
       </div>
 
-      {/* Trend chart */}
+      {/* Trend chart — minimal, white data line, no grid */}
       <div className="glass-static p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <BarChart2 className="h-4 w-4 text-[var(--text-secondary)]" />
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Quality trend</p>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#3B82F6]" />Overall</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#10b981]" />Accuracy</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-4 rounded-sm bg-[#f59e0b]" />Hallucination</span>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Quality trend</p>
+          <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[rgba(255,255,255,0.50)]" />Overall</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[#10B981]" />Accuracy</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-1.5 w-3 rounded-sm bg-[#F59E0B]" />Hallucination</span>
           </div>
         </div>
 
@@ -178,43 +178,38 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
               <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradOverall" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradAccuracy" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.15)" stopOpacity={1} />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
+                <CartesianGrid stroke="rgba(255,255,255,0.03)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.25)" }}
                   tickFormatter={(value) => value.slice(5)}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0.3, 1]}
-                  tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.25)" }}
                   tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "var(--glass-bg-elevated)",
-                    border: "1px solid var(--glass-border)",
+                    background: "#13131A",
+                    border: "1px solid rgba(255,255,255,0.08)",
                     borderRadius: "10px",
                     fontSize: 12,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-                    backdropFilter: "blur(16px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                   }}
                   formatter={(value) => [`${Math.round(Number(value) * 100)}%`]}
                 />
-                <Area type="monotone" dataKey="overall" stroke="#3B82F6" strokeWidth={2} fill="url(#gradOverall)" dot={false} />
-                <Area type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={1.5} fill="url(#gradAccuracy)" dot={false} opacity={0.7} />
-                <Area type="monotone" dataKey="hallucination" stroke="#f59e0b" strokeWidth={1.5} fill="transparent" dot={false} opacity={0.7} />
+                <Area type="monotone" dataKey="overall" stroke="rgba(255,255,255,0.50)" strokeWidth={1.5} fill="url(#gradOverall)" dot={false} />
+                <Area type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={1} fill="transparent" dot={false} opacity={0.6} />
+                <Area type="monotone" dataKey="hallucination" stroke="#F59E0B" strokeWidth={1} fill="transparent" dot={false} opacity={0.6} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -224,10 +219,10 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
       {/* Conversations to review */}
       {summary?.top_failures?.length ? (
         <div className="glass-static overflow-hidden">
-          <div className="border-b border-[var(--border-subtle)] px-5 py-3">
+          <div className="border-b border-[var(--divider)] px-5 py-3">
             <p className="text-sm font-semibold text-[var(--text-primary)]">Conversations worth reviewing</p>
           </div>
-          <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="divide-y divide-[var(--divider)]">
             {summary.top_failures.map((item) => (
               <Link
                 key={item.conversation_id}
@@ -235,7 +230,7 @@ export function ReportsPageClient({ report }: { report: ReportData }) {
                 className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-[var(--table-row-hover)] transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text-primary)] font-mono">{item.conversation_id.slice(0, 8)}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)] font-mono">{item.conversation_id.slice(0, 8)}</p>
                   {item.summary && (
                     <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">{item.summary}</p>
                   )}

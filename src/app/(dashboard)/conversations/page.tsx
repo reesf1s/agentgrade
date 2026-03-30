@@ -4,14 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import {
-  getConversationWorkflow,
-  getQueueStateMap,
-  setQueueState,
-  type QueueWorkflowState,
-} from "@/lib/review-workflow";
 
 interface ConversationRow {
   id: string;
@@ -38,7 +31,7 @@ interface ConversationRow {
     | "waiting_for_quiet_period";
 }
 
-function priorityReason(conversation: ConversationRow) {
+function insightLabel(conversation: ConversationRow) {
   if (!conversation.quality_scores) {
     return conversation.score_status === "waiting_for_completion" ? "Still open" : "Scoring…";
   }
@@ -46,48 +39,49 @@ function priorityReason(conversation: ConversationRow) {
   const summary = (conversation.quality_scores.summary || "").toLowerCase();
   const flags   = conversation.quality_scores.flags || [];
 
-  if (flags.some((f) => /escalation/i.test(f)) || /escalat/.test(summary)) return "Escalation issue";
+  if (flags.some((f) => /escalation/i.test(f)) || /escalat/.test(summary)) return "Escalation detected";
   if (flags.some((f) => /resolution/i.test(f)) || /resolve|next step|follow-up/.test(summary)) return "Weak resolution";
-  if (flags.some((f) => /ground|crm|record|source|verify/i.test(f)) || /verify|record|source|detail/.test(summary)) return "Source check needed";
-  if (score < 0.5) return "Needs review";
-  if (score < 0.72) return "Quick pass";
-  return "Looks safe";
+  if (flags.some((f) => /ground|crm|record|source|verify/i.test(f)) || /verify|record|source|detail/.test(summary)) return "Verify claims";
+  if (score < 0.5) return "Quality issue";
+  if (score < 0.72) return "Needs review";
+  return "Looks good";
 }
 
 function groupLabel(conversation: ConversationRow) {
   const s = conversation.quality_scores?.overall_score;
   if (s === undefined || s === null) return "Pending";
-  if (s < 0.65) return "Review now";
-  if (s < 0.82) return "Quick pass";
-  return "Safe to close";
+  if (s < 0.65) return "Needs attention";
+  if (s < 0.82) return "Review";
+  return "Healthy";
 }
 
-const GROUP_ORDER = ["Review now", "Quick pass", "Pending", "Safe to close"];
+const GROUP_ORDER = ["Needs attention", "Review", "Pending", "Healthy"];
 
 const RISK_COLOR: Record<string, string> = {
-  "Review now":    "score-critical",
-  "Quick pass":    "score-warning",
-  "Pending":       "text-[var(--text-muted)]",
-  "Safe to close": "score-good",
+  "Needs attention": "text-[#EF4444]",
+  "Review":          "text-[#F59E0B]",
+  "Pending":         "text-[var(--text-muted)]",
+  "Healthy":         "text-[#10B981]",
+};
+
+const BAR_COLOR: Record<string, string> = {
+  "Needs attention": "#EF4444",
+  "Review":          "#F59E0B",
+  "Pending":         "rgba(255,255,255,0.15)",
+  "Healthy":         "#10B981",
 };
 
 export default function ConversationsPage() {
-  const [conversations, setConversations]   = useState<ConversationRow[]>([]);
-  const [total, setTotal]                   = useState(0);
-  const [loading, setLoading]               = useState(true);
-  const [savingActionId, setSavingActionId] = useState<string | null>(null);
-  const [search, setSearch]                 = useState("");
-  const [scoreFilter, setScoreFilter]       = useState<string>("all");
-  const [platform, setPlatform]             = useState<string>("all");
-  const [escalated, setEscalated]           = useState<string>("all");
-  const [flag, setFlag]                     = useState("");
-  const [sortPreset, setSortPreset]         = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
-  const [queueStates, setQueueStates]       = useState<Record<string, QueueWorkflowState>>({});
-  const [showFilters, setShowFilters]       = useState(false);
-  const [viewMode, setViewMode]             = useState<"queue" | "all">("all");
-  const { success, error }                  = useToast();
-
-  useEffect(() => { setQueueStates(getQueueStateMap()); }, []);
+  const [conversations, setConversations] = useState<ConversationRow[]>([]);
+  const [total, setTotal]                 = useState(0);
+  const [loading, setLoading]             = useState(true);
+  const [search, setSearch]               = useState("");
+  const [scoreFilter, setScoreFilter]     = useState<string>("all");
+  const [platform, setPlatform]           = useState<string>("all");
+  const [escalated, setEscalated]         = useState<string>("all");
+  const [flag, setFlag]                   = useState("");
+  const [sortPreset, setSortPreset]       = useState<"review" | "risk" | "recent" | "safe">("review");
+  const [showFilters, setShowFilters]     = useState(false);
 
   const fetchConversations = useCallback(() => {
     setLoading(true);
@@ -125,30 +119,21 @@ export default function ConversationsPage() {
   }, [conversations, loading, fetchConversations]);
 
   const stats = useMemo(() => {
-    const scored      = conversations.filter((c) => Boolean(c.quality_scores));
-    const reviewNext  = scored.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.72);
-    const pending     = conversations.filter((c) => !c.quality_scores);
-    const doneCount   = Object.values(queueStates).filter((v) => v === "reviewed" || v === "safe").length;
-    return { scored: scored.length, reviewNext: reviewNext.length, pending: pending.length, done: doneCount };
-  }, [conversations, queueStates]);
+    const scored     = conversations.filter((c) => Boolean(c.quality_scores));
+    const attention  = scored.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.65);
+    const pending    = conversations.filter((c) => !c.quality_scores);
+    return { scored: scored.length, attention: attention.length, pending: pending.length };
+  }, [conversations]);
 
   const sorted = useMemo(() => {
-    const arr = viewMode === "queue"
-      ? conversations.filter((c) => {
-          const wf = getConversationWorkflow(c.metadata);
-          return wf?.queue_state !== "safe" && wf?.queue_state !== "reviewed";
-        })
-      : [...conversations];
+    const arr = [...conversations];
     arr.sort((a, b) => {
       const aS = a.quality_scores?.overall_score ?? -1;
       const bS = b.quality_scores?.overall_score ?? -1;
-      const aC = a.quality_scores?.confidence_level === "high" ? 2 : a.quality_scores?.confidence_level === "medium" ? 1 : 0;
-      const bC = b.quality_scores?.confidence_level === "high" ? 2 : b.quality_scores?.confidence_level === "medium" ? 1 : 0;
       switch (sortPreset) {
-        case "risk":       return aS - bS;
-        case "recent":     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "confidence": return aC - bC || aS - bS;
-        case "safe":       return bS - aS;
+        case "risk":   return aS - bS;
+        case "recent": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "safe":   return bS - aS;
         default: {
           const aP = a.quality_scores ? 0 : 1;
           const bP = b.quality_scores ? 0 : 1;
@@ -157,50 +142,13 @@ export default function ConversationsPage() {
       }
     });
     return arr;
-  }, [conversations, sortPreset, viewMode]);
+  }, [conversations, sortPreset]);
 
   const groups = useMemo(() => {
-    const g: Record<string, ConversationRow[]> = { "Review now": [], "Quick pass": [], "Pending": [], "Safe to close": [] };
+    const g: Record<string, ConversationRow[]> = { "Needs attention": [], "Review": [], "Pending": [], "Healthy": [] };
     for (const c of sorted) g[groupLabel(c)].push(c);
     return g;
   }, [sorted]);
-
-  async function updateQueueState(conversationId: string, state: QueueWorkflowState) {
-    const prev = conversations;
-    const prevTotal = total;
-
-    setQueueState(conversationId, state);
-    setQueueStates((cur) => ({ ...cur, [conversationId]: state }));
-    setSavingActionId(conversationId);
-    setConversations((cur) => cur.filter((c) => c.id !== conversationId));
-    setTotal((cur) => Math.max(0, cur - 1));
-
-    try {
-      const disposition =
-        state === "safe"         ? "safe"
-        : state === "reviewed"   ? "ignore"
-        : state === "escalated"  ? "escalate_issue"
-        : state === "needs_review" ? "action_needed"
-        : "watch";
-
-      const res = await fetch(`/api/conversations/${conversationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ disposition, queue_state: state }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      success(`Marked as ${state.replaceAll("_", " ")}`);
-    } catch {
-      setConversations(prev);
-      setTotal(prevTotal);
-      setQueueStates((cur) => { const n = { ...cur }; delete n[conversationId]; return n; });
-      error("Could not save. Try again.");
-    } finally {
-      setSavingActionId(null);
-    }
-  }
-
-  const highRisk = conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length;
 
   return (
     <div className="space-y-5 pb-8">
@@ -211,33 +159,15 @@ export default function ConversationsPage() {
           <h1 className="page-title">Conversations</h1>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
             <span><strong className="text-[var(--text-primary)]">{total}</strong> total</span>
-            {stats.reviewNext > 0 && <span><strong className="text-score-critical">{stats.reviewNext}</strong> to review</span>}
-            {highRisk > 0 && <span><strong className="text-score-critical">{highRisk}</strong> high risk</span>}
-            {stats.pending > 0 && <span>{stats.pending} scoring</span>}
+            {stats.attention > 0 && <span><strong className="text-[#EF4444]">{stats.attention}</strong> need attention</span>}
+            {stats.pending > 0 && <span className="text-[var(--text-muted)]">{stats.pending} scoring</span>}
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("all")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${viewMode === "all" ? "bg-[var(--panel)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("queue")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${viewMode === "queue" ? "bg-[var(--panel)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
-          >
-            Queue
-          </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="glass-static p-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Search */}
           <label className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
@@ -249,13 +179,12 @@ export default function ConversationsPage() {
             />
           </label>
 
-          {/* Sort presets */}
           <div className="flex flex-wrap items-center gap-1">
             {([
-              ["review",     "Review first"],
-              ["risk",       "Highest risk"],
-              ["recent",     "Most recent"],
-              ["safe",       "Lowest risk"],
+              ["review",  "Review first"],
+              ["risk",    "Highest risk"],
+              ["recent",  "Most recent"],
+              ["safe",    "Lowest risk"],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
@@ -263,7 +192,7 @@ export default function ConversationsPage() {
                 onClick={() => setSortPreset(key)}
                 className={`operator-chip cursor-pointer transition-colors ${
                   sortPreset === key
-                    ? "!border-[var(--btn-primary-bg)] !bg-[var(--sidebar-accent-bg)] !text-[var(--sidebar-accent-fg)] font-semibold"
+                    ? "!border-[rgba(255,255,255,0.15)] !bg-[rgba(255,255,255,0.06)] !text-[var(--text-primary)] font-semibold"
                     : ""
                 }`}
               >
@@ -272,7 +201,6 @@ export default function ConversationsPage() {
             ))}
           </div>
 
-          {/* More filters toggle */}
           <button
             type="button"
             onClick={() => setShowFilters((v) => !v)}
@@ -290,9 +218,9 @@ export default function ConversationsPage() {
               className="glass-input px-2.5 py-1.5 text-sm"
             >
               <option value="all">All scores</option>
-              <option value="critical">Needs review (&lt;65%)</option>
-              <option value="warning">Watch (65–82%)</option>
-              <option value="good">Safe (&gt;82%)</option>
+              <option value="critical">Needs attention (&lt;65%)</option>
+              <option value="warning">Review (65–82%)</option>
+              <option value="good">Healthy (&gt;82%)</option>
             </select>
 
             <select
@@ -329,7 +257,7 @@ export default function ConversationsPage() {
         )}
       </div>
 
-      {/* Conversation table */}
+      {/* Conversation list */}
       <div className="space-y-5">
         {GROUP_ORDER.map((groupName) => {
           const items = groups[groupName];
@@ -342,32 +270,36 @@ export default function ConversationsPage() {
                 <span className={`section-label ${RISK_COLOR[groupName] || "text-[var(--text-muted)]"}`}>
                   {groupName}
                 </span>
-                <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+                <span className="text-[10px] font-medium text-[var(--text-muted)]">
                   {items.length}
                 </span>
-                <div className="ml-auto h-1 flex-1 max-w-[100px] rounded-full bg-[var(--surface)] overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, (items.length / Math.max(1, sorted.length)) * 100)}%`, background: groupName === 'Review now' ? '#DC2626' : groupName === 'Quick pass' ? '#D97706' : groupName === 'Pending' ? '#64748B' : '#16A34A' }} />
+                <div className="ml-auto h-[2px] flex-1 max-w-[80px] rounded-full bg-[rgba(255,255,255,0.04)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, (items.length / Math.max(1, sorted.length)) * 100)}%`,
+                      background: BAR_COLOR[groupName] || "rgba(255,255,255,0.15)",
+                      opacity: 0.6,
+                    }}
+                  />
                 </div>
               </div>
 
-              {/* Table */}
+              {/* Table — NO actions column */}
               <div className="glass-static overflow-hidden">
-                {/* Column headers */}
-                <div className="grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px_minmax(160px,1fr)] gap-0 border-b border-[var(--border-subtle)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] gap-0 border-b border-[var(--divider)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   <span>Conversation</span>
-                  <span>Issue</span>
+                  <span>Insight</span>
                   <span>Score</span>
-                  <span>Actions</span>
                 </div>
 
                 {items.map((c, idx) => (
                   <Link key={c.id} href={`/conversations/${c.id}`} className="block">
                     <div
-                      className={`grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px_minmax(160px,1fr)] items-center gap-0 px-4 py-2.5 hover:bg-[var(--table-row-hover)] transition-colors ${
-                        idx < items.length - 1 ? "border-b border-[var(--border-subtle)]" : ""
+                      className={`grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px] items-center gap-0 px-4 py-2.5 hover:bg-[var(--table-row-hover)] transition-colors ${
+                        idx < items.length - 1 ? "border-b border-[var(--divider)]" : ""
                       }`}
                     >
-                      {/* Conversation */}
                       <div className="min-w-0 pr-4">
                         <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                           {c.customer_identifier || c.external_id || "Unknown"}
@@ -378,41 +310,16 @@ export default function ConversationsPage() {
                         </p>
                       </div>
 
-                      {/* Issue */}
                       <div className="pr-4 text-xs text-[var(--text-secondary)]">
-                        {priorityReason(c)}
+                        {insightLabel(c)}
                       </div>
 
-                      {/* Score */}
                       <div>
                         {c.quality_scores ? (
                           <ScoreBadge score={c.quality_scores.overall_score} size="sm" />
                         ) : (
                           <span className="text-xs text-[var(--text-muted)]">—</span>
                         )}
-                      </div>
-
-                      {/* Actions */}
-                      <div
-                        className="flex flex-wrap gap-1"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      >
-                        {(["safe", "needs_review", "escalated", "reviewed"] as const).map((state) => (
-                          <button
-                            key={state}
-                            type="button"
-                            disabled={savingActionId === c.id}
-                            onClick={() => updateQueueState(c.id, state)}
-                            className={`glass-button py-0.5 px-2 text-xs ${state === 'safe' ? 'hover:!border-[#16A34A] hover:!text-[#16A34A]' : state === 'escalated' ? 'hover:!border-[#DC2626] hover:!text-[#DC2626]' : ''}`}
-                          >
-                            {savingActionId === c.id
-                              ? "···"
-                              : state === "safe"         ? "Safe"
-                              : state === "needs_review" ? "Action"
-                              : state === "escalated"    ? "Escalate"
-                              : "Ignore"}
-                          </button>
-                        ))}
                       </div>
                     </div>
                   </Link>
@@ -424,7 +331,7 @@ export default function ConversationsPage() {
 
         {!loading && conversations.length === 0 && (
           <div className="glass-static py-16 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)]">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.04)]">
               <Search className="h-4 w-4 text-[var(--text-muted)]" />
             </div>
             <p className="text-sm font-medium text-[var(--text-secondary)]">No conversations found</p>

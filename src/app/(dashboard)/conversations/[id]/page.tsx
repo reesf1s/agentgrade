@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Bot,
-  Check,
   CheckCircle2,
   Headphones,
   Info,
@@ -19,16 +18,9 @@ import {
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { useToast } from "@/components/ui/toast";
 import { scoreColor, formatScore } from "@/lib/utils";
 import type { ClaimAnalysis, Message, QualityScore } from "@/lib/db/types";
 import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
-import {
-  getConversationDispositionMap,
-  setConversationDisposition,
-  setQueueState,
-  type ReviewDisposition,
-} from "@/lib/review-workflow";
 
 interface ConversationDetail {
   id: string;
@@ -42,11 +34,6 @@ interface ConversationDetail {
   score_status?: "pending" | "refreshing" | "ready" | "waiting_for_completion" | "waiting_for_quiet_period";
 }
 
-interface ReviewGroup {
-  title: string;
-  body: string;
-}
-
 function hasStructuredAnswer(messages: Message[]) {
   return messages.some(
     (message) =>
@@ -58,90 +45,62 @@ function hasStructuredAnswer(messages: Message[]) {
 
 function deriveStrengths(messages: Message[], score?: QualityScore | null) {
   const strengths: string[] = [];
-
-  if ((score?.resolution_score || 0) >= 0.78) {
-    strengths.push("Clear next step");
-  }
-  if ((score?.tone_score || 0) >= 0.84) {
-    strengths.push("Calm tone");
-  }
-  if (hasStructuredAnswer(messages)) {
-    strengths.push("Clear structure");
-  }
-  if ((score?.overall_score || 0) >= 0.8) {
-    strengths.push("Reusable pattern");
-  }
-
+  if ((score?.resolution_score || 0) >= 0.78) strengths.push("Clear next step");
+  if ((score?.tone_score || 0) >= 0.84) strengths.push("Professional tone");
+  if (hasStructuredAnswer(messages)) strengths.push("Well structured");
+  if ((score?.overall_score || 0) >= 0.8) strengths.push("Reusable pattern");
   return strengths.slice(0, 3);
 }
 
 function claimLooksLikeDate(text: string) {
-  return /\b(today|tomorrow|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|deadline|due|close date|week|month|quarter|day)\b/i.test(
-    text
-  );
+  return /\b(today|tomorrow|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|deadline|due|close date|week|month|quarter|day)\b/i.test(text);
 }
 
 function claimLooksLikeNumber(text: string) {
-  return /[%£$€]|\b\d+(\.\d+)?\b|score|probability|value|hours|rate|metric|accuracy|conversion|win rate|amount/i.test(
-    text
-  );
+  return /[%£$€]|\b\d+(\.\d+)?\b|score|probability|value|hours|rate|metric|accuracy|conversion|win rate|amount/i.test(text);
 }
 
 function claimLooksLikeRecord(text: string) {
-  return /\b(deal|account|company|contact|ticket|subscription|order|record|crm|pipeline|stage|owner|champion|todo|history|health|risk|briefing|competitor)\b/i.test(
-    text
-  );
+  return /\b(deal|account|company|contact|ticket|subscription|order|record|crm|pipeline|stage|owner|champion|todo|history|health|risk|briefing|competitor)\b/i.test(text);
 }
 
-function buildReviewGroups(score?: QualityScore | null): ReviewGroup[] {
+function buildInsights(score?: QualityScore | null) {
   const claims = (score?.claim_analysis || []).filter((claim) => claim.verdict !== "verified");
-  if (claims.length === 0) {
-    return [];
-  }
+  if (claims.length === 0) return [];
 
-  const groups: ReviewGroup[] = [];
+  const insights: { title: string; body: string; type: "risk" | "warning" | "info" }[] = [];
 
   if (claims.some((claim) => claimLooksLikeRecord(claim.claim))) {
-    groups.push({
-      title: "Record details",
-      body: "Deal fields, contact roles, or internal record details should be checked against the source system before reuse.",
+    insights.push({
+      title: "Record details to verify",
+      body: "Deal fields, contact roles, or internal record details should be checked against the source system.",
+      type: "warning",
     });
   }
-
   if (claims.some((claim) => claimLooksLikeNumber(claim.claim))) {
-    groups.push({
-      title: "Numbers and scores",
-      body: "Metrics, values, probabilities, or score changes were stated confidently and should be spot-checked before anyone acts on them.",
+    insights.push({
+      title: "Numbers need spot-checking",
+      body: "Metrics, values, or scores were stated confidently — verify before acting on them.",
+      type: "warning",
     });
   }
-
   if (claims.some((claim) => claimLooksLikeDate(claim.claim))) {
-    groups.push({
-      title: "Dates and timing",
-      body: "Dates, deadlines, and overdue status should be checked before they are used in planning or follow-up.",
+    insights.push({
+      title: "Date accuracy uncertain",
+      body: "Dates, deadlines, and overdue status should be confirmed before using in planning.",
+      type: "warning",
     });
   }
 
-  if (groups.length === 0) {
-    groups.push({
-      title: "Specific details",
-      body: "A few specific claims are not fully traceable in the transcript and are worth a quick spot-check.",
+  if (insights.length === 0) {
+    insights.push({
+      title: "Details need verification",
+      body: "Some specific claims are not fully traceable in the transcript.",
+      type: "info",
     });
   }
 
-  return groups.slice(0, 3);
-}
-
-function nextBestAction(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "Wait for score";
-  if (groundingOnly) return "Verify first";
-  if ((score.overall_score || 0) >= 0.82) return "Safe";
-  if ((score.overall_score || 0) >= 0.65) return "Watch";
-  return "Escalate";
-}
-
-function isLongMessage(content: string) {
-  return content.length > 520 || content.split("\n").length > 10;
+  return insights.slice(0, 3);
 }
 
 function groupClaimsForAdvancedReview(score?: QualityScore | null) {
@@ -149,22 +108,12 @@ function groupClaimsForAdvancedReview(score?: QualityScore | null) {
   const grouped: Array<{ title: string; items: ClaimAnalysis[] }> = [];
 
   const buckets = [
-    {
-      title: "Record details to verify",
-      test: (claim: ClaimAnalysis) => claimLooksLikeRecord(claim.claim),
-    },
-    {
-      title: "Numbers to verify",
-      test: (claim: ClaimAnalysis) => claimLooksLikeNumber(claim.claim),
-    },
-    {
-      title: "Dates to verify",
-      test: (claim: ClaimAnalysis) => claimLooksLikeDate(claim.claim),
-    },
+    { title: "Record details to verify", test: (claim: ClaimAnalysis) => claimLooksLikeRecord(claim.claim) },
+    { title: "Numbers to verify", test: (claim: ClaimAnalysis) => claimLooksLikeNumber(claim.claim) },
+    { title: "Dates to verify", test: (claim: ClaimAnalysis) => claimLooksLikeDate(claim.claim) },
   ];
 
   const remaining = [...claims];
-
   for (const bucket of buckets) {
     const items = remaining.filter(bucket.test);
     if (items.length > 0) {
@@ -175,16 +124,14 @@ function groupClaimsForAdvancedReview(score?: QualityScore | null) {
       }
     }
   }
-
   if (remaining.length > 0) {
-    grouped.push({ title: "Other details to sense-check", items: remaining.slice(0, 4) });
+    grouped.push({ title: "Other claims to check", items: remaining.slice(0, 4) });
   }
-
   return grouped;
 }
 
 function getAssessmentLabel(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "Scoring in progress";
+  if (!score) return "Scoring…";
   if (groundingOnly && (score.overall_score || 0) >= 0.74) return "Strong answer";
   if ((score.overall_score || 0) >= 0.82) return "Healthy";
   if ((score.overall_score || 0) >= 0.65) return "Needs review";
@@ -192,30 +139,28 @@ function getAssessmentLabel(score?: QualityScore | null, groundingOnly = false) 
   return "Broken";
 }
 
-function getRiskLine(score?: QualityScore | null, groundingOnly = false) {
-  if (!score) return "Pending";
-  if (groundingOnly) return "Moderate if reused";
-  if ((score.overall_score || 0) >= 0.82) return "Low reuse risk";
-  if ((score.overall_score || 0) >= 0.65) return "Moderate if reused";
-  return "High confusion risk";
-}
-
 function getEvidenceLabel(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return null;
   if (groundingOnly) return "Evidence limited";
   const flags = score.flags || [];
-  if (flags.some((flag) => /grounding|trace|tool_backed|unverified|ungrounded/i.test(flag))) {
-    return "Evidence mixed";
-  }
+  if (flags.some((flag) => /grounding|trace|tool_backed|unverified|ungrounded/i.test(flag))) return "Evidence mixed";
   return "Evidence strong";
 }
 
 function getDisplaySummary(score?: QualityScore | null, groundingOnly = false) {
   if (!score) return "Scoring in progress.";
-  if (groundingOnly) {
-    return "Useful, but verify first.";
-  }
+  if (groundingOnly) return "Useful, but verify first.";
   return score.summary || "No summary available.";
+}
+
+function isLongMessage(content: string) {
+  return content.length > 520 || content.split("\n").length > 10;
+}
+
+function scoreAccent(score: number) {
+  if (score >= 0.75) return "#10B981";
+  if (score >= 0.5)  return "#F59E0B";
+  return "#EF4444";
 }
 
 export default function ConversationDetailPage() {
@@ -223,30 +168,25 @@ export default function ConversationDetailPage() {
   const [conv, setConv] = useState<ConversationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [showAdvancedDrawer, setShowAdvancedDrawer] = useState(false);
-  const [reviewDisposition, setReviewDispositionState] = useState<ReviewDisposition | null>(null);
-  const [savingDisposition, setSavingDisposition] = useState<ReviewDisposition | null>(null);
   const [nextConversationId, setNextConversationId] = useState<string | null>(null);
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
+
+  // Override form state
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [overrideDimension, setOverrideDimension] = useState("overall");
   const [overrideScore, setOverrideScore] = useState("50");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideState, setOverrideState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  // Training labels
   const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [labelSetState, setLabelSetState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [labelNotes, setLabelNotes] = useState("");
   const [labelShareScope, setLabelShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
   const [labelExampleKind, setLabelExampleKind] = useState<"real" | "synthetic">("real");
-  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
-  const { success, error } = useToast();
   const [trainingLabels, setTrainingLabels] = useState({
-    overall: "",
-    accuracy: "",
-    hallucination: "",
-    resolution: "",
-    escalation: "",
-    tone: "",
-    sentiment: "",
+    overall: "", accuracy: "", hallucination: "", resolution: "", escalation: "", tone: "", sentiment: "",
   });
 
   useEffect(() => {
@@ -255,79 +195,43 @@ export default function ConversationDetailPage() {
 
     const loadConversation = async (isInitialLoad = false) => {
       try {
-        const response = await fetch(`/api/conversations/${params.id}`, {
-          cache: "no-store",
-        });
-
-        if (response.status === 404) {
-          if (!cancelled) setNotFound(true);
-          return;
-        }
-
+        const response = await fetch(`/api/conversations/${params.id}`, { cache: "no-store" });
+        if (response.status === 404) { if (!cancelled) setNotFound(true); return; }
         const data = (await response.json()) as ConversationDetail;
         if (cancelled) return;
-
         setConv(data);
-
         if (data.score_status === "pending" || data.score_status === "refreshing") {
-          pollTimer = setTimeout(() => {
-            void loadConversation(false);
-          }, 2500);
+          pollTimer = setTimeout(() => { void loadConversation(false); }, 2500);
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (!cancelled && isInitialLoad) {
-          setLoading(false);
-        }
-      }
+      } catch (err) { console.error(err); }
+      finally { if (!cancelled && isInitialLoad) setLoading(false); }
     };
 
     void loadConversation(true);
-
-    return () => {
-      cancelled = true;
-      if (pollTimer) clearTimeout(pollTimer);
-    };
+    return () => { cancelled = true; if (pollTimer) clearTimeout(pollTimer); };
   }, [params.id]);
 
   useEffect(() => {
-    if (!conv) return;
-    const dispositions = getConversationDispositionMap();
-    setReviewDispositionState(dispositions[conv.id] || null);
-  }, [conv]);
-
-  useEffect(() => {
     let cancelled = false;
-
     async function loadNextConversation() {
       try {
         const response = await fetch("/api/conversations?limit=100", { cache: "no-store" });
         if (!response.ok) return;
         const data = await response.json();
         if (cancelled) return;
-
         const list = (data.conversations || []) as Array<{ id: string }>;
         const currentIndex = list.findIndex((item) => item.id === params.id);
         if (currentIndex >= 0 && currentIndex < list.length - 1) {
           setNextConversationId(list[currentIndex + 1]?.id || null);
-        } else {
-          setNextConversationId(null);
         }
-      } catch (error) {
-        console.error(error);
-      }
+      } catch (err) { console.error(err); }
     }
-
     void loadNextConversation();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [params.id]);
 
   async function submitOverride() {
     if (!conv) return;
-
     setOverrideState("saving");
     try {
       const response = await fetch(`/api/conversations/${conv.id}/override`, {
@@ -339,23 +243,15 @@ export default function ConversationDetailPage() {
           reason: overrideReason || null,
         }),
       });
-
-      if (!response.ok) {
-        setOverrideState("error");
-        return;
-      }
-
+      if (!response.ok) { setOverrideState("error"); return; }
       setOverrideState("saved");
       setShowOverrideForm(false);
       setOverrideReason("");
-    } catch {
-      setOverrideState("error");
-    }
+    } catch { setOverrideState("error"); }
   }
 
   async function submitTrainingLabels() {
     if (!conv) return;
-
     setLabelSetState("saving");
     try {
       const response = await fetch("/api/calibration", {
@@ -369,66 +265,16 @@ export default function ConversationDetailPage() {
           example_kind: labelExampleKind,
         }),
       });
-
-      if (!response.ok) {
-        setLabelSetState("error");
-        return;
-      }
-
+      if (!response.ok) { setLabelSetState("error"); return; }
       setLabelSetState("saved");
-    } catch {
-      setLabelSetState("error");
-    }
-  }
-
-  async function updateDisposition(disposition: ReviewDisposition) {
-    if (!conv) return;
-    const previousDisposition = reviewDisposition;
-    setConversationDisposition(conv.id, disposition);
-    setReviewDispositionState(disposition);
-    setSavingDisposition(disposition);
-
-    const queueState =
-      disposition === "safe"
-        ? "safe"
-        : disposition === "ignore"
-          ? "reviewed"
-          : disposition === "escalate_issue"
-            ? "escalated"
-            : disposition === "action_needed"
-              ? "needs_review"
-              : "reviewed";
-
-    setQueueState(conv.id, queueState);
-    try {
-      const response = await fetch(`/api/conversations/${conv.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ disposition, queue_state: queueState }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save review state");
-      }
-
-      success(`Marked as ${disposition.replaceAll("_", " ")}`);
-    } catch (err) {
-      console.error(err);
-      if (previousDisposition) {
-        setConversationDisposition(conv.id, previousDisposition);
-      }
-      setReviewDispositionState(previousDisposition || null);
-      error("Could not save action. Retry.");
-    } finally {
-      setSavingDisposition(null);
-    }
+    } catch { setLabelSetState("error"); }
   }
 
   if (loading) {
     return (
       <div className="pb-8">
         <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-          <ArrowLeft className="h-3.5 w-3.5" /> Review queue
+          <ArrowLeft className="h-3.5 w-3.5" /> Conversations
         </Link>
         <div className="glass-static p-10 text-center">
           <p className="text-sm text-[var(--text-muted)]">Loading…</p>
@@ -441,7 +287,7 @@ export default function ConversationDetailPage() {
     return (
       <div className="pb-8">
         <Link href="/conversations" className="mb-5 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-          <ArrowLeft className="h-3.5 w-3.5" /> Review queue
+          <ArrowLeft className="h-3.5 w-3.5" /> Conversations
         </Link>
         <div className="glass-static p-10 text-center">
           <p className="text-sm text-[var(--text-muted)]">Conversation not found.</p>
@@ -455,10 +301,9 @@ export default function ConversationDetailPage() {
   const confidenceLevel = qs?.confidence_level ?? qs?.structural_metrics?.confidence_level;
   const evidenceLabel = getEvidenceLabel(qs, groundingOnly);
   const assessmentLabel = getAssessmentLabel(qs, groundingOnly);
-  const riskLine = getRiskLine(qs, groundingOnly);
   const displaySummary = getDisplaySummary(qs, groundingOnly);
   const strengths = deriveStrengths(conv.messages, qs);
-  const reviewGroups = buildReviewGroups(qs);
+  const insights = buildInsights(qs);
   const advancedClaimGroups = groupClaimsForAdvancedReview(qs);
   const showKnowledgeAndPromptDetails = !groundingOnly;
 
@@ -478,21 +323,13 @@ export default function ConversationDetailPage() {
     { label: "Tone",          score: qs.tone_score },
   ] : [];
 
-  const dispositions: { value: ReviewDisposition; label: string; hint: string }[] = [
-    { value: "safe",           label: "Safe",          hint: "No issues, good to go" },
-    { value: "watch",          label: "Watch",         hint: "Monitor for patterns" },
-    { value: "action_needed",  label: "Needs action",  hint: "Something to fix" },
-    { value: "escalate_issue", label: "Escalate",      hint: "Raise with the team" },
-    { value: "ignore",         label: "Ignore",        hint: "Not relevant to review" },
-  ];
-
   return (
     <div className="space-y-4 pb-8">
       {/* Topnav */}
       <div className="flex items-center justify-between gap-4">
         <Link href="/conversations" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" />
-          Review queue
+          Conversations
         </Link>
         <div className="flex items-center gap-2">
           {nextConversationId && (
@@ -501,52 +338,47 @@ export default function ConversationDetailPage() {
             </Link>
           )}
           <button type="button" className="glass-button text-xs" onClick={() => setShowAdvancedDrawer(true)}>
-            Advanced
+            Deep dive
           </button>
         </div>
       </div>
 
       {/* Header card */}
-      <div className="glass-static p-5 relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-[0.07]" style={{ background: `radial-gradient(circle, ${qs && (qs.overall_score || 0) >= 0.75 ? '#16A34A' : qs && (qs.overall_score || 0) >= 0.5 ? '#D97706' : '#DC2626'}, transparent 70%)` }} />
+      <div className="glass-static p-5">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="operator-chip capitalize">{conv.platform}</span>
           <span className="operator-chip">{new Date(conv.created_at).toLocaleDateString("en-GB")}</span>
           <span className="operator-chip">{conv.message_count} messages</span>
           {qs ? <ScoreBadge score={qs.overall_score} size="sm" /> : <span className="operator-chip">Scoring…</span>}
-          <span className={`operator-chip font-medium ${
-            assessmentLabel === "Healthy" || assessmentLabel === "Strong answer" ? "!text-[#16A34A] !border-[#BBF7D0] !bg-[#F0FDF4]" :
-            assessmentLabel === "Needs review" || assessmentLabel === "Risky" ? "!text-[#D97706] !border-[#FDE68A] !bg-[#FFFBEB]" :
-            assessmentLabel === "Broken" ? "!text-[#DC2626] !border-[#FECACA] !bg-[#FEF2F2]" : ""
+          <span className={`insight-badge ${
+            assessmentLabel === "Healthy" || assessmentLabel === "Strong answer" ? "insight-badge-good" :
+            assessmentLabel === "Needs review" || assessmentLabel === "Risky" ? "insight-badge-warning" :
+            assessmentLabel === "Broken" ? "insight-badge-risk" : ""
           }`}>{assessmentLabel}</span>
-          {conv.was_escalated && <span className="operator-chip !text-[#D97706] !border-[#FDE68A] !bg-[#FFFBEB]">Escalated</span>}
+          {conv.was_escalated && <span className="insight-badge insight-badge-warning">Escalated</span>}
         </div>
 
         <h1 className="text-xl font-bold tracking-[-0.02em] text-[var(--text-primary)]">
           {conv.customer_identifier || "Unknown customer"}
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
-          {groundingOnly ? "Useful, but verify specific claims before reuse." : displaySummary}
+          {displaySummary}
         </p>
 
-        {(strengths.length > 0 || reviewGroups.length > 0) && (
+        {(strengths.length > 0 || insights.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-[var(--divider)] pt-3.5 text-xs">
-            {strengths[0] && (
-              <span className="flex items-center gap-1.5 font-medium text-[#16A34A]">
+            {strengths.slice(0, 2).map((s) => (
+              <span key={s} className="flex items-center gap-1.5 font-medium text-[#10B981]">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                {strengths[0]}
-              </span>
-            )}
-            {reviewGroups.slice(0, 2).map((g) => (
-              <span key={g.title} className="flex items-center gap-1.5 font-medium text-[#D97706]">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Check: {g.title}
+                {s}
               </span>
             ))}
-            <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
-              <Info className="h-3.5 w-3.5" />
-              {riskLine}
-            </span>
+            {insights.slice(0, 2).map((i) => (
+              <span key={i.title} className="flex items-center gap-1.5 font-medium text-[#F59E0B]">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {i.title}
+              </span>
+            ))}
           </div>
         )}
       </div>
@@ -556,11 +388,12 @@ export default function ConversationDetailPage() {
 
         {/* Transcript */}
         <div className="glass-static overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-3">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Transcript <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--surface)] px-1.5 text-[10px] font-medium text-[var(--text-muted)]">{conv.messages.length}</span></p>
-            <div className="flex gap-2">
-              {evidenceLabel && <span className="operator-chip">{evidenceLabel}</span>}
-            </div>
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--divider)] px-5 py-3">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Transcript
+              <span className="ml-1.5 text-xs font-normal text-[var(--text-muted)]">{conv.messages.length} messages</span>
+            </p>
+            {evidenceLabel && <span className="operator-chip">{evidenceLabel}</span>}
           </div>
 
           {conv.messages.length === 0 ? (
@@ -592,7 +425,7 @@ export default function ConversationDetailPage() {
                         <button
                           type="button"
                           onClick={() => setExpandedMessages((cur) => ({ ...cur, [message.id]: !expanded }))}
-                          className="mt-2.5 text-xs font-semibold text-[var(--btn-primary-bg)] hover:underline"
+                          className="mt-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                         >
                           {expanded ? "Show less" : "Show full response"}
                         </button>
@@ -605,7 +438,7 @@ export default function ConversationDetailPage() {
           )}
         </div>
 
-        {/* Right sidebar */}
+        {/* Right sidebar — insights, not actions */}
         <div className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:self-start">
 
           {/* Score card */}
@@ -623,19 +456,18 @@ export default function ConversationDetailPage() {
               <div className="space-y-3">
                 {scoreRows.map(({ label, score }) => {
                   const s = score ?? 0;
-                  const barColor = s >= 0.75 ? "#16A34A" : s >= 0.5 ? "#D97706" : "#DC2626";
                   return (
                     <div key={label}>
                       <div className="mb-1 flex items-center justify-between">
                         <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
-                        <span className={`text-xs font-semibold tabular-nums ${scoreColor(s)}`}>
+                        <span className={`text-xs font-semibold tabular-nums font-mono ${scoreColor(s)}`}>
                           {formatScore(s)}%
                         </span>
                       </div>
                       <div className="score-bar-track">
                         <div
                           className="score-bar-fill"
-                          style={{ width: `${s * 100}%`, background: barColor, boxShadow: `0 0 8px ${barColor}40` }}
+                          style={{ width: `${s * 100}%`, background: scoreAccent(s) }}
                         />
                       </div>
                     </div>
@@ -645,33 +477,46 @@ export default function ConversationDetailPage() {
             )}
           </div>
 
-          {/* Action card */}
-          <div className="glass-static p-4">
-            <p className="section-label mb-3">Your call</p>
-            <p className="text-xs text-[var(--text-muted)] mb-3 -mt-1">Choose how to handle this conversation</p>
-            <div className="space-y-1.5">
-              {dispositions.map(({ value, label, hint }) => {
-                const isActive = reviewDisposition === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => updateDisposition(value)}
-                    disabled={Boolean(savingDisposition)}
-                    className={`disposition-btn ${isActive ? "disposition-btn-active" : ""}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`disposition-label text-sm font-medium ${isActive ? "" : "text-[var(--text-primary)]"}`}>
-                        {savingDisposition === value ? "Saving…" : label}
-                      </span>
-                      {isActive && <Check className="h-3.5 w-3.5 text-[var(--btn-primary-bg)] shrink-0" />}
+          {/* Insights card — replaces dispositions */}
+          {insights.length > 0 && (
+            <div className="glass-static p-4">
+              <p className="section-label mb-3">Insights</p>
+              <div className="space-y-3">
+                {insights.map((i) => (
+                  <div key={i.title}>
+                    <div className="flex items-start gap-2">
+                      {i.type === "risk" ? (
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#EF4444]" />
+                      ) : i.type === "warning" ? (
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#F59E0B]" />
+                      ) : (
+                        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-[var(--text-primary)]">{i.title}</p>
+                        <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed">{i.body}</p>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">{hint}</p>
-                  </button>
-                );
-              })}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Prompt improvements — surface inline */}
+          {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.length ? (
+            <div className="glass-static p-4">
+              <p className="section-label mb-3">Suggested fixes</p>
+              <div className="space-y-3">
+                {qs.prompt_improvements.slice(0, 2).map((improvement) => (
+                  <div key={improvement.issue}>
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed">{improvement.expected_impact}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {/* Metadata */}
           <div className="glass-static p-4">
@@ -682,7 +527,6 @@ export default function ConversationDetailPage() {
                 { k: "Messages",   v: conv.message_count },
                 { k: "Date",       v: new Date(conv.created_at).toLocaleDateString("en-GB") },
                 confidenceLevel ? { k: "Confidence", v: confidenceLevel } : null,
-                reviewDisposition ? { k: "Disposition", v: reviewDisposition.replaceAll("_", " ") } : null,
               ].filter(Boolean).map((row) => row && (
                 <div key={row.k} className="flex items-center justify-between gap-2">
                   <span className="text-xs text-[var(--text-muted)]">{row.k}</span>
@@ -694,36 +538,37 @@ export default function ConversationDetailPage() {
         </div>
       </div>
 
+      {/* Advanced drawer */}
       {showAdvancedDrawer ? (
         <>
           <button
             type="button"
-            aria-label="Close advanced review"
+            aria-label="Close deep dive"
             className="drawer-backdrop"
             onClick={() => setShowAdvancedDrawer(false)}
           />
           <aside className="drawer-panel">
             <div className="drawer-header">
               <div>
-                <p className="page-eyebrow">Advanced review</p>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-                  Claims, evidence, overrides, training
+                <p className="page-eyebrow">Deep dive</p>
+                <h2 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                  Claims, evidence &amp; calibration
                 </h2>
               </div>
               <button type="button" onClick={() => setShowAdvancedDrawer(false)} className="glass-button py-1 px-2 text-xs inline-flex items-center gap-1 shrink-0">
                 <X className="h-3.5 w-3.5" />
-                Close
               </button>
             </div>
-            <div className="drawer-body space-y-3">
-              {advancedClaimGroups.length > 0 ? (
-                <div className="details-panel-content space-y-3">
+            <div className="drawer-body space-y-4">
+              {/* Claims */}
+              {advancedClaimGroups.length > 0 && (
+                <div className="space-y-3">
                   {advancedClaimGroups.map((group) => (
-                    <div key={group.title} className="compact-list-item">
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">{group.title}</p>
-                      <div className="mt-2 space-y-2">
+                    <div key={group.title} className="border-b border-[var(--divider)] pb-3 last:border-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">{group.title}</p>
+                      <div className="space-y-2">
                         {group.items.map((claim) => (
-                          <div key={`${group.title}-${claim.claim}`} className="border-b border-[var(--divider)] pb-2 last:border-b-0 last:pb-0">
+                          <div key={`${group.title}-${claim.claim}`} className="border-b border-[var(--divider)] pb-2 last:border-0 last:pb-0">
                             <p className="text-sm text-[var(--text-primary)]">{claim.claim}</p>
                             <p className="mt-1 text-xs capitalize text-[var(--text-muted)]">{claim.verdict}</p>
                           </div>
@@ -732,174 +577,106 @@ export default function ConversationDetailPage() {
                     </div>
                   ))}
                 </div>
-              ) : null}
+              )}
 
+              {/* Prompt guidance */}
               {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.length ? (
-                <div className="compact-list-item">
-                  <p className="section-label">Prompt guidance</p>
-                  <div className="mt-3 space-y-3">
+                <div className="border-b border-[var(--divider)] pb-3">
+                  <p className="section-label mb-2">Prompt guidance</p>
+                  <div className="space-y-3">
                     {qs.prompt_improvements.slice(0, 3).map((improvement) => (
                       <div key={improvement.issue}>
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{improvement.issue}</p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{improvement.expected_impact}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{improvement.expected_impact}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : null}
 
+              {/* Knowledge gaps */}
               {showKnowledgeAndPromptDetails && qs?.knowledge_gaps?.length ? (
-                <div className="compact-list-item">
-                  <p className="section-label">Knowledge coverage</p>
-                  <div className="mt-3 space-y-3">
+                <div className="border-b border-[var(--divider)] pb-3">
+                  <p className="section-label mb-2">Knowledge gaps</p>
+                  <div className="space-y-3">
                     {qs.knowledge_gaps.slice(0, 3).map((gap) => (
                       <div key={gap.topic}>
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{gap.topic}</p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{gap.description}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{gap.description}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : null}
 
-              <div className="compact-list-item">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Correct the score</p>
-                <div className="mt-3 space-y-3">
-                  {showOverrideForm ? (
-                    <>
-                      <select
-                        value={overrideDimension}
-                        onChange={(event) => setOverrideDimension(event.target.value)}
-                        className="glass-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="overall">Overall</option>
-                        <option value="accuracy">Accuracy</option>
-                        <option value="hallucination">Hallucination</option>
-                        <option value="resolution">Resolution</option>
-                        <option value="tone">Tone</option>
-                        <option value="sentiment">Sentiment</option>
-                      </select>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={overrideScore}
-                        onChange={(event) => setOverrideScore(event.target.value)}
-                        className="glass-input w-full px-3 py-2 text-sm"
-                        placeholder="Adjusted score %"
-                      />
-                      <GlassTextarea
-                        value={overrideReason}
-                        onChange={(event) => setOverrideReason(event.target.value)}
-                        className="min-h-[88px]"
-                        placeholder="Why is the current score wrong?"
-                      />
-                      <div className="flex gap-2">
-                        <GlassButton size="sm" className="w-full" onClick={submitOverride} disabled={overrideState === "saving"}>
-                          {overrideState === "saving" ? "Saving..." : "Save override"}
-                        </GlassButton>
-                        <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowOverrideForm(false)}>
-                          Cancel
-                        </GlassButton>
-                      </div>
-                    </>
-                  ) : (
-                    <GlassButton size="sm" className="w-full" onClick={() => setShowOverrideForm(true)}>
-                      Add override
-                    </GlassButton>
-                  )}
-                  {overrideState === "saved" ? <p className="text-xs text-score-good">Override saved.</p> : null}
-                  {overrideState === "error" ? <p className="text-xs text-score-critical">Failed to save override.</p> : null}
-                </div>
+              {/* Score override */}
+              <div className="border-b border-[var(--divider)] pb-3">
+                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Correct the score</p>
+                {showOverrideForm ? (
+                  <div className="space-y-3">
+                    <select value={overrideDimension} onChange={(e) => setOverrideDimension(e.target.value)} className="glass-input w-full px-3 py-2 text-sm">
+                      <option value="overall">Overall</option>
+                      <option value="accuracy">Accuracy</option>
+                      <option value="hallucination">Hallucination</option>
+                      <option value="resolution">Resolution</option>
+                      <option value="tone">Tone</option>
+                      <option value="sentiment">Sentiment</option>
+                    </select>
+                    <input type="number" min={0} max={100} value={overrideScore} onChange={(e) => setOverrideScore(e.target.value)} className="glass-input w-full px-3 py-2 text-sm" placeholder="Score %" />
+                    <GlassTextarea value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} className="min-h-[80px]" placeholder="Why is the current score wrong?" />
+                    <div className="flex gap-2">
+                      <GlassButton size="sm" className="w-full" onClick={submitOverride} disabled={overrideState === "saving"}>
+                        {overrideState === "saving" ? "Saving…" : "Save override"}
+                      </GlassButton>
+                      <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowOverrideForm(false)}>Cancel</GlassButton>
+                    </div>
+                  </div>
+                ) : (
+                  <GlassButton size="sm" className="w-full" onClick={() => setShowOverrideForm(true)}>Add override</GlassButton>
+                )}
+                {overrideState === "saved" && <p className="mt-2 text-xs text-[#10B981]">Override saved.</p>}
+                {overrideState === "error" && <p className="mt-2 text-xs text-[#EF4444]">Failed to save.</p>}
               </div>
 
-              <div className="compact-list-item">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Train the scorer</p>
-                <div className="mt-3 space-y-3">
-                  {showTrainingForm ? (
-                    <>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <GlassSelect
-                          label="Example type"
-                          value={labelExampleKind}
-                          onChange={(event) => setLabelExampleKind(event.target.value as "real" | "synthetic")}
-                          options={[
-                            { value: "real", label: "Real customer conversation" },
-                            { value: "synthetic", label: "Synthetic training example" },
-                          ]}
-                        />
-                        <GlassSelect
-                          label="Training scope"
-                          value={labelShareScope}
-                          onChange={(event) => setLabelShareScope(event.target.value as "workspace_private" | "global_anonymous")}
-                          options={[
-                            { value: "workspace_private", label: "Private to this workspace" },
-                            { value: "global_anonymous", label: "Share anonymized features" },
-                          ]}
-                        />
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {Object.entries(trainingLabels).map(([key, value]) => (
-                          <label key={key} className="space-y-1">
-                            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{key}</span>
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={value}
-                              onChange={(event) =>
-                                setTrainingLabels((current) => ({
-                                  ...current,
-                                  [key]: event.target.value,
-                                }))
-                              }
-                              className="glass-input w-full px-3 py-2 text-sm"
-                              placeholder="Optional %"
-                            />
-                          </label>
-                        ))}
-                      </div>
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="w-full"
-                        onClick={() =>
-                          setTrainingLabels({
-                            overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
-                            accuracy: qs?.accuracy_score !== undefined ? String(Math.round(qs.accuracy_score * 100)) : "",
-                            hallucination: qs?.hallucination_score !== undefined ? String(Math.round(qs.hallucination_score * 100)) : "",
-                            resolution: qs?.resolution_score !== undefined ? String(Math.round(qs.resolution_score * 100)) : "",
-                            escalation: qs?.escalation_score !== undefined ? String(Math.round(qs.escalation_score * 100)) : "",
-                            tone: qs?.tone_score !== undefined ? String(Math.round(qs.tone_score * 100)) : "",
-                            sentiment: qs?.sentiment_score !== undefined ? String(Math.round(qs.sentiment_score * 100)) : "",
-                          })
-                        }
-                      >
-                        Start from current scores
+              {/* Training labels */}
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Train the scorer</p>
+                {showTrainingForm ? (
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <GlassSelect label="Example type" value={labelExampleKind} onChange={(e) => setLabelExampleKind(e.target.value as "real" | "synthetic")} options={[{ value: "real", label: "Real conversation" }, { value: "synthetic", label: "Synthetic example" }]} />
+                      <GlassSelect label="Scope" value={labelShareScope} onChange={(e) => setLabelShareScope(e.target.value as "workspace_private" | "global_anonymous")} options={[{ value: "workspace_private", label: "Private" }, { value: "global_anonymous", label: "Shared anonymous" }]} />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {Object.entries(trainingLabels).map(([key, value]) => (
+                        <label key={key} className="space-y-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{key}</span>
+                          <input type="number" min={0} max={100} value={value} onChange={(e) => setTrainingLabels((c) => ({ ...c, [key]: e.target.value }))} className="glass-input w-full px-3 py-2 text-sm" placeholder="%" />
+                        </label>
+                      ))}
+                    </div>
+                    <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setTrainingLabels({
+                      overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
+                      accuracy: qs?.accuracy_score !== undefined ? String(Math.round(qs.accuracy_score * 100)) : "",
+                      hallucination: qs?.hallucination_score !== undefined ? String(Math.round(qs.hallucination_score * 100)) : "",
+                      resolution: qs?.resolution_score !== undefined ? String(Math.round(qs.resolution_score * 100)) : "",
+                      escalation: qs?.escalation_score !== undefined ? String(Math.round(qs.escalation_score * 100)) : "",
+                      tone: qs?.tone_score !== undefined ? String(Math.round(qs.tone_score * 100)) : "",
+                      sentiment: qs?.sentiment_score !== undefined ? String(Math.round(qs.sentiment_score * 100)) : "",
+                    })}>Start from current scores</GlassButton>
+                    <GlassTextarea value={labelNotes} onChange={(e) => setLabelNotes(e.target.value)} className="min-h-[80px]" placeholder="Why are these labels correct?" />
+                    <div className="flex gap-2">
+                      <GlassButton size="sm" className="w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
+                        {labelSetState === "saving" ? "Saving…" : "Save labels"}
                       </GlassButton>
-                      <GlassTextarea
-                        value={labelNotes}
-                        onChange={(event) => setLabelNotes(event.target.value)}
-                        className="min-h-[104px]"
-                        placeholder="Why are these labels correct?"
-                      />
-                      <div className="flex gap-2">
-                        <GlassButton size="sm" className="w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
-                          {labelSetState === "saving" ? "Saving..." : "Save labels"}
-                        </GlassButton>
-                        <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowTrainingForm(false)}>
-                          Cancel
-                        </GlassButton>
-                      </div>
-                    </>
-                  ) : (
-                    <GlassButton size="sm" className="w-full" onClick={() => setShowTrainingForm(true)}>
-                      Save training label
-                    </GlassButton>
-                  )}
-                  {labelSetState === "saved" ? <p className="text-xs text-score-good">Labels saved.</p> : null}
-                  {labelSetState === "error" ? <p className="text-xs text-score-critical">Failed to save labels.</p> : null}
-                </div>
+                      <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowTrainingForm(false)}>Cancel</GlassButton>
+                    </div>
+                  </div>
+                ) : (
+                  <GlassButton size="sm" className="w-full" onClick={() => setShowTrainingForm(true)}>Save training label</GlassButton>
+                )}
+                {labelSetState === "saved" && <p className="mt-2 text-xs text-[#10B981]">Labels saved.</p>}
+                {labelSetState === "error" && <p className="mt-2 text-xs text-[#EF4444]">Failed to save.</p>}
               </div>
             </div>
           </aside>
