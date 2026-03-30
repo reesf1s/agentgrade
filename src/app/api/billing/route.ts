@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { supabaseAdmin } from "@/lib/supabase";
+import { STRIPE_PRICES, PLAN_LIMITS } from "@/lib/db/types";
 
-const PLAN_LIMITS = {
-  starter: 5000,
-  growth: 25000,
-  enterprise: Infinity,
-};
-
-const PLAN_PRICES = {
-  starter: "£199/mo",
-  growth: "£499/mo",
-  enterprise: "Custom",
+const PLAN_PRICES: Record<string, string> = {
+  starter: `£${STRIPE_PRICES.starter.amount}/mo`,
+  growth: `£${STRIPE_PRICES.growth.amount}/mo`,
+  enterprise: `£${STRIPE_PRICES.enterprise.amount}/mo`,
 };
 
 /**
@@ -37,13 +32,14 @@ export async function GET() {
       .gte("created_at", monthStart.toISOString());
 
     const plan = workspace.plan ?? "starter";
-    const limit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? 5000;
+    const rawLimit = PLAN_LIMITS[plan] ?? 5000;
+    const isUnlimited = rawLimit <= 0;
 
     return NextResponse.json({
       plan,
-      price: PLAN_PRICES[plan as keyof typeof PLAN_PRICES] ?? "£199/mo",
+      price: PLAN_PRICES[plan] ?? "£199/mo",
       usage: count ?? 0,
-      limit: limit === Infinity ? null : limit,
+      limit: isUnlimited ? null : rawLimit,
       configured: !!process.env.STRIPE_SECRET_KEY,
       stripe_customer_id: workspace.stripe_customer_id,
       stripe_subscription_id: workspace.stripe_subscription_id,

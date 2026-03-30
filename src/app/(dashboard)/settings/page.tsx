@@ -48,6 +48,8 @@ interface BillingData {
   usage: number;
   limit: number | null;
   configured?: boolean;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
 }
 
 interface CalibrationInfo {
@@ -827,13 +829,31 @@ function KnowledgeTab() {
 
 // ─── Tab: Billing ─────────────────────────────────────────────────────────────
 
+const PLANS = [
+  { key: "starter", name: "Starter", price: "£199/mo", conversations: "5,000", current: false },
+  { key: "growth", name: "Growth", price: "£499/mo", conversations: "25,000", current: false },
+  { key: "enterprise", name: "Enterprise", price: "£999/mo", conversations: "Unlimited", current: false },
+] as const;
+
 function BillingTab() {
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check URL for success/cancel params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "1") {
+      setSuccessMsg("Your subscription has been updated. Changes may take a moment to reflect.");
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("success");
+      window.history.replaceState({}, "", url.toString());
+    }
+
     fetch("/api/billing")
       .then((r) => r.json())
       .then((d) => setBilling(d))
@@ -860,13 +880,14 @@ function BillingTab() {
     }
   }
 
-  async function openCheckout() {
+  async function openCheckout(plan: string) {
     setBillingError(null);
+    setCheckoutPlan(plan);
     try {
       const r = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "growth" }),
+        body: JSON.stringify({ plan }),
       });
       const d = await r.json();
       if (!r.ok) {
@@ -877,6 +898,8 @@ function BillingTab() {
     } catch (e) {
       console.error(e);
       setBillingError("Unable to start checkout.");
+    } finally {
+      setCheckoutPlan(null);
     }
   }
 
@@ -892,60 +915,127 @@ function BillingTab() {
     ? Math.min(100, ((billing.usage ?? 0) / billing.limit) * 100)
     : 0;
 
+  const currentPlan = billing?.plan ?? "starter";
+
   return (
-    <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
-      {billing ? (
-        <>
-          {!billing.configured && (
-            <div className="mb-4 rounded-[1.25rem] border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-900">
-              Stripe is not configured in production yet. Billing screens are wired, but checkout and the portal will stay unavailable until `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set in Vercel.
-            </div>
-          )}
+    <div className="space-y-4">
+      <GlassCard className="p-6">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Billing</h2>
 
-          {billingError && (
-            <div className="mb-4 rounded-[1.25rem] border border-red-200/70 bg-red-50/70 p-4 text-sm text-red-700">
-              {billingError}
-            </div>
-          )}
+        {successMsg && (
+          <div className="mb-4 rounded-xl border border-[rgba(16,185,129,0.20)] bg-[rgba(16,185,129,0.06)] p-4 text-sm text-[#10B981]">
+            {successMsg}
+          </div>
+        )}
 
-          <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)] capitalize">{billing.plan} Plan</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {billing.price} &middot; {billing.limit ? billing.limit.toLocaleString() : "Unlimited"} conversations
-                </p>
+        {!billing?.configured && (
+          <div className="mb-4 rounded-xl border border-[rgba(245,158,11,0.20)] bg-[rgba(245,158,11,0.06)] p-4 text-sm text-[#F59E0B]">
+            Stripe is not configured yet. Checkout and portal are unavailable until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set in Vercel environment variables.
+          </div>
+        )}
+
+        {billingError && (
+          <div className="mb-4 rounded-xl border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.06)] p-4 text-sm text-[#EF4444]">
+            {billingError}
+          </div>
+        )}
+
+        {billing ? (
+          <>
+            {/* Current plan + usage */}
+            <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)] capitalize">{currentPlan} Plan</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {billing.price} &middot; {billing.limit ? billing.limit.toLocaleString() : "Unlimited"} conversations/mo
+                  </p>
+                </div>
+                {billing.stripe_subscription_id && (
+                  <GlassButton size="sm" onClick={openPortal} disabled={portalLoading || !billing.configured}>
+                    {portalLoading ? "Opening..." : "Manage billing"}
+                  </GlassButton>
+                )}
               </div>
-              {billing.plan !== "enterprise" && (
-                <GlassButton size="sm" onClick={openCheckout} disabled={!billing.configured}>Upgrade</GlassButton>
+              {billing.limit && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-[var(--text-secondary)]">Usage this month</span>
+                    <span className="text-[var(--text-primary)] font-mono">
+                      {(billing.usage ?? 0).toLocaleString()} / {billing.limit.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.06)]">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${usagePct}%`,
+                        backgroundColor: usagePct > 90 ? "#EF4444" : usagePct > 75 ? "#F59E0B" : "rgba(255,255,255,0.40)",
+                      }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
-            {billing.limit && (
-              <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[var(--text-secondary)]">Usage this month</span>
-                  <span className="text-[var(--text-primary)] font-mono">
-                    {(billing.usage ?? 0).toLocaleString()} / {billing.limit.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-[var(--surface)]">
+
+            {/* Plan picker */}
+            <h3 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+              {currentPlan === "starter" ? "Choose a plan" : "Available plans"}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {PLANS.map((p) => {
+                const isCurrent = currentPlan === p.key;
+                const isDowngrade = PLANS.findIndex((x) => x.key === currentPlan) >= PLANS.findIndex((x) => x.key === p.key);
+                return (
                   <div
-                    className="h-full rounded-full bg-[var(--text-primary)]"
-                    style={{ width: `${usagePct}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <GlassButton onClick={openPortal} disabled={portalLoading || !billing.configured}>
-            {portalLoading ? "Opening..." : "Manage billing"}
-          </GlassButton>
-        </>
-      ) : (
-        <p className="text-sm text-[var(--text-muted)]">Unable to load billing information.</p>
-      )}
-    </GlassCard>
+                    key={p.key}
+                    className={`rounded-xl border p-4 transition-all ${
+                      isCurrent
+                        ? "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)]"
+                        : "border-[var(--border-subtle)] bg-[var(--surface)] hover:border-[rgba(255,255,255,0.10)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
+                      {isCurrent && (
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] border border-[var(--border-subtle)] rounded px-1.5 py-0.5">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-lg font-semibold text-[var(--text-primary)] font-mono">{p.price}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">{p.conversations} conversations/mo</p>
+                    {!isCurrent && !isDowngrade && (
+                      <GlassButton
+                        size="sm"
+                        className="mt-3 w-full"
+                        onClick={() => openCheckout(p.key)}
+                        disabled={!billing.configured || checkoutPlan !== null}
+                      >
+                        {checkoutPlan === p.key ? "Redirecting..." : "Upgrade"}
+                      </GlassButton>
+                    )}
+                    {!isCurrent && isDowngrade && billing.stripe_subscription_id && (
+                      <GlassButton
+                        size="sm"
+                        variant="ghost"
+                        className="mt-3 w-full"
+                        onClick={openPortal}
+                        disabled={!billing.configured || portalLoading}
+                      >
+                        Downgrade via portal
+                      </GlassButton>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)]">Unable to load billing information.</p>
+        )}
+      </GlassCard>
+    </div>
   );
 }
 
