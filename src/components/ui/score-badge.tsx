@@ -9,22 +9,22 @@ interface ScoreBadgeProps {
 
 export function ScoreBadge({ score, label, size = "md" }: ScoreBadgeProps) {
   const sizeClasses = {
-    sm: "text-[11px] px-2 py-0.5",
-    md: "text-xs px-2.5 py-1",
-    lg: "text-sm px-3 py-1.5 font-semibold",
+    sm: "text-[11px] px-1.5 py-0.5",
+    md: "text-xs px-2 py-0.5",
+    lg: "text-sm px-2.5 py-1 font-semibold",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-transparent font-semibold tabular-nums",
+        "inline-flex items-center gap-1 rounded-md font-semibold tabular-nums border",
         scoreBgColor(score),
         scoreColor(score),
         sizeClasses[size]
       )}
     >
-      {formatScore(score)}
-      {label && <span className="font-sans text-[0.85em] opacity-70">{label}</span>}
+      {formatScore(score)}%
+      {label && <span className="opacity-70 font-normal">{label}</span>}
     </span>
   );
 }
@@ -34,18 +34,18 @@ interface SeverityBadgeProps {
 }
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
-  const styles = {
-    low: "border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-secondary)]",
-    medium: "score-bg-warning score-warning",
-    high: "score-bg-warning score-warning",
-    critical: "score-bg-critical score-critical",
+  const styles: Record<string, string> = {
+    low:      "border border-[var(--border-subtle)] bg-[var(--surface-soft)] text-[var(--text-muted)]",
+    medium:   "border border-amber-200 bg-amber-50 text-amber-700",
+    high:     "border border-orange-200 bg-orange-50 text-orange-700",
+    critical: "border border-red-200 bg-red-50 text-red-700",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-        styles[severity]
+        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize",
+        styles[severity] || styles.low
       )}
     >
       {severity}

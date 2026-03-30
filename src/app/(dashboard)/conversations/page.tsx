@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Filter, Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
@@ -38,431 +38,374 @@ interface ConversationRow {
     | "waiting_for_quiet_period";
 }
 
-function statusLabel(conversation: ConversationRow) {
-  if (conversation.quality_scores) return `${conversation.quality_scores.confidence_level || "scored"} confidence`;
-  if (conversation.score_status === "waiting_for_completion") return "Waiting to close";
-  if (conversation.score_status === "waiting_for_quiet_period") return "Queued";
-  if (conversation.score_status === "refreshing") return "Refreshing";
-  return "Pending";
-}
-
 function priorityReason(conversation: ConversationRow) {
   if (!conversation.quality_scores) {
-    return conversation.score_status === "waiting_for_completion"
-      ? "Still open"
-      : "Scoring";
+    return conversation.score_status === "waiting_for_completion" ? "Still open" : "Scoring…";
   }
-
-  const score = conversation.quality_scores.overall_score;
+  const score   = conversation.quality_scores.overall_score;
   const summary = (conversation.quality_scores.summary || "").toLowerCase();
-  const flags = conversation.quality_scores.flags || [];
+  const flags   = conversation.quality_scores.flags || [];
 
-  if (flags.some((flag) => /escalation/i.test(flag)) || /escalat/.test(summary)) return "Escalation handling";
-  if (flags.some((flag) => /resolution/i.test(flag)) || /resolve|next step|follow-up/.test(summary)) return "Resolution weak";
-  if (flags.some((flag) => /ground|crm|record|source|verify/i.test(flag)) || /verify|record|source|detail/.test(summary)) {
-    return "Needs source check";
-  }
+  if (flags.some((f) => /escalation/i.test(f)) || /escalat/.test(summary)) return "Escalation issue";
+  if (flags.some((f) => /resolution/i.test(f)) || /resolve|next step|follow-up/.test(summary)) return "Weak resolution";
+  if (flags.some((f) => /ground|crm|record|source|verify/i.test(f)) || /verify|record|source|detail/.test(summary)) return "Source check needed";
   if (score < 0.5) return "Needs review";
   if (score < 0.72) return "Quick pass";
-  return "Likely safe";
+  return "Looks safe";
 }
 
 function groupLabel(conversation: ConversationRow) {
-  const score = conversation.quality_scores?.overall_score;
-  if (score === undefined || score === null) return "Quick pass";
-  if (score < 0.65) return "Review now";
-  if (score < 0.82) return "Quick pass";
+  const s = conversation.quality_scores?.overall_score;
+  if (s === undefined || s === null) return "Pending";
+  if (s < 0.65) return "Review now";
+  if (s < 0.82) return "Quick pass";
   return "Safe to close";
 }
 
-export default function ConversationsPage() {
-  const [conversations, setConversations] = useState<ConversationRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [savingActionId, setSavingActionId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [scoreFilter, setScoreFilter] = useState<string>("all");
-  const [platform, setPlatform] = useState<string>("all");
-  const [escalated, setEscalated] = useState<string>("all");
-  const [flag, setFlag] = useState("");
-  const [sortPreset, setSortPreset] = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
-  const [queueStates, setQueueStates] = useState<Record<string, QueueWorkflowState>>({});
-  const { success, error } = useToast();
+const GROUP_ORDER = ["Review now", "Quick pass", "Pending", "Safe to close"];
 
-  useEffect(() => {
-    setQueueStates(getQueueStateMap());
-  }, []);
+const RISK_COLOR: Record<string, string> = {
+  "Review now":    "score-critical",
+  "Quick pass":    "score-warning",
+  "Pending":       "text-[var(--text-muted)]",
+  "Safe to close": "score-good",
+};
+
+export default function ConversationsPage() {
+  const [conversations, setConversations]   = useState<ConversationRow[]>([]);
+  const [total, setTotal]                   = useState(0);
+  const [loading, setLoading]               = useState(true);
+  const [savingActionId, setSavingActionId] = useState<string | null>(null);
+  const [search, setSearch]                 = useState("");
+  const [scoreFilter, setScoreFilter]       = useState<string>("all");
+  const [platform, setPlatform]             = useState<string>("all");
+  const [escalated, setEscalated]           = useState<string>("all");
+  const [flag, setFlag]                     = useState("");
+  const [sortPreset, setSortPreset]         = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
+  const [queueStates, setQueueStates]       = useState<Record<string, QueueWorkflowState>>({});
+  const [showFilters, setShowFilters]       = useState(false);
+  const { success, error }                  = useToast();
+
+  useEffect(() => { setQueueStates(getQueueStateMap()); }, []);
 
   const fetchConversations = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (search)               params.set("search", search);
     if (scoreFilter !== "all") params.set("score_filter", scoreFilter);
-    if (platform !== "all") params.set("platform", platform);
-    if (escalated !== "all") params.set("escalated", escalated);
-    if (flag) params.set("flag", flag);
+    if (platform !== "all")   params.set("platform", platform);
+    if (escalated !== "all")  params.set("escalated", escalated);
+    if (flag)                  params.set("flag", flag);
     params.set("limit", "50");
 
     fetch(`/api/conversations?${params}`)
-      .then((response) => response.json())
+      .then((r) => r.json())
       .then((data) => {
-        const nextConversations = (data.conversations || []).filter((conversation: ConversationRow) => {
-          const workflow = getConversationWorkflow(conversation.metadata);
-          return workflow?.queue_state !== "safe" && workflow?.queue_state !== "reviewed";
+        const rows = (data.conversations || []).filter((c: ConversationRow) => {
+          const wf = getConversationWorkflow(c.metadata);
+          return wf?.queue_state !== "safe" && wf?.queue_state !== "reviewed";
         });
-
-        setConversations(nextConversations);
-        setTotal(nextConversations.length);
+        setConversations(rows);
+        setTotal(rows.length);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [search, scoreFilter, platform, escalated, flag]);
 
   useEffect(() => {
-    const debounce = setTimeout(fetchConversations, 280);
-    return () => clearTimeout(debounce);
+    const t = setTimeout(fetchConversations, 280);
+    return () => clearTimeout(t);
   }, [fetchConversations]);
 
   useEffect(() => {
     if (loading) return;
-
     const shouldPoll = conversations.some(
-      (conversation) =>
-        conversation.score_status === "pending" || conversation.score_status === "refreshing"
+      (c) => c.score_status === "pending" || c.score_status === "refreshing"
     );
-
     if (!shouldPoll) return;
-
-    const timer = setTimeout(fetchConversations, 2500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(fetchConversations, 2500);
+    return () => clearTimeout(t);
   }, [conversations, loading, fetchConversations]);
 
   const stats = useMemo(() => {
-    const scored = conversations.filter((conversation) => Boolean(conversation.quality_scores));
-    const reviewNext = scored.filter((conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.72);
-    const pending = conversations.filter((conversation) => !conversation.quality_scores);
-
-    return {
-      scored: scored.length,
-      reviewNext: reviewNext.length,
-      pending: pending.length,
-      reviewed: Object.values(queueStates).filter((value) => value === "reviewed" || value === "safe").length,
-    };
+    const scored      = conversations.filter((c) => Boolean(c.quality_scores));
+    const reviewNext  = scored.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.72);
+    const pending     = conversations.filter((c) => !c.quality_scores);
+    const doneCount   = Object.values(queueStates).filter((v) => v === "reviewed" || v === "safe").length;
+    return { scored: scored.length, reviewNext: reviewNext.length, pending: pending.length, done: doneCount };
   }, [conversations, queueStates]);
 
-  const sortedConversations = useMemo(() => {
-    const sorted = [...conversations];
-
-    sorted.sort((a, b) => {
-      const aScore = a.quality_scores?.overall_score ?? -1;
-      const bScore = b.quality_scores?.overall_score ?? -1;
-      const aConfidence = a.quality_scores?.confidence_level === "high" ? 2 : a.quality_scores?.confidence_level === "medium" ? 1 : 0;
-      const bConfidence = b.quality_scores?.confidence_level === "high" ? 2 : b.quality_scores?.confidence_level === "medium" ? 1 : 0;
-
+  const sorted = useMemo(() => {
+    const arr = [...conversations];
+    arr.sort((a, b) => {
+      const aS = a.quality_scores?.overall_score ?? -1;
+      const bS = b.quality_scores?.overall_score ?? -1;
+      const aC = a.quality_scores?.confidence_level === "high" ? 2 : a.quality_scores?.confidence_level === "medium" ? 1 : 0;
+      const bC = b.quality_scores?.confidence_level === "high" ? 2 : b.quality_scores?.confidence_level === "medium" ? 1 : 0;
       switch (sortPreset) {
-        case "risk":
-          return aScore - bScore;
-        case "recent":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "confidence":
-          return aConfidence - bConfidence || aScore - bScore;
-        case "safe":
-          return bScore - aScore;
-        case "review":
+        case "risk":       return aS - bS;
+        case "recent":     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "confidence": return aC - bC || aS - bS;
+        case "safe":       return bS - aS;
         default: {
-          const aPending = a.quality_scores ? 0 : 1;
-          const bPending = b.quality_scores ? 0 : 1;
-          return aPending - bPending || aScore - bScore;
+          const aP = a.quality_scores ? 0 : 1;
+          const bP = b.quality_scores ? 0 : 1;
+          return aP - bP || aS - bS;
         }
       }
     });
-
-    return sorted;
+    return arr;
   }, [conversations, sortPreset]);
 
-  const groupedConversations = useMemo(() => {
-    const groups: Record<string, ConversationRow[]> = {
-      "Review now": [],
-      "Quick pass": [],
-      "Safe to close": [],
-    };
-
-    for (const conversation of sortedConversations) {
-      groups[groupLabel(conversation)].push(conversation);
-    }
-
-    return groups;
-  }, [sortedConversations]);
+  const groups = useMemo(() => {
+    const g: Record<string, ConversationRow[]> = { "Review now": [], "Quick pass": [], "Pending": [], "Safe to close": [] };
+    for (const c of sorted) g[groupLabel(c)].push(c);
+    return g;
+  }, [sorted]);
 
   async function updateQueueState(conversationId: string, state: QueueWorkflowState) {
-    const previousConversations = conversations;
-    const previousTotal = total;
+    const prev = conversations;
+    const prevTotal = total;
 
     setQueueState(conversationId, state);
-    setQueueStates((current) => ({ ...current, [conversationId]: state }));
+    setQueueStates((cur) => ({ ...cur, [conversationId]: state }));
     setSavingActionId(conversationId);
-    setConversations((current) => current.filter((conversation) => conversation.id !== conversationId));
-    setTotal((current) => Math.max(0, current - 1));
+    setConversations((cur) => cur.filter((c) => c.id !== conversationId));
+    setTotal((cur) => Math.max(0, cur - 1));
 
     try {
       const disposition =
-        state === "safe"
-          ? "safe"
-          : state === "reviewed"
-            ? "ignore"
-            : state === "escalated"
-              ? "escalate_issue"
-              : state === "needs_review"
-                ? "action_needed"
-                : "watch";
+        state === "safe"         ? "safe"
+        : state === "reviewed"   ? "ignore"
+        : state === "escalated"  ? "escalate_issue"
+        : state === "needs_review" ? "action_needed"
+        : "watch";
 
-      const response = await fetch(`/api/conversations/${conversationId}`, {
+      const res = await fetch(`/api/conversations/${conversationId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ disposition, queue_state: state }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save action");
-      }
-
+      if (!res.ok) throw new Error("Failed");
       success(`Marked as ${state.replaceAll("_", " ")}`);
-    } catch (err) {
-      console.error(err);
-      setConversations(previousConversations);
-      setTotal(previousTotal);
-      setQueueStates((current) => {
-        const next = { ...current };
-        delete next[conversationId];
-        return next;
-      });
-      error("Could not save action. Retry.");
+    } catch {
+      setConversations(prev);
+      setTotal(prevTotal);
+      setQueueStates((cur) => { const n = { ...cur }; delete n[conversationId]; return n; });
+      error("Could not save. Try again.");
     } finally {
       setSavingActionId(null);
     }
   }
 
+  const highRisk = conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length;
+
   return (
-    <div className="space-y-6 pb-10">
-      <section className="glass-static rounded-[1.25rem] p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="page-eyebrow">Review queue</p>
-            <h1 className="mt-1.5 page-title">Review inbox.</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span className="operator-chip">
-              <span className="font-semibold text-[var(--text-primary)]">{stats.reviewNext}</span>
-              &nbsp;to review
-            </span>
-            {conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length > 0 && (
-              <span className="operator-chip score-critical">
-                {conversations.filter((c) => (c.quality_scores?.overall_score ?? 1) < 0.5).length} high risk
-              </span>
-            )}
-            {stats.reviewed > 0 && (
-              <span className="operator-chip">
-                {stats.reviewed} done
-              </span>
-            )}
+    <div className="space-y-5 pb-8">
+
+      {/* Page header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Review queue</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
+            <span><strong className="text-[var(--text-primary)]">{stats.reviewNext}</strong> to review</span>
+            {highRisk > 0 && <span><strong className="score-critical">{highRisk}</strong> high risk</span>}
+            {stats.pending > 0 && <span>{stats.pending} scoring</span>}
+            {stats.done > 0 && <span>{stats.done} processed</span>}
           </div>
         </div>
-        {total > 0 && (
-          <div className="mt-3 h-1 rounded-full bg-[var(--surface)]">
-            <div
-              className="h-full rounded-full bg-[var(--text-primary)] transition-all"
-              style={{ width: `${Math.min(100, (stats.reviewed / (total + stats.reviewed)) * 100)}%` }}
-            />
-          </div>
-        )}
-      </section>
+      </div>
 
-      <section className="space-y-3 border-b border-[var(--divider)] pb-4">
+      {/* Filters */}
+      <div className="glass-static p-3">
         <div className="flex flex-wrap items-center gap-2">
-          {[
-            ["review", "Review now"],
-            ["risk", "Highest risk"],
-            ["recent", "Most recent"],
-            ["confidence", "Lowest confidence"],
-            ["safe", "Likely safe"],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSortPreset(key as typeof sortPreset)}
-              className={`operator-chip transition-colors ${
-                sortPreset === key ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(180px,0.7fr)_minmax(160px,0.7fr)]">
-          <label className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+          {/* Search */}
+          <label className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
-              placeholder="Search by customer, external id, or issue"
+              placeholder="Search customer, ID, or issue…"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="glass-input w-full py-2.5 pl-10 pr-4 text-sm"
+              onChange={(e) => setSearch(e.target.value)}
+              className="glass-input w-full py-1.5 pl-8 pr-3 text-sm"
             />
           </label>
 
-          <select
-            value={scoreFilter}
-            onChange={(event) => setScoreFilter(event.target.value)}
-            className="glass-input px-3 py-2.5 text-sm"
+          {/* Sort presets */}
+          <div className="flex flex-wrap items-center gap-1">
+            {([
+              ["review",     "Review first"],
+              ["risk",       "Highest risk"],
+              ["recent",     "Most recent"],
+              ["safe",       "Lowest risk"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSortPreset(key)}
+                className={`operator-chip cursor-pointer transition-colors ${
+                  sortPreset === key
+                    ? "!border-[var(--btn-primary-bg)] !bg-[var(--sidebar-accent-bg)] !text-[var(--sidebar-accent-fg)] font-semibold"
+                    : ""
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* More filters toggle */}
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className="operator-chip cursor-pointer ml-auto"
           >
-            <option value="all">Review now</option>
-            <option value="critical">Needs review</option>
-            <option value="warning">Watch</option>
-            <option value="good">Likely safe</option>
-          </select>
-
-          <details className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2.5">
-            <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
-              <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-              Refine
-            </summary>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <select
-                value={platform}
-                onChange={(event) => setPlatform(event.target.value)}
-                className="glass-input px-3 py-2.5 text-sm"
-              >
-                <option value="all">All platforms</option>
-                <option value="intercom">Intercom</option>
-                <option value="zendesk">Zendesk</option>
-                <option value="voiceflow">Voiceflow</option>
-                <option value="custom">Custom</option>
-                <option value="csv">CSV / JSON</option>
-              </select>
-
-              <select
-                value={escalated}
-                onChange={(event) => setEscalated(event.target.value)}
-                className="glass-input px-3 py-2.5 text-sm"
-              >
-                <option value="all">All escalation states</option>
-                <option value="true">Escalated</option>
-                <option value="false">Not escalated</option>
-              </select>
-
-              <input
-                type="text"
-                placeholder="Issue"
-                value={flag}
-                onChange={(event) => setFlag(event.target.value)}
-                className="glass-input px-3 py-2.5 text-sm sm:col-span-2"
-              />
-            </div>
-          </details>
+            Filters <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </button>
         </div>
-      </section>
 
-      <div className="space-y-6">
-        {Object.entries(groupedConversations).map(([groupName, items]) =>
-          items.length > 0 ? (
-            <section key={groupName} className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">{groupName}</h2>
-                <span className="text-xs text-[var(--text-muted)]">{items.length}</span>
+        {showFilters && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--divider)] pt-3">
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value)}
+              className="glass-input px-2.5 py-1.5 text-sm"
+            >
+              <option value="all">All scores</option>
+              <option value="critical">Needs review (&lt;65%)</option>
+              <option value="warning">Watch (65–82%)</option>
+              <option value="good">Safe (&gt;82%)</option>
+            </select>
+
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              className="glass-input px-2.5 py-1.5 text-sm"
+            >
+              <option value="all">All platforms</option>
+              <option value="intercom">Intercom</option>
+              <option value="zendesk">Zendesk</option>
+              <option value="voiceflow">Voiceflow</option>
+              <option value="custom">Custom</option>
+              <option value="csv">CSV / JSON</option>
+            </select>
+
+            <select
+              value={escalated}
+              onChange={(e) => setEscalated(e.target.value)}
+              className="glass-input px-2.5 py-1.5 text-sm"
+            >
+              <option value="all">All escalation states</option>
+              <option value="true">Escalated</option>
+              <option value="false">Not escalated</option>
+            </select>
+
+            <input
+              type="text"
+              placeholder="Issue keyword…"
+              value={flag}
+              onChange={(e) => setFlag(e.target.value)}
+              className="glass-input px-2.5 py-1.5 text-sm"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Conversation table */}
+      <div className="space-y-5">
+        {GROUP_ORDER.map((groupName) => {
+          const items = groups[groupName];
+          if (!items || items.length === 0) return null;
+
+          return (
+            <section key={groupName}>
+              {/* Group header */}
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className={`section-label ${RISK_COLOR[groupName] || "text-[var(--text-muted)]"}`}>
+                  {groupName}
+                </span>
+                <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+                  {items.length}
+                </span>
               </div>
 
-              {/* Column headers */}
-              <div className="hidden xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(130px,1fr)_minmax(80px,0.5fr)_minmax(160px,1fr)] xl:items-center xl:gap-3 xl:px-0.5 xl:pb-1.5">
-                <p className="section-label">Conversation</p>
-                <p className="section-label">Issue</p>
-                <p className="section-label">Score</p>
-                <p className="section-label">Actions</p>
-              </div>
+              {/* Table */}
+              <div className="glass-static overflow-hidden">
+                {/* Column headers */}
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px_minmax(160px,1fr)] gap-0 border-b border-[var(--border-subtle)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  <span>Conversation</span>
+                  <span>Issue</span>
+                  <span>Score</span>
+                  <span>Actions</span>
+                </div>
 
-              <div className="space-y-0">
-                {items.map((conversation) => (
-                  <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
-                    <div className="stack-row group">
-                      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,2fr)_minmax(130px,1fr)_minmax(80px,0.5fr)_minmax(160px,1fr)] xl:items-center xl:gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                            {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                            {formatDate(conversation.created_at)}
-                            {conversation.quality_scores?.confidence_level && (
-                              <> · {conversation.quality_scores.confidence_level} conf</>
-                            )}
-                          </p>
-                        </div>
+                {items.map((c, idx) => (
+                  <Link key={c.id} href={`/conversations/${c.id}`} className="block">
+                    <div
+                      className={`grid grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_80px_minmax(160px,1fr)] items-center gap-0 px-4 py-2.5 hover:bg-[var(--table-row-hover)] transition-colors ${
+                        idx < items.length - 1 ? "border-b border-[var(--border-subtle)]" : ""
+                      }`}
+                    >
+                      {/* Conversation */}
+                      <div className="min-w-0 pr-4">
+                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                          {c.customer_identifier || c.external_id || "Unknown"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                          {formatDate(c.created_at)}
+                          {c.quality_scores?.confidence_level && ` · ${c.quality_scores.confidence_level}`}
+                        </p>
+                      </div>
 
-                        <div className="min-w-0 text-xs font-medium text-[var(--text-secondary)]">
-                          {priorityReason(conversation)}
-                        </div>
+                      {/* Issue */}
+                      <div className="pr-4 text-xs text-[var(--text-secondary)]">
+                        {priorityReason(c)}
+                      </div>
 
-                        <div className="flex items-center gap-2">
-                          {conversation.quality_scores ? (
-                            <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
-                          ) : (
-                            <span className="text-xs text-[var(--text-muted)]">Pending</span>
-                          )}
-                        </div>
+                      {/* Score */}
+                      <div>
+                        {c.quality_scores ? (
+                          <ScoreBadge score={c.quality_scores.overall_score} size="sm" />
+                        ) : (
+                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                        )}
+                      </div>
 
-                        <div
-                          className="flex flex-wrap gap-1.5"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                          }}
-                        >
+                      {/* Actions */}
+                      <div
+                        className="flex flex-wrap gap-1"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      >
+                        {(["safe", "needs_review", "escalated", "reviewed"] as const).map((state) => (
                           <button
+                            key={state}
                             type="button"
-                            className="operator-chip"
-                            disabled={savingActionId === conversation.id}
-                            onClick={() => updateQueueState(conversation.id, "safe")}
+                            disabled={savingActionId === c.id}
+                            onClick={() => updateQueueState(c.id, state)}
+                            className="glass-button py-0.5 px-2 text-xs"
                           >
-                            {savingActionId === conversation.id ? "···" : "Safe"}
+                            {savingActionId === c.id
+                              ? "···"
+                              : state === "safe"         ? "Safe"
+                              : state === "needs_review" ? "Action"
+                              : state === "escalated"    ? "Escalate"
+                              : "Ignore"}
                           </button>
-                          <button
-                            type="button"
-                            className="operator-chip"
-                            disabled={savingActionId === conversation.id}
-                            onClick={() => updateQueueState(conversation.id, "needs_review")}
-                          >
-                            Action
-                          </button>
-                          <button
-                            type="button"
-                            className="operator-chip"
-                            disabled={savingActionId === conversation.id}
-                            onClick={() => updateQueueState(conversation.id, "escalated")}
-                          >
-                            Escalate
-                          </button>
-                          <button
-                            type="button"
-                            className="operator-chip"
-                            disabled={savingActionId === conversation.id}
-                            onClick={() => updateQueueState(conversation.id, "reviewed")}
-                          >
-                            Ignore
-                          </button>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
             </section>
-          ) : null
-        )}
+          );
+        })}
 
-        {!loading && conversations.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="text-sm text-[var(--text-muted)]">No conversations match these filters.</p>
+        {!loading && conversations.length === 0 && (
+          <div className="glass-static py-12 text-center">
+            <p className="text-sm text-[var(--text-muted)]">No conversations match your filters.</p>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
