@@ -127,6 +127,7 @@ body {
 
 html {
   background: var(--background);
+  font-size: 93.75%;
 }
 
 .dark .glass-sidebar {

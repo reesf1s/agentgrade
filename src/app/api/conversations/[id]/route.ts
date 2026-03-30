@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { compactReplayArtifacts } from "@/lib/messages/transcript-normalizer";
 import { isConversationExplicitlyIncomplete } from "@/lib/ingest/completion";
 import type { PromptImprovement, QualityScore } from "@/lib/db/types";
+import type { QueueWorkflowState, ReviewDisposition } from "@/lib/review-workflow";
 
 function sanitizeReplayArtifactSignals(
   qualityScore: (QualityScore & { flags?: string[]; prompt_improvements?: PromptImprovement[] }) | null,
@@ -112,6 +113,81 @@ export async function GET(
     );
   } catch (error) {
     console.error("Conversation detail API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/conversations/:id
+ * Persists lightweight workflow state into conversation metadata.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const ctx = await getWorkspaceContext();
+    if (!ctx) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = (await request.json()) as {
+      disposition?: ReviewDisposition;
+      queue_state?: QueueWorkflowState;
+    };
+
+    const { data: conversation, error: fetchError } = await supabaseAdmin
+      .from("conversations")
+      .select("id, metadata")
+      .eq("id", id)
+      .eq("workspace_id", ctx.workspace.id)
+      .single();
+
+    if (fetchError || !conversation) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    const currentMetadata = (conversation.metadata as Record<string, unknown> | null) || {};
+    const currentWorkflow =
+      currentMetadata.review_workflow && typeof currentMetadata.review_workflow === "object"
+        ? (currentMetadata.review_workflow as Record<string, unknown>)
+        : {};
+
+    const nextMetadata = {
+      ...currentMetadata,
+      review_workflow: {
+        ...currentWorkflow,
+        ...(body.disposition ? { disposition: body.disposition } : {}),
+        ...(body.queue_state ? { queue_state: body.queue_state } : {}),
+        updated_at: new Date().toISOString(),
+      },
+    };
+
+    const updatePayload: Record<string, unknown> = {
+      metadata: nextMetadata,
+    };
+
+    if (body.disposition === "escalate_issue" || body.queue_state === "escalated") {
+      updatePayload.was_escalated = true;
+    }
+
+    const { data: updated, error: updateError } = await supabaseAdmin
+      .from("conversations")
+      .update(updatePayload)
+      .eq("id", id)
+      .eq("workspace_id", ctx.workspace.id)
+      .select("id, metadata, was_escalated")
+      .single();
+
+    if (updateError || !updated) {
+      console.error("Conversation workflow update failed:", updateError);
+      return NextResponse.json({ error: "Failed to update review state" }, { status: 500 });
+    }
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Conversation workflow PATCH error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

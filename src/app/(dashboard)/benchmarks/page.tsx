@@ -5,22 +5,29 @@ import { loadBenchmarkStats } from "@/lib/dashboard-data";
 import { getUserId } from "@/lib/auth/get-user";
 import { getWorkspaceContext } from "@/lib/workspace";
 
+export const dynamic = "force-dynamic";
+
 export default async function BenchmarksPage() {
-  const userId = await getUserId();
-  if (!userId) {
-    redirect("/sign-in");
-  }
+  try {
+    const userId = await getUserId();
+    if (!userId) {
+      redirect("/sign-in");
+    }
 
-  const workspaceContext = await getWorkspaceContext();
-  if (!workspaceContext?.workspace.id) {
-    return (
-      <SetupEmptyState
-        title="Benchmarks start once conversations land"
-        description="Benchmarks don’t require a finished onboarding flow, but they do require a connected agent and enough scored conversations to compare quality meaningfully."
-      />
-    );
-  }
+    const workspaceContext = await getWorkspaceContext();
+    if (!workspaceContext?.workspace.id) {
+      return (
+        <SetupEmptyState
+          title="Benchmarks start once conversations land"
+          description="Benchmarks don’t require a finished onboarding flow, but they do require a connected agent and enough scored conversations to compare quality meaningfully."
+        />
+      );
+    }
 
-  const stats = await loadBenchmarkStats(workspaceContext.workspace.id, 30);
-  return <BenchmarksPageClient stats={stats} />;
+    const stats = await loadBenchmarkStats(workspaceContext.workspace.id, 30);
+    return <BenchmarksPageClient stats={stats} />;
+  } catch (error) {
+    console.error("Benchmarks page error:", error);
+    throw error;
+  }
 }

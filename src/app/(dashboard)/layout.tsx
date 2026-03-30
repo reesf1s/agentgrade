@@ -12,7 +12,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[var(--background)]">
       <Sidebar />
       <main className="relative min-h-screen px-4 pb-6 pt-20 lg:ml-[16rem] lg:px-5 lg:pt-5">
-        <div className="mx-auto max-w-[96rem]">
+        <div className="mx-auto max-w-[68.75rem]">
           <div className="workspace-frame min-h-[calc(100vh-2rem)] px-4 py-4 sm:px-5 lg:px-5 lg:py-5">
             <div className="workspace-toolbar mb-4 flex items-center justify-between gap-4 px-4 py-3">
               <div className="min-w-0">

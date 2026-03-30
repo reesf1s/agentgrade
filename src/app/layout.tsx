@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 function cleanClerkPath(value: string | undefined, fallback: string) {
@@ -64,10 +65,10 @@ export default function RootLayout({
             }}
           />
         </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <ThemeProvider>{children}</ThemeProvider>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <ToastProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </ToastProvider>
         </body>
       </html>
     </ClerkProvider>

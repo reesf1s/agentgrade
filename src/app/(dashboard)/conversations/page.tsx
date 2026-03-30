@@ -4,8 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Filter, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
+import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import { getQueueStateMap, setQueueState, type QueueWorkflowState } from "@/lib/review-workflow";
+import {
+  getConversationWorkflow,
+  getQueueStateMap,
+  setQueueState,
+  type QueueWorkflowState,
+} from "@/lib/review-workflow";
 
 interface ConversationRow {
   id: string;
@@ -14,6 +20,7 @@ interface ConversationRow {
   platform: string;
   was_escalated: boolean;
   created_at: string;
+  metadata?: Record<string, unknown>;
   quality_scores?: {
     overall_score: number;
     accuracy_score?: number;
@@ -72,6 +79,7 @@ export default function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [savingActionId, setSavingActionId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<string>("all");
   const [platform, setPlatform] = useState<string>("all");
@@ -79,6 +87,7 @@ export default function ConversationsPage() {
   const [flag, setFlag] = useState("");
   const [sortPreset, setSortPreset] = useState<"review" | "risk" | "recent" | "confidence" | "safe">("review");
   const [queueStates, setQueueStates] = useState<Record<string, QueueWorkflowState>>({});
+  const { success, error } = useToast();
 
   useEffect(() => {
     setQueueStates(getQueueStateMap());
@@ -97,8 +106,13 @@ export default function ConversationsPage() {
     fetch(`/api/conversations?${params}`)
       .then((response) => response.json())
       .then((data) => {
-        setConversations(data.conversations || []);
-        setTotal(data.total || 0);
+        const nextConversations = (data.conversations || []).filter((conversation: ConversationRow) => {
+          const workflow = getConversationWorkflow(conversation.metadata);
+          return workflow?.queue_state !== "safe" && workflow?.queue_state !== "reviewed";
+        });
+
+        setConversations(nextConversations);
+        setTotal(nextConversations.length);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -180,9 +194,52 @@ export default function ConversationsPage() {
     return groups;
   }, [sortedConversations]);
 
-  function updateQueueState(conversationId: string, state: QueueWorkflowState) {
+  async function updateQueueState(conversationId: string, state: QueueWorkflowState) {
+    const previousConversations = conversations;
+    const previousTotal = total;
+
     setQueueState(conversationId, state);
     setQueueStates((current) => ({ ...current, [conversationId]: state }));
+    setSavingActionId(conversationId);
+    setConversations((current) => current.filter((conversation) => conversation.id !== conversationId));
+    setTotal((current) => Math.max(0, current - 1));
+
+    try {
+      const disposition =
+        state === "safe"
+          ? "safe"
+          : state === "reviewed"
+            ? "ignore"
+            : state === "escalated"
+              ? "escalate_issue"
+              : state === "needs_review"
+                ? "action_needed"
+                : "watch";
+
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disposition, queue_state: state }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save action");
+      }
+
+      success(`Marked as ${state.replaceAll("_", " ")}`);
+    } catch (err) {
+      console.error(err);
+      setConversations(previousConversations);
+      setTotal(previousTotal);
+      setQueueStates((current) => {
+        const next = { ...current };
+        delete next[conversationId];
+        return next;
+      });
+      error("Could not save action. Retry.");
+    } finally {
+      setSavingActionId(null);
+    }
   }
 
   return (
@@ -314,45 +371,76 @@ export default function ConversationsPage() {
                 {items.map((conversation) => (
                   <Link key={conversation.id} href={`/conversations/${conversation.id}`} className="block">
                     <div className="stack-row group">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_minmax(120px,0.65fr)_minmax(110px,0.65fr)_minmax(110px,0.65fr)_minmax(180px,1fr)] xl:items-center">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                             {conversation.customer_identifier || conversation.external_id || "Unknown conversation"}
                           </p>
-                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            {priorityReason(conversation)}
-                          </p>
-                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            {formatDate(conversation.created_at)} · {conversation.quality_scores?.confidence_level || "pending"} confidence
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">{statusLabel(conversation)}</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">{formatDate(conversation.created_at)} · {conversation.quality_scores?.confidence_level || "pending"}</p>
                         </div>
+
+                        <div className="min-w-0 text-sm text-[var(--text-secondary)]">{priorityReason(conversation)}</div>
+
+                        <div className="min-w-0 text-xs text-[var(--text-muted)]">
+                          {conversation.quality_scores
+                            ? `Acc ${Math.round((conversation.quality_scores.accuracy_score ?? 0) * 100)} · Hall ${Math.round((conversation.quality_scores.hallucination_score ?? 0) * 100)} · Res ${Math.round((conversation.quality_scores.resolution_score ?? 0) * 100)}`
+                            : "Pending"}
+                        </div>
+
+                        <div className="text-sm text-[var(--text-secondary)]">
+                          {(conversation.quality_scores?.overall_score ?? 1) < 0.5
+                            ? "High"
+                            : (conversation.quality_scores?.overall_score ?? 1) < 0.72
+                              ? "Moderate"
+                              : "Low"}
+                        </div>
+
                         <div className="flex shrink-0 items-center gap-2">
-                          <span className="operator-chip">{conversation.quality_scores?.confidence_level || "pending"}</span>
                           {conversation.quality_scores ? <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" /> : null}
                         </div>
-                      </div>
 
-                      <div
-                        className="mt-2 flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                        }}
-                      >
-                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "safe")}>
-                          Safe
-                        </button>
-                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "needs_review")}>
-                          Watch
-                        </button>
-                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "escalated")}>
-                          Escalate
-                        </button>
-                        <button type="button" className="operator-chip" onClick={() => updateQueueState(conversation.id, "snoozed")}>
-                          Snooze
-                        </button>
+                        <div
+                          className="flex flex-wrap gap-2 transition-opacity xl:opacity-0 xl:group-hover:opacity-100"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="operator-chip"
+                            disabled={savingActionId === conversation.id}
+                            onClick={() => updateQueueState(conversation.id, "safe")}
+                          >
+                            {savingActionId === conversation.id ? "Saving..." : "Safe"}
+                          </button>
+                          <button
+                            type="button"
+                            className="operator-chip"
+                            disabled={savingActionId === conversation.id}
+                            onClick={() => updateQueueState(conversation.id, "needs_review")}
+                          >
+                            Action
+                          </button>
+                          <button
+                            type="button"
+                            className="operator-chip"
+                            disabled={savingActionId === conversation.id}
+                            onClick={() => updateQueueState(conversation.id, "escalated")}
+                          >
+                            Escalate
+                          </button>
+                          <button
+                            type="button"
+                            className="operator-chip"
+                            disabled={savingActionId === conversation.id}
+                            onClick={() => updateQueueState(conversation.id, "reviewed")}
+                          >
+                            Ignore
+                          </button>
+                        </div>
                       </div>
+                      <div className="text-xs text-[var(--text-muted)]">{statusLabel(conversation)}</div>
                     </div>
                   </Link>
                 ))}

@@ -26,6 +26,12 @@ type WorkflowStore = {
   issueState?: Record<string, IssueWorkflowState>;
 };
 
+export interface ConversationWorkflowRecord {
+  disposition?: ReviewDisposition;
+  queue_state?: QueueWorkflowState;
+  updated_at?: string;
+}
+
 const STORAGE_KEY = "agentgrade-review-workflow";
 
 function canUseStorage() {
@@ -91,4 +97,20 @@ export function setIssueState(issueId: string, state: IssueWorkflowState) {
       [issueId]: state,
     },
   });
+}
+
+export function getConversationWorkflow(metadata?: Record<string, unknown> | null): ConversationWorkflowRecord | null {
+  const workflow = metadata?.review_workflow;
+  if (!workflow || typeof workflow !== "object") {
+    return null;
+  }
+
+  const record = workflow as Record<string, unknown>;
+  return {
+    disposition:
+      typeof record.disposition === "string" ? (record.disposition as ReviewDisposition) : undefined,
+    queue_state:
+      typeof record.queue_state === "string" ? (record.queue_state as QueueWorkflowState) : undefined,
+    updated_at: typeof record.updated_at === "string" ? record.updated_at : undefined,
+  };
 }

@@ -15,6 +15,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { ScoreBadge } from "@/components/ui/score-badge";
+import { useToast } from "@/components/ui/toast";
 import { scoreColor, formatScore } from "@/lib/utils";
 import type { ClaimAnalysis, Message, QualityScore } from "@/lib/db/types";
 import { isGroundingRiskOnlyScore } from "@/lib/scoring/quality-score-status";
@@ -221,6 +222,7 @@ export default function ConversationDetailPage() {
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [showAdvancedDrawer, setShowAdvancedDrawer] = useState(false);
   const [reviewDisposition, setReviewDispositionState] = useState<ReviewDisposition | null>(null);
+  const [savingDisposition, setSavingDisposition] = useState<ReviewDisposition | null>(null);
   const [nextConversationId, setNextConversationId] = useState<string | null>(null);
   const [overrideDimension, setOverrideDimension] = useState("overall");
   const [overrideScore, setOverrideScore] = useState("50");
@@ -232,6 +234,7 @@ export default function ConversationDetailPage() {
   const [labelShareScope, setLabelShareScope] = useState<"workspace_private" | "global_anonymous">("workspace_private");
   const [labelExampleKind, setLabelExampleKind] = useState<"real" | "synthetic">("real");
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
+  const { success, error } = useToast();
   const [trainingLabels, setTrainingLabels] = useState({
     overall: "",
     accuracy: "",
@@ -374,10 +377,12 @@ export default function ConversationDetailPage() {
     }
   }
 
-  function updateDisposition(disposition: ReviewDisposition) {
+  async function updateDisposition(disposition: ReviewDisposition) {
     if (!conv) return;
+    const previousDisposition = reviewDisposition;
     setConversationDisposition(conv.id, disposition);
     setReviewDispositionState(disposition);
+    setSavingDisposition(disposition);
 
     const queueState =
       disposition === "safe"
@@ -391,6 +396,28 @@ export default function ConversationDetailPage() {
               : "reviewed";
 
     setQueueState(conv.id, queueState);
+    try {
+      const response = await fetch(`/api/conversations/${conv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disposition, queue_state: queueState }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save review state");
+      }
+
+      success(`Marked as ${disposition.replaceAll("_", " ")}`);
+    } catch (err) {
+      console.error(err);
+      if (previousDisposition) {
+        setConversationDisposition(conv.id, previousDisposition);
+      }
+      setReviewDispositionState(previousDisposition || null);
+      error("Could not save action. Retry.");
+    } finally {
+      setSavingDisposition(null);
+    }
   }
 
   if (loading) {
@@ -456,7 +483,7 @@ export default function ConversationDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to review queue
       </Link>
 
-      <section className="border-b border-[var(--divider)] pb-3">
+      <section className="border-b border-[var(--divider)] pb-4">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="truncate font-semibold text-[var(--text-primary)]">
             {conv.customer_identifier || "Unknown customer"}
@@ -477,9 +504,14 @@ export default function ConversationDetailPage() {
             Advanced
           </button>
         </div>
-        <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
-          {groundingOnly ? "Useful, but verify first." : displaySummary}
-        </p>
+        <div className="mt-3 space-y-1">
+          <p className="text-xl font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+            {groundingOnly ? "Useful, but verify first." : displaySummary}
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {groundingOnly ? "Check record details before reuse." : actionState}
+          </p>
+        </div>
       </section>
 
       <section className="border-b border-[var(--divider)] pb-3 text-sm">
@@ -591,11 +623,12 @@ export default function ConversationDetailPage() {
                   key={value}
                   type="button"
                   onClick={() => updateDisposition(value as ReviewDisposition)}
+                  disabled={Boolean(savingDisposition)}
                   className={`operator-chip transition-colors ${
                     reviewDisposition === value ? "border-[var(--border-strong)] bg-[var(--panel)] text-[var(--text-primary)]" : ""
                   }`}
                 >
-                  {label}
+                  {savingDisposition === value ? "Saving..." : label}
                 </button>
               ))}
             </div>
