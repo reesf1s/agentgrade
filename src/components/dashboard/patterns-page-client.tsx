@@ -17,11 +17,11 @@ const STATE_LABELS: Record<IssueWorkflowState, string> = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  New:        "border-edge bg-surface text-fg-muted",
-  Monitoring: "border-amber-500/20 bg-amber-500/10 text-amber-500",
-  "In progress": "border-white/12 bg-white/[0.06] text-fg",
-  Quieted:    "border-edge bg-surface text-fg-muted",
-  Resolved:   "border-emerald-500/20 bg-emerald-500/10 text-emerald-500",
+  New:           "border-[#E9E9E7] bg-[#F7F7F5] text-[#787774]",
+  Monitoring:    "border-[rgba(196,122,0,0.2)] bg-[rgba(196,122,0,0.08)] text-[#C47A00]",
+  "In progress": "border-[rgba(35,131,226,0.2)] bg-[rgba(35,131,226,0.08)] text-[#2383E2]",
+  Quieted:       "border-[#E9E9E7] bg-[#F7F7F5] text-[#ACABA8]",
+  Resolved:      "border-[rgba(15,123,61,0.2)] bg-[rgba(15,123,61,0.08)] text-[#0F7B3D]",
 };
 
 function issueStateLabel(pattern: FailurePattern): string {
@@ -40,11 +40,11 @@ function nextAction(pattern: FailurePattern) {
 
 export function PatternsPageClient({ initialPatterns }: { initialPatterns: FailurePattern[] }) {
   const { success, error } = useToast();
-  const [patterns, setPatterns]           = useState(initialPatterns);
-  const [resolving, setResolving]         = useState<string | null>(null);
-  const [refreshing, setRefreshing]       = useState(false);
+  const [patterns, setPatterns]               = useState(initialPatterns);
+  const [resolving, setResolving]             = useState<string | null>(null);
+  const [refreshing, setRefreshing]           = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<FailurePattern | null>(null);
-  const [stateSaving, setStateSaving]     = useState<string | null>(null);
+  const [stateSaving, setStateSaving]         = useState<string | null>(null);
 
   useEffect(() => {
     setPatterns(initialPatterns);
@@ -136,13 +136,13 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
   }
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-5 pb-8 animate-fade-in">
 
       {/* Page header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Issues</h1>
-          <p className="mt-1 text-sm text-fg-secondary">
+          <p className="mt-1 text-sm" style={{ color: "#787774" }}>
             Recurring failure patterns detected across conversations
           </p>
         </div>
@@ -158,18 +158,38 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
       </div>
 
       {patterns.length === 0 ? (
-        <div className="glass-static py-12 text-center">
-          <p className="text-sm text-fg-muted">No issues detected this week.</p>
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white px-6 py-14 text-center"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div
+            className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ background: "#F7F7F5", border: "1px solid #E9E9E7" }}
+          >
+            <Check className="h-4.5 w-4.5" style={{ color: "#ACABA8" }} />
+          </div>
+          <p className="text-sm font-medium" style={{ color: "#37352F" }}>
+            No open issues
+          </p>
+          <p className="mt-1 text-xs" style={{ color: "#787774" }}>
+            No recurring failure patterns detected this week.
+          </p>
         </div>
       ) : (
-        <div className="glass-static overflow-hidden">
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white overflow-hidden"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
           {/* Table header */}
-          <div className="grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] gap-0 border-b border-edge px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-            <span>Issue</span>
-            <span>Severity</span>
-            <span>Volume</span>
-            <span>Status</span>
-            <span>Actions</span>
+          <div
+            className="grid grid-cols-[minmax(0,2fr)_100px_80px_120px_minmax(160px,1fr)] gap-0 border-b border-[#E9E9E7] px-4 py-2.5"
+            style={{ background: "#F7F7F5" }}
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#ACABA8" }}>Issue</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#ACABA8" }}>Severity</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#ACABA8" }}>Volume</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#ACABA8" }}>Status</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#ACABA8" }}>Actions</span>
           </div>
 
           {patterns.map((pattern, idx) => {
@@ -179,25 +199,31 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             return (
               <div
                 key={pattern.id}
-                className={`grid grid-cols-[minmax(0,2fr)_100px_80px_100px_minmax(160px,1fr)] items-start gap-0 px-4 py-3 hover:bg-surface-hover transition-colors ${
-                  idx < patterns.length - 1 ? "border-b border-edge" : ""
+                className={`grid grid-cols-[minmax(0,2fr)_100px_80px_120px_minmax(160px,1fr)] items-start gap-0 px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${
+                  idx < patterns.length - 1 ? "border-b border-[#F1F1EF]" : ""
                 }`}
               >
-                {/* Title + description */}
+                {/* Title + description + recommendation */}
                 <div className="min-w-0 pr-6">
                   <button
                     type="button"
-                    className="text-left text-sm font-semibold text-fg transition-colors hover:text-[var(--brand)]"
+                    className="text-left text-sm font-semibold transition-colors hover:text-[#2383E2]"
+                    style={{ color: "#37352F" }}
                     onClick={() => setSelectedPattern(pattern)}
                   >
                     {pattern.title}
                   </button>
-                  <p className="mt-0.5 text-xs text-fg-secondary line-clamp-2 leading-relaxed">
+                  <p
+                    className="mt-0.5 text-xs leading-relaxed line-clamp-2"
+                    style={{ color: "#787774" }}
+                  >
                     {pattern.description}
                   </p>
-                  <p className="mt-1 text-xs font-medium text-fg">
-                    → {nextAction(pattern)}
-                  </p>
+                  <div className="mt-1.5 pl-3 border-l-2 border-[#2383E2]">
+                    <p className="text-xs font-medium" style={{ color: "#37352F" }}>
+                      {nextAction(pattern)}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Severity */}
@@ -206,9 +232,9 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </div>
 
                 {/* Volume */}
-                <div className="pt-0.5 text-sm font-medium text-fg">
+                <div className="pt-0.5 text-sm font-medium" style={{ color: "#37352F" }}>
                   {pattern.affected_conversation_ids.length}
-                  <span className="ml-1 text-xs text-fg-muted">convs</span>
+                  <span className="ml-1 text-xs" style={{ color: "#ACABA8" }}>convs</span>
                 </div>
 
                 {/* Status */}
@@ -217,7 +243,7 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                     value={pattern.workflow_state}
                     onChange={(e) => updateState(pattern.id, e.target.value as IssueWorkflowState)}
                     disabled={stateSaving === pattern.id}
-                    className={`rounded-md border px-2 py-0.5 text-xs font-medium cursor-pointer ${stateStyle}`}
+                    className={`appearance-none rounded-md border px-2 py-0.5 text-xs font-medium cursor-pointer bg-[#FFFFFF] ${stateStyle}`}
                   >
                     {ISSUE_WORKFLOW_STATES.map((state) => (
                       <option key={state} value={state}>
@@ -270,10 +296,13 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             onClick={() => setSelectedPattern(null)}
           />
           <aside className="drawer-panel">
-            <div className="drawer-header">
+            <div className="drawer-header" style={{ background: "#F7F7F5" }}>
               <div className="min-w-0">
                 <p className="page-eyebrow">Issue detail</p>
-                <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.03em] text-fg">
+                <h2
+                  className="mt-1.5 text-lg font-semibold tracking-[-0.03em]"
+                  style={{ color: "#37352F" }}
+                >
                   {selectedPattern.title}
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -299,16 +328,18 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
             <div className="drawer-body space-y-4">
               <div className="compact-list-item">
                 <p className="section-label mb-2">What is happening</p>
-                <p className="text-sm leading-relaxed text-fg-secondary">
+                <p className="text-sm leading-relaxed" style={{ color: "#787774" }}>
                   {selectedPattern.description}
                 </p>
               </div>
 
-              <div className="compact-list-item">
-                <p className="section-label mb-2">Recommended action</p>
-                <p className="text-sm font-medium text-fg">
-                  {nextAction(selectedPattern)}
-                </p>
+              <div className="compact-list-item" style={{ borderTop: "1px solid #F1F1EF" }}>
+                <p className="section-label mb-2 pt-4">Recommended action</p>
+                <div className="pl-3 border-l-2 border-[#2383E2]">
+                  <p className="text-sm font-medium" style={{ color: "#37352F" }}>
+                    {nextAction(selectedPattern)}
+                  </p>
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -337,18 +368,20 @@ export function PatternsPageClient({ initialPatterns }: { initialPatterns: Failu
                 </div>
               </div>
 
-              <div className="compact-list-item">
-                <p className="section-label mb-2">Affected conversations</p>
-                <div className="space-y-1">
+              <div className="compact-list-item" style={{ borderTop: "1px solid #F1F1EF" }}>
+                <p className="section-label mb-2 pt-4">Affected conversations</p>
+                <div className="space-y-0.5">
                   {selectedPattern.affected_conversation_ids.slice(0, 8).map((id) => (
                     <Link
                       key={id}
                       href={`/conversations/${id}`}
-                      className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm hover:bg-surface-hover transition-colors"
+                      className="flex items-center justify-between rounded-[4px] px-2.5 py-1.5 transition-colors hover:bg-[#F7F7F5]"
                       onClick={() => setSelectedPattern(null)}
                     >
-                      <span className="font-mono text-xs text-fg-secondary">{id.slice(0, 12)}…</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-fg-muted" />
+                      <span className="font-mono text-xs" style={{ color: "#787774" }}>
+                        {id.slice(0, 12)}…
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5" style={{ color: "#ACABA8" }} />
                     </Link>
                   ))}
                 </div>

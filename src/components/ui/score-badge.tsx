@@ -34,10 +34,10 @@ interface SeverityBadgeProps {
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
   const styles: Record<string, string> = {
-    low:      "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.48)]",
-    medium:   "border-[rgba(217,136,50,0.2)] bg-[rgba(217,136,50,0.1)] text-[#D98832]",
-    high:     "border-[rgba(220,91,91,0.2)] bg-[rgba(220,91,91,0.1)] text-[#DC5B5B]",
-    critical: "border-[rgba(220,91,91,0.28)] bg-[rgba(220,91,91,0.14)] text-[#DC5B5B]",
+    low:      "border-[#E9E9E7] bg-[#F7F7F5] text-[#787774]",
+    medium:   "border-[rgba(196,122,0,0.2)] bg-[rgba(196,122,0,0.08)] text-[#C47A00]",
+    high:     "border-[rgba(196,52,44,0.2)] bg-[rgba(196,52,44,0.08)] text-[#C4342C]",
+    critical: "border-[rgba(196,52,44,0.3)] bg-[rgba(196,52,44,0.12)] text-[#C4342C]",
   };
 
   return (

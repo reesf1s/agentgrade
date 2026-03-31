@@ -1,7 +1,5 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { GlassCard } from "@/components/ui/glass-card";
-import { GlassButton } from "@/components/ui/glass-button";
 import { GlassInput, GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { Plug, Bell, Users, BookOpen, Trash2, Copy, Check, RefreshCw, Brain } from "lucide-react";
 
@@ -264,13 +262,13 @@ function ConnectionsTab() {
 
   return (
     <div className="space-y-4">
-      <GlassCard className="p-6">
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
-            <p className="enterprise-kicker">Connections</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">Setup</h2>
+            <p className="page-eyebrow">Connections</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#37352F]">Setup</h2>
           </div>
-          <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-fg-muted">
+          <div className="rounded-full border border-[#E9E9E7] bg-[#F7F7F5] px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-[#ACABA8]">
             5 minutes
           </div>
         </div>
@@ -289,28 +287,28 @@ function ConnectionsTab() {
           ].map((option) => (
             <button
               key={option.platform}
-              className="rounded-2xl border border-edge bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white p-4 text-left transition-colors hover:bg-[#F7F7F5]"
               onClick={() => {
                 window.location.href = `/onboarding?platform=${option.platform}`;
               }}
             >
-              <p className="text-sm font-medium text-fg">{option.label}</p>
-              <p className="mt-1 text-xs text-fg-secondary">Connect</p>
+              <p className="text-sm font-medium text-[#37352F]">{option.label}</p>
+              <p className="mt-1 text-xs text-[#787774]">Connect</p>
             </button>
           ))}
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-edge bg-[var(--panel-subtle)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Webhook endpoint</p>
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">Webhook endpoint</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <input
                 readOnly
                 value={webhookUrl}
                 className="glass-input flex-1 px-3 py-2 text-xs font-mono"
               />
-              <GlassButton size="sm" onClick={copyWebhook}>
+              <button className="glass-button" onClick={copyWebhook}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </GlassButton>
+              </button>
             </div>
           </div>
           <button
@@ -318,50 +316,54 @@ function ConnectionsTab() {
             onClick={() => {
               window.location.href = "/onboarding?platform=csv";
             }}
-            className="rounded-2xl border-2 border-dashed border-edge p-5 text-left transition-colors hover:border-[var(--border-strong)]"
+            className="rounded-[6px] border-2 border-dashed border-[#E9E9E7] p-5 text-left transition-colors hover:border-[#D0D0CD]"
           >
-            <p className="text-sm font-medium text-fg">Upload past conversations</p>
-            <p className="mt-2 text-xs leading-5 text-fg-secondary">CSV or JSON</p>
+            <p className="text-sm font-medium text-[#37352F]">Upload past conversations</p>
+            <p className="mt-2 text-xs leading-5 text-[#787774]">CSV or JSON</p>
           </button>
         </div>
-      </GlassCard>
+      </div>
 
-      <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-fg mb-4">Connected assistants</h2>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <h2 className="text-sm font-semibold text-[#37352F] mb-4">Connected assistants</h2>
         {loading ? (
-          <p className="text-sm text-fg-muted">Loading connections...</p>
+          <p className="text-sm text-[#ACABA8]">Loading connections...</p>
         ) : loadError ? (
           <div className="py-6 text-center">
-            <p className="text-sm text-fg-secondary">Could not load connections.</p>
-            <GlassButton size="sm" className="mt-3" onClick={loadConnections}>Retry</GlassButton>
+            <p className="text-sm text-[#787774]">Could not load connections.</p>
+            <button className="glass-button mt-3" onClick={loadConnections}>Retry</button>
           </div>
         ) : connections.length === 0 ? (
-          <div className="py-6 text-center text-sm text-fg-muted">
+          <div className="py-6 text-center text-sm text-[#ACABA8]">
             No live assistants connected yet. Use one of the setup options above to get started.
           </div>
         ) : (
           <div className="space-y-3 mb-6">
             {connections.map((conn) => (
-              <div key={conn.id} className="rounded-xl border border-edge bg-surface p-4">
+              <div key={conn.id} className="rounded-[6px] border border-[#E9E9E7] bg-white p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-fg">{conn.name}</p>
-                    <p className="text-xs text-fg-muted mt-0.5 capitalize">
+                    <p className="text-sm font-medium text-[#37352F]">{conn.name}</p>
+                    <p className="text-xs text-[#ACABA8] mt-0.5 capitalize">
                       {conn.platform} &middot; {conn.is_active ? "Active" : "Inactive"}
                       {conn.last_sync_at ? ` · Last sync: ${new Date(conn.last_sync_at).toLocaleString()}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {conn.is_active && <span className="w-2 h-2 rounded-full bg-score-good" />}
-                    <GlassButton size="sm" onClick={() => loadSetup(conn.id)}>
+                    {conn.is_active && (
+                      <span className="inline-flex items-center gap-1 rounded-[4px] border border-[rgba(15,123,61,0.2)] bg-[rgba(15,123,61,0.08)] px-2 py-0.5 text-[11px] font-medium text-[#0F7B3D]">
+                        Active
+                      </span>
+                    )}
+                    <button className="glass-button" onClick={() => loadSetup(conn.id)}>
                       {setupLoading === conn.id
                         ? "Loading..."
                         : expandedConnectionId === conn.id
                           ? "Hide setup"
                           : "Setup"}
-                    </GlassButton>
-                    <GlassButton
-                      size="sm"
+                    </button>
+                    <button
+                      className="glass-button"
                       onClick={() => syncConnection(conn.id)}
                       disabled={syncing === conn.id}
                     >
@@ -370,26 +372,25 @@ function ConnectionsTab() {
                       ) : (
                         "Sync now"
                       )}
-                    </GlassButton>
+                    </button>
                     {confirmDeleteId === conn.id ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-fg-secondary">Remove?</span>
-                        <GlassButton
-                          size="sm"
-                          variant="danger"
-                          loading={deleting === conn.id}
+                        <span className="text-xs text-[#787774]">Remove?</span>
+                        <button
+                          className="glass-button"
+                          disabled={deleting === conn.id}
                           onClick={() => deleteConnection(conn.id)}
                         >
                           Yes
-                        </GlassButton>
-                        <GlassButton size="sm" onClick={() => setConfirmDeleteId(null)}>
+                        </button>
+                        <button className="glass-button" onClick={() => setConfirmDeleteId(null)}>
                           No
-                        </GlassButton>
+                        </button>
                       </div>
                     ) : (
                       <button
                         onClick={() => setConfirmDeleteId(conn.id)}
-                        className="text-fg-muted hover:text-score-critical transition-colors"
+                        className="text-[#ACABA8] hover:text-[#C4342C] transition-colors"
                         aria-label="Remove connection"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -399,15 +400,15 @@ function ConnectionsTab() {
                 </div>
 
                 {expandedConnectionId === conn.id && setupByConnection[conn.id] && (
-                  <div className="mt-4 space-y-4 rounded-2xl border border-edge bg-[var(--panel-subtle)] p-5">
-                    <div className="rounded-2xl border border-edge bg-[var(--panel)] p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
+                  <div className="mt-4 space-y-4 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-5">
+                    <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">
                         Integration steps
                       </p>
-                      <ol className="mt-3 space-y-2 text-sm text-fg-secondary">
+                      <ol className="mt-3 space-y-2 text-sm text-[#787774]">
                         {setupByConnection[conn.id].install_steps.map((step, index) => (
                           <li key={step} className="flex gap-3">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-strong)] text-[11px] font-semibold text-fg">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#F1F1EF] text-[11px] font-semibold text-[#37352F]">
                               {index + 1}
                             </span>
                             <span>{step}</span>
@@ -417,58 +418,58 @@ function ConnectionsTab() {
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-fg mb-1">Webhook endpoint</p>
+                      <p className="text-xs font-medium text-[#37352F] mb-1">Webhook endpoint</p>
                       <div className="flex gap-2">
                         <input
                           readOnly
                           value={setupByConnection[conn.id].webhook_url}
                           className="glass-input flex-1 px-3 py-2 text-xs font-mono"
                         />
-                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].webhook_url)}>
+                        <button className="glass-button" onClick={() => copyText(setupByConnection[conn.id].webhook_url)}>
                           <Copy className="w-4 h-4" />
-                        </GlassButton>
+                        </button>
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-fg mb-1">Bearer secret</p>
+                      <p className="text-xs font-medium text-[#37352F] mb-1">Bearer secret</p>
                       <div className="flex gap-2">
                         <input
                           readOnly
                           value={setupByConnection[conn.id].api_key}
                           className="glass-input flex-1 px-3 py-2 text-xs font-mono"
                         />
-                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].api_key)}>
+                        <button className="glass-button" onClick={() => copyText(setupByConnection[conn.id].api_key)}>
                           <Copy className="w-4 h-4" />
-                        </GlassButton>
+                        </button>
                       </div>
-                      <p className="mt-2 text-xs text-fg-muted">
+                      <p className="mt-2 text-xs text-[#ACABA8]">
                         Send every transcript update with `Authorization: Bearer &lt;secret&gt;`. Re-sending the same `conversation_id` now appends new messages and re-scores instead of being ignored.
                       </p>
                     </div>
 
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <p className="text-xs font-medium text-fg">Env vars for your app</p>
-                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].env_example)}>
+                        <p className="text-xs font-medium text-[#37352F]">Env vars for your app</p>
+                        <button className="glass-button" onClick={() => copyText(setupByConnection[conn.id].env_example)}>
                           Copy env vars
-                        </GlassButton>
+                        </button>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
+                      <pre className="bg-[#F7F7F5] border border-[#E9E9E7] text-[#37352F] font-mono text-xs rounded-[6px] p-4 overflow-x-auto">
                         {setupByConnection[conn.id].env_example}
                       </pre>
-                      <div className="mt-2 space-y-1 text-xs text-fg-muted">
+                      <div className="mt-2 space-y-1 text-xs text-[#ACABA8]">
                         {Object.entries(setupByConnection[conn.id].env_help).map(([key, value]) => (
                           <p key={key}>
-                            <span className="font-mono text-fg">{key}</span>: {value}
+                            <span className="font-mono text-[#37352F]">{key}</span>: {value}
                           </p>
                         ))}
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs font-medium text-fg mb-1">Quick test</p>
-                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
+                      <p className="text-xs font-medium text-[#37352F] mb-1">Quick test</p>
+                      <pre className="bg-[#F7F7F5] border border-[#E9E9E7] text-[#37352F] font-mono text-xs rounded-[6px] p-4 overflow-x-auto">
 {`curl -X POST ${setupByConnection[conn.id].webhook_url} \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${setupByConnection[conn.id].api_key}" \\
@@ -486,12 +487,12 @@ function ConnectionsTab() {
 
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <p className="text-xs font-medium text-fg">JavaScript snippet</p>
-                        <GlassButton size="sm" onClick={() => copyText(setupByConnection[conn.id].snippet)}>
+                        <p className="text-xs font-medium text-[#37352F]">JavaScript snippet</p>
+                        <button className="glass-button" onClick={() => copyText(setupByConnection[conn.id].snippet)}>
                           Copy snippet
-                        </GlassButton>
+                        </button>
                       </div>
-                      <pre className="overflow-x-auto rounded-xl border border-edge bg-[var(--panel-subtle)] p-3 text-xs text-fg-secondary">
+                      <pre className="bg-[#F7F7F5] border border-[#E9E9E7] text-[#37352F] font-mono text-xs rounded-[6px] p-4 overflow-x-auto">
                         {setupByConnection[conn.id].snippet}
                       </pre>
                     </div>
@@ -501,7 +502,7 @@ function ConnectionsTab() {
             ))}
           </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -569,23 +570,23 @@ function AlertsTab() {
   }
 
   return (
-    <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-fg mb-4">Alert Thresholds</h2>
-      <p className="text-xs text-fg-muted mb-6">Get notified when quality drops below these thresholds.</p>
+    <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <h2 className="text-sm font-semibold text-[#37352F] mb-4">Alert Thresholds</h2>
+      <p className="text-xs text-[#ACABA8] mb-6">Get notified when quality drops below these thresholds.</p>
       {loading ? (
-        <p className="text-sm text-fg-muted">Loading...</p>
+        <p className="text-sm text-[#ACABA8]">Loading...</p>
       ) : loadError ? (
         <div className="py-4 text-center">
-          <p className="text-sm text-fg-secondary">Could not load alert thresholds.</p>
-          <GlassButton size="sm" className="mt-3" onClick={loadThresholds}>Retry</GlassButton>
+          <p className="text-sm text-[#787774]">Could not load alert thresholds.</p>
+          <button className="glass-button mt-3" onClick={loadThresholds}>Retry</button>
         </div>
       ) : (
         <div className="space-y-4">
           {THRESHOLD_DIMS.map(({ dim, label }) => (
             <div key={dim} className="flex items-center justify-between">
-              <span className="text-sm text-fg">{label}</span>
+              <span className="text-sm text-[#37352F]">{label}</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-fg-muted">Alert below</span>
+                <span className="text-xs text-[#ACABA8]">Alert below</span>
                 <input
                   type="number"
                   min={0}
@@ -596,19 +597,19 @@ function AlertsTab() {
                   }
                   className="glass-input w-16 px-2 py-1 text-sm text-center font-mono"
                 />
-                <span className="text-xs text-fg-muted">%</span>
+                <span className="text-xs text-[#ACABA8]">%</span>
               </div>
             </div>
           ))}
         </div>
       )}
       {saveError && (
-        <p className="mt-3 text-xs text-score-critical">Failed to save thresholds. Try again.</p>
+        <p className="mt-3 text-xs text-[#C4342C]">Failed to save thresholds. Try again.</p>
       )}
-      <GlassButton className="mt-3" onClick={saveThresholds} disabled={saving || loading || loadError}>
+      <button className="glass-button mt-3" onClick={saveThresholds} disabled={saving || loading || loadError}>
         {saved ? "Saved!" : saving ? "Saving..." : "Save thresholds"}
-      </GlassButton>
-    </GlassCard>
+      </button>
+    </div>
   );
 }
 
@@ -660,33 +661,33 @@ function TeamTab() {
   }
 
   return (
-    <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-fg mb-4">Team Members</h2>
+    <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <h2 className="text-sm font-semibold text-[#37352F] mb-4">Team Members</h2>
       {loading ? (
-        <p className="text-sm text-fg-muted">Loading...</p>
+        <p className="text-sm text-[#ACABA8]">Loading...</p>
       ) : loadError ? (
         <div className="py-4 text-center mb-4">
-          <p className="text-sm text-fg-secondary">Could not load team members.</p>
-          <GlassButton size="sm" className="mt-3" onClick={loadTeam}>Retry</GlassButton>
+          <p className="text-sm text-[#787774]">Could not load team members.</p>
+          <button className="glass-button mt-3" onClick={loadTeam}>Retry</button>
         </div>
       ) : members.length === 0 ? (
-        <p className="text-sm text-fg-muted mb-6">No team members yet.</p>
+        <p className="text-sm text-[#ACABA8] mb-6">No team members yet.</p>
       ) : (
         <div className="space-y-3 mb-6">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-xl border border-edge bg-surface p-3">
+            <div key={m.id} className="flex items-center justify-between rounded-[6px] border border-[#E9E9E7] bg-white p-3 hover:bg-[#F7F7F5] transition-colors">
               <div>
-                <p className="text-sm font-medium text-fg">
+                <p className="text-sm font-medium text-[#37352F]">
                   {m.email || m.clerk_user_id}
                 </p>
-                <p className="text-xs text-fg-muted capitalize">{m.role}</p>
+                <p className="text-xs text-[#ACABA8] capitalize">{m.role}</p>
               </div>
             </div>
           ))}
         </div>
       )}
       {inviteError && (
-        <p className="text-xs text-score-critical mb-3">{inviteError}</p>
+        <p className="text-xs text-[#C4342C] mb-3">{inviteError}</p>
       )}
       <div className="flex gap-2">
         <GlassInput
@@ -695,11 +696,11 @@ function TeamTab() {
           value={inviteEmail}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInviteEmail(e.target.value)}
         />
-        <GlassButton onClick={invite} disabled={inviting || !inviteEmail}>
+        <button className="glass-button" onClick={invite} disabled={inviting || !inviteEmail}>
           {inviting ? "Inviting..." : "Invite"}
-        </GlassButton>
+        </button>
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -827,9 +828,9 @@ function KnowledgeTab() {
   }
 
   return (
-    <GlassCard className="p-6">
-      <h2 className="text-sm font-semibold text-fg mb-2">Knowledge Base</h2>
-      <p className="text-xs text-fg-muted mb-6">
+    <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <h2 className="text-sm font-semibold text-[#37352F] mb-2">Knowledge Base</h2>
+      <p className="text-xs text-[#ACABA8] mb-6">
         Upload your help docs, FAQs, and policies. Used to verify agent accuracy and detect hallucinations.
       </p>
       <input
@@ -848,16 +849,16 @@ function KnowledgeTab() {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="mb-4 w-full rounded-xl border-2 border-dashed border-edge p-8 text-center transition-colors hover:border-[var(--border-strong)]"
+        className="mb-4 w-full rounded-[6px] border-2 border-dashed border-[#E9E9E7] p-8 text-center transition-colors hover:border-[#D0D0CD] hover:bg-[#F7F7F5]"
       >
-        <BookOpen className="w-8 h-8 text-fg-muted mx-auto mb-2" />
-        <p className="text-sm text-fg-secondary">
+        <BookOpen className="w-8 h-8 text-[#ACABA8] mx-auto mb-2" />
+        <p className="text-sm text-[#787774]">
           {uploadingFile ? "Uploading knowledge file..." : "Upload PDF, DOCX, TXT, Markdown, or JSON"}
         </p>
-        <p className="text-xs text-fg-muted mt-1">Files are chunked and embedded for semantic search</p>
+        <p className="text-xs text-[#ACABA8] mt-1">Files are chunked and embedded for semantic search</p>
       </button>
-      <div className="mb-4 rounded-xl border border-edge bg-[var(--panel-subtle)] p-4">
-        <p className="text-xs font-medium text-fg mb-3">Or import a help center URL</p>
+      <div className="mb-4 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+        <p className="text-xs font-medium text-[#37352F] mb-3">Or import a help center URL</p>
         <div className="flex gap-2">
           <GlassInput
             value={sourceUrl}
@@ -865,59 +866,61 @@ function KnowledgeTab() {
             placeholder="https://help.example.com/article"
             className="flex-1"
           />
-          <GlassButton onClick={ingestUrl} disabled={!sourceUrl || syncingUrl}>
+          <button className="glass-button" onClick={ingestUrl} disabled={!sourceUrl || syncingUrl}>
             {syncingUrl ? "Importing..." : "Import URL"}
-          </GlassButton>
+          </button>
         </div>
-        {urlError ? <p className="mt-2 text-xs text-score-critical">{urlError}</p> : null}
+        {urlError ? <p className="mt-2 text-xs text-[#C4342C]">{urlError}</p> : null}
       </div>
-      <div className="mb-4 rounded-xl border border-edge bg-[var(--panel-subtle)] p-4">
-        <p className="text-xs font-medium text-fg mb-3">Sync from a connected help center</p>
+      <div className="mb-4 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+        <p className="text-xs font-medium text-[#37352F] mb-3">Sync from a connected help center</p>
         <div className="flex flex-wrap gap-2">
-          <GlassButton
+          <button
+            className="glass-button"
             onClick={() => syncHelpCenter("intercom")}
             disabled={syncingPlatform !== null}
           >
             {syncingPlatform === "intercom" ? "Syncing Intercom..." : "Sync Intercom Articles"}
-          </GlassButton>
-          <GlassButton
+          </button>
+          <button
+            className="glass-button"
             onClick={() => syncHelpCenter("zendesk")}
             disabled={syncingPlatform !== null}
           >
             {syncingPlatform === "zendesk" ? "Syncing Zendesk..." : "Sync Zendesk Help Center"}
-          </GlassButton>
+          </button>
         </div>
       </div>
       {loading ? (
-        <p className="text-sm text-fg-muted">Loading...</p>
+        <p className="text-sm text-[#ACABA8]">Loading...</p>
       ) : loadError ? (
         <div className="py-4 text-center">
-          <p className="text-sm text-fg-secondary">Could not load knowledge base.</p>
-          <GlassButton size="sm" className="mt-3" onClick={loadSources}>Retry</GlassButton>
+          <p className="text-sm text-[#787774]">Could not load knowledge base.</p>
+          <button className="glass-button mt-3" onClick={loadSources}>Retry</button>
         </div>
       ) : sources.length === 0 ? (
-        <div className="py-4 text-center text-sm text-fg-muted">
+        <div className="py-4 text-center text-sm text-[#ACABA8]">
           No knowledge base items yet. Upload documents to improve accuracy scoring.
         </div>
       ) : (
         <div className="space-y-2">
           {sources.map((s) => (
-            <div key={s.id} className="flex items-center justify-between rounded-xl border border-edge bg-surface p-3">
+            <div key={s.id} className="flex items-center justify-between rounded-[6px] border border-[#E9E9E7] bg-white p-3 hover:bg-[#F7F7F5] transition-colors border-b border-[#F1F1EF]">
               <div>
-                <p className="text-sm text-fg">{s.source}</p>
-                <p className="text-xs text-fg-muted">
+                <p className="text-sm font-medium text-[#37352F]">{s.source}</p>
+                <p className="text-xs text-[#ACABA8]">
                   {s.chunks} chunk{s.chunks !== 1 ? "s" : ""} · Uploaded {new Date(s.created_at).toLocaleDateString()}
                 </p>
               </div>
               {confirmDeleteKbId === s.id ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-fg-secondary">Delete?</span>
-                  <GlassButton size="sm" variant="danger" loading={deletingKb === s.id} onClick={() => deleteSource(s.id)}>Yes</GlassButton>
-                  <GlassButton size="sm" onClick={() => setConfirmDeleteKbId(null)}>No</GlassButton>
+                  <span className="text-xs text-[#787774]">Delete?</span>
+                  <button className="glass-button" disabled={deletingKb === s.id} onClick={() => deleteSource(s.id)}>Yes</button>
+                  <button className="glass-button" onClick={() => setConfirmDeleteKbId(null)}>No</button>
                 </div>
               ) : (
                 <button
-                  className="text-fg-muted hover:text-score-critical transition-colors"
+                  className="text-[#ACABA8] hover:text-[#C4342C] transition-colors"
                   onClick={() => setConfirmDeleteKbId(s.id)}
                   aria-label="Delete knowledge base item"
                 >
@@ -928,7 +931,7 @@ function KnowledgeTab() {
           ))}
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -1017,18 +1020,18 @@ function BillingTab() {
 
   if (loading) {
     return (
-      <GlassCard className="p-6">
-        <p className="text-sm text-fg-muted">Loading billing...</p>
-      </GlassCard>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <p className="text-sm text-[#ACABA8]">Loading billing...</p>
+      </div>
     );
   }
 
   if (loadError) {
     return (
-      <GlassCard className="p-6 text-center">
-        <p className="text-sm text-fg-secondary">Could not load billing information.</p>
-        <GlassButton size="sm" className="mt-3" onClick={loadBilling}>Retry</GlassButton>
-      </GlassCard>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6 text-center" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <p className="text-sm text-[#787774]">Could not load billing information.</p>
+        <button className="glass-button mt-3" onClick={loadBilling}>Retry</button>
+      </div>
     );
   }
 
@@ -1040,23 +1043,23 @@ function BillingTab() {
 
   return (
     <div className="space-y-4">
-      <GlassCard className="p-6">
-        <h2 className="text-sm font-semibold text-fg mb-4">Billing</h2>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <h2 className="text-sm font-semibold text-[#37352F] mb-4">Billing</h2>
 
         {successMsg && (
-          <div className="mb-4 rounded-xl border border-[rgba(16,185,129,0.20)] bg-[rgba(16,185,129,0.06)] p-4 text-sm text-[#10B981]">
+          <div className="mb-4 rounded-[6px] border border-[rgba(15,123,61,0.2)] bg-[rgba(15,123,61,0.08)] p-4 text-sm text-[#0F7B3D]">
             {successMsg}
           </div>
         )}
 
         {!billing?.configured && (
-          <div className="mb-4 rounded-xl border border-[rgba(245,158,11,0.20)] bg-[rgba(245,158,11,0.06)] p-4 text-sm text-[#F59E0B]">
+          <div className="mb-4 rounded-[6px] border border-[rgba(196,122,0,0.2)] bg-[rgba(196,122,0,0.08)] p-4 text-sm text-[#C47A00]">
             Stripe is not configured yet. Checkout and portal are unavailable until STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set in Vercel environment variables.
           </div>
         )}
 
         {billingError && (
-          <div className="mb-4 rounded-xl border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.06)] p-4 text-sm text-[#EF4444]">
+          <div className="mb-4 rounded-[6px] border border-[rgba(196,52,44,0.2)] bg-[rgba(196,52,44,0.08)] p-4 text-sm text-[#C4342C]">
             {billingError}
           </div>
         )}
@@ -1064,34 +1067,34 @@ function BillingTab() {
         {billing ? (
           <>
             {/* Current plan + usage */}
-            <div className="mb-6 rounded-xl border border-edge bg-surface p-4">
+            <div className="mb-6 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-fg capitalize">{currentPlan} Plan</p>
-                  <p className="text-xs text-fg-muted">
+                  <p className="text-sm font-bold text-[#37352F] capitalize">{currentPlan} Plan</p>
+                  <p className="text-xs text-[#787774]">
                     {billing.price} &middot; {billing.limit ? billing.limit.toLocaleString() : "Unlimited"} conversations/mo
                   </p>
                 </div>
                 {billing.stripe_subscription_id && (
-                  <GlassButton size="sm" onClick={openPortal} disabled={portalLoading || !billing.configured}>
+                  <button className="glass-button" onClick={openPortal} disabled={portalLoading || !billing.configured}>
                     {portalLoading ? "Opening..." : "Manage billing"}
-                  </GlassButton>
+                  </button>
                 )}
               </div>
               {billing.limit && (
                 <div className="mt-3">
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-fg-secondary">Usage this month</span>
-                    <span className="text-fg font-mono">
+                    <span className="text-[#787774]">Usage this month</span>
+                    <span className="text-[#37352F] font-mono">
                       {(billing.usage ?? 0).toLocaleString()} / {billing.limit.toLocaleString()}
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.06)]">
+                  <div className="h-1.5 rounded-full bg-[#E9E9E7]">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${usagePct}%`,
-                        backgroundColor: usagePct > 90 ? "#EF4444" : usagePct > 75 ? "#F59E0B" : "rgba(255,255,255,0.40)",
+                        backgroundColor: usagePct > 90 ? "#C4342C" : usagePct > 75 ? "#C47A00" : "#2383E2",
                       }}
                     />
                   </div>
@@ -1100,7 +1103,7 @@ function BillingTab() {
             </div>
 
             {/* Plan picker */}
-            <h3 className="text-xs font-medium text-fg-secondary uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-[#787774] uppercase tracking-wider mb-3">
               {currentPlan === "starter" ? "Choose a plan" : "Available plans"}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1110,42 +1113,40 @@ function BillingTab() {
                 return (
                   <div
                     key={p.key}
-                    className={`rounded-xl border p-4 transition-all ${
+                    className={`rounded-[6px] border p-4 transition-all ${
                       isCurrent
-                        ? "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)]"
-                        : "border-edge bg-surface hover:border-[rgba(255,255,255,0.10)]"
+                        ? "border-[#2383E2] bg-[rgba(35,131,226,0.04)]"
+                        : "border-[#E9E9E7] bg-white hover:bg-[#F7F7F5]"
                     }`}
+                    style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-fg">{p.name}</p>
+                      <p className="text-sm font-bold text-[#37352F]">{p.name}</p>
                       {isCurrent && (
-                        <span className="text-[10px] uppercase tracking-wider text-fg-muted border border-edge rounded px-1.5 py-0.5">
+                        <span className="text-[10px] uppercase tracking-wider text-[#787774] border border-[#E9E9E7] rounded-[4px] px-1.5 py-0.5 bg-[#F7F7F5]">
                           Current
                         </span>
                       )}
                     </div>
-                    <p className="text-lg font-semibold text-fg font-mono">{p.price}</p>
-                    <p className="text-xs text-fg-muted mt-1">{p.conversations} conversations/mo</p>
+                    <p className="text-lg font-semibold text-[#37352F] font-mono">{p.price}</p>
+                    <p className="text-xs text-[#ACABA8] mt-1">{p.conversations} conversations/mo</p>
                     {!isCurrent && !isDowngrade && (
-                      <GlassButton
-                        size="sm"
-                        className="mt-3 w-full"
+                      <button
+                        className="glass-button glass-button-primary mt-3 w-full"
                         onClick={() => openCheckout(p.key)}
                         disabled={!billing.configured || checkoutPlan !== null}
                       >
                         {checkoutPlan === p.key ? "Redirecting..." : "Upgrade"}
-                      </GlassButton>
+                      </button>
                     )}
                     {!isCurrent && isDowngrade && billing.stripe_subscription_id && (
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="mt-3 w-full"
+                      <button
+                        className="glass-button mt-3 w-full"
                         onClick={openPortal}
                         disabled={!billing.configured || portalLoading}
                       >
                         Downgrade via portal
-                      </GlassButton>
+                      </button>
                     )}
                   </div>
                 );
@@ -1153,9 +1154,9 @@ function BillingTab() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-fg-muted">Unable to load billing information.</p>
+          <p className="text-sm text-[#ACABA8]">Unable to load billing information.</p>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -1245,69 +1246,69 @@ function CalibrationTab() {
 
   if (loading) {
     return (
-      <GlassCard className="p-6">
-        <p className="text-sm text-fg-muted">Loading calibration tools...</p>
-      </GlassCard>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <p className="text-sm text-[#ACABA8]">Loading calibration tools...</p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <GlassCard className="p-6">
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <p className="enterprise-section-title">Training</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Training</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#37352F]">
               Improve scoring with examples your team agrees on
             </h2>
-            <p className="mt-3 text-sm leading-6 text-fg-secondary">
+            <p className="mt-3 text-sm leading-6 text-[#787774]">
               Add real or synthetic conversations, label them once, and AgentGrade uses those labels to calibrate scoring over time.
             </p>
           </div>
-          <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-fg-muted">
+          <div className="rounded-full border border-[#E9E9E7] bg-[#F7F7F5] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[#ACABA8]">
             {data?.scorer.training_stage.label}
           </div>
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Human labels</p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">Human labels</p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#37352F]">
               {data?.scorer.labeled_examples || 0}
             </p>
-            <p className="mt-1 text-xs text-fg-secondary">Across private and shared training sets</p>
+            <p className="mt-1 text-xs text-[#787774]">Across private and shared training sets</p>
           </div>
-          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Workspace learning</p>
-            <p className="mt-2 text-sm font-semibold text-fg">
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">Workspace learning</p>
+            <p className="mt-2 text-sm font-semibold text-[#37352F]">
               {data?.scorer.learned_calibration.workspace_model.active ? "Active" : "Warming up"}
             </p>
-            <p className="mt-1 text-xs text-fg-secondary">
+            <p className="mt-1 text-xs text-[#787774]">
               {data?.scorer.learned_calibration.workspace_private_labels || 0} private labels in this workspace
             </p>
           </div>
-          <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Scorer</p>
-            <p className="mt-2 text-sm font-semibold text-fg">
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">Scorer</p>
+            <p className="mt-2 text-sm font-semibold text-[#37352F]">
               {data?.scorer.evaluator_provider} / {data?.scorer.evaluator_model}
             </p>
-            <p className="mt-1 text-xs text-fg-secondary">
+            <p className="mt-1 text-xs text-[#787774]">
               Version {data?.scorer.scoring_model_version}
             </p>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <GlassCard id="training-example-form" className="p-6">
+        <div id="training-example-form" className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-fg">Create a training example</h2>
-              <p className="mt-2 text-sm leading-6 text-fg-secondary">
+              <h2 className="text-sm font-semibold text-[#37352F]">Create a training example</h2>
+              <p className="mt-2 text-sm leading-6 text-[#787774]">
                 Paste a transcript, add the scores a human would give it, and save it as a gold-set example.
               </p>
             </div>
-            <div className="rounded-full border border-edge bg-surface px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-fg-muted">
+            <div className="rounded-full border border-[#E9E9E7] bg-[#F7F7F5] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-[#ACABA8]">
               {exampleKind === "synthetic" ? "Synthetic" : "Real"}
             </div>
           </div>
@@ -1351,7 +1352,7 @@ function CalibrationTab() {
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             {data?.scorer.supported_dimensions.map((dimension) => (
               <div key={dimension.key}>
-                <p className="mb-1 text-xs text-fg-secondary">{dimension.label}</p>
+                <p className="mb-1 text-xs text-[#787774]">{dimension.label}</p>
                 <input
                   type="number"
                   min={0}
@@ -1370,8 +1371,8 @@ function CalibrationTab() {
             ))}
           </div>
 
-          <details className="mt-4 rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-fg">
+          <details className="mt-4 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-[#37352F]">
               Add reviewer notes and sharing details
             </summary>
             <GlassTextarea
@@ -1380,111 +1381,111 @@ function CalibrationTab() {
               className="mt-4 min-h-[96px]"
               placeholder="Explain the correct judgment. Capture groundedness, user intent, escalation quality, and any org context."
             />
-            <p className="mt-3 text-xs leading-5 text-fg-muted">
+            <p className="mt-3 text-xs leading-5 text-[#ACABA8]">
               Shared learning uses anonymized score features plus your labels. Raw transcript text stays private.
             </p>
           </details>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-fg-muted">
+            <p className="text-xs text-[#ACABA8]">
               {data?.scorer.calibration_note}
             </p>
-            <GlassButton className="sm:min-w-[220px]" onClick={submitCalibrationExample} disabled={saving}>
+            <button className="glass-button sm:min-w-[220px]" onClick={submitCalibrationExample} disabled={saving}>
               {saving ? "Saving..." : "Save training example"}
-            </GlassButton>
+            </button>
           </div>
-          {state === "saved" ? <p className="mt-3 text-xs text-score-good">Training example saved.</p> : null}
-          {state === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save training example.</p> : null}
-        </GlassCard>
+          {state === "saved" ? <p className="mt-3 text-xs text-[#0F7B3D]">Training example saved.</p> : null}
+          {state === "error" ? <p className="mt-3 text-xs text-[#C4342C]">Failed to save training example.</p> : null}
+        </div>
 
         <div className="space-y-4">
-          <GlassCard className="p-5">
-            <h2 className="text-sm font-semibold text-fg">Where to focus next</h2>
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <h2 className="text-sm font-semibold text-[#37352F]">Where to focus next</h2>
             <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Next private milestone</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">
+              <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">Next private milestone</p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#37352F]">
                   {data?.scorer.training_insights.roadmap.next_workspace_label_milestone || 30}
                 </p>
-                <p className="mt-1 text-xs text-fg-secondary">Private labels needed to strengthen the workspace scorer</p>
+                <p className="mt-1 text-xs text-[#787774]">Private labels needed to strengthen the workspace scorer</p>
               </div>
-              <div className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-muted">Best next steps</p>
+              <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ACABA8]">Best next steps</p>
                 <div className="mt-3 space-y-2">
                   {data?.scorer.training_insights.roadmap.best_next_steps.map((step) => (
-                    <p key={step} className="text-sm leading-6 text-fg-secondary">• {step}</p>
+                    <p key={step} className="text-sm leading-6 text-[#787774]">• {step}</p>
                   ))}
                 </div>
               </div>
             </div>
-          </GlassCard>
+          </div>
 
-          <GlassCard id="review-queue" className="p-5">
-            <h2 className="text-sm font-semibold text-fg">Label real conversations next</h2>
-            <p className="mt-2 text-sm leading-6 text-fg-secondary">
+          <div id="review-queue" className="rounded-[6px] border border-[#E9E9E7] bg-white p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <h2 className="text-sm font-semibold text-[#37352F]">Label real conversations next</h2>
+            <p className="mt-2 text-sm leading-6 text-[#787774]">
               These are the highest-value conversations to review if you want the scorer to improve quickly.
             </p>
             <div className="mt-4 space-y-3">
               {data?.scorer.training_insights.review_queue.length ? data.scorer.training_insights.review_queue.map((item) => (
-                <div key={item.conversation_id} className="rounded-2xl border border-edge bg-[var(--surface-soft)] p-4">
+                <div key={item.conversation_id} className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-fg">
+                      <p className="text-sm font-semibold text-[#37352F]">
                         {item.customer_identifier || item.conversation_id}
                       </p>
-                      <p className="mt-1 text-xs text-fg-muted capitalize">
+                      <p className="mt-1 text-xs text-[#ACABA8] capitalize">
                         {item.platform || "custom"} · Score {(item.overall_score * 100).toFixed(0)}% · Confidence {item.confidence_level}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-fg-secondary">{item.reason}</p>
+                      <p className="mt-2 text-sm leading-6 text-[#787774]">{item.reason}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <span className="rounded-full bg-[var(--panel)] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-fg-muted">
+                      <span className="rounded-[4px] bg-[#F7F7F5] border border-[#E9E9E7] px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-[#ACABA8]">
                         Priority {item.priority_score.toFixed(2)}
                       </span>
-                      <GlassButton size="sm" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
+                      <button className="glass-button" onClick={() => { window.location.href = `/conversations/${item.conversation_id}`; }}>
                         Review
-                      </GlassButton>
+                      </button>
                     </div>
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-fg-muted">No high-value unlabeled conversations right now.</p>
+                <p className="text-sm text-[#ACABA8]">No high-value unlabeled conversations right now.</p>
               )}
             </div>
-          </GlassCard>
+          </div>
         </div>
       </div>
 
-      <details className="group rounded-[1.25rem] border border-edge bg-[var(--panel)] p-6">
+      <details className="group rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-fg">Model details and coverage</h2>
-            <p className="mt-1 text-xs text-fg-secondary">
+            <h2 className="text-sm font-semibold text-[#37352F]">Model details and coverage</h2>
+            <p className="mt-1 text-xs text-[#787774]">
               Open this when you want to inspect coverage, privacy, and how the scorer is currently built.
             </p>
           </div>
-          <span className="rounded-full border border-edge bg-surface px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-fg-muted group-open:hidden">
+          <span className="rounded-full border border-[#E9E9E7] bg-[#F7F7F5] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#ACABA8] group-open:hidden">
             Expand
           </span>
         </summary>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-edge bg-surface p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Coverage snapshot</p>
-            <div className="mt-3 space-y-2 text-xs text-fg-secondary">
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">Coverage snapshot</p>
+            <div className="mt-3 space-y-2 text-xs text-[#787774]">
               <p>Private examples: {data?.scorer.training_insights.label_coverage.private_examples || 0}</p>
               <p>Shared examples: {data?.scorer.training_insights.label_coverage.shared_examples || 0}</p>
               <p>Real examples: {data?.scorer.training_insights.label_coverage.real_examples || 0}</p>
               <p>Synthetic examples: {data?.scorer.training_insights.label_coverage.synthetic_examples || 0}</p>
             </div>
           </div>
-          <div className="rounded-2xl border border-edge bg-surface p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Coverage by score dimension</p>
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">Coverage by score dimension</p>
             <div className="mt-3 space-y-2">
               {data?.scorer.training_insights.label_coverage.dimensions.map((dimension) => (
                 <div key={dimension.key} className="flex items-center justify-between text-xs">
-                  <span className="text-fg-secondary">{dimension.label}</span>
-                  <span className={dimension.healthy ? "score-good" : "score-warning"}>
+                  <span className="text-[#787774]">{dimension.label}</span>
+                  <span className={dimension.healthy ? "text-[#0F7B3D]" : "text-[#C47A00]"}>
                     {dimension.label_count} labels
                   </span>
                 </div>
@@ -1493,60 +1494,60 @@ function CalibrationTab() {
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-edge bg-surface p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">What runs in production</p>
-            <p className="mt-2 text-sm font-medium text-fg">
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">What runs in production</p>
+            <p className="mt-2 text-sm font-medium text-[#37352F]">
               {data?.scorer.model_card.base_evaluator.provider} / {data?.scorer.model_card.base_evaluator.model}
             </p>
             <div className="mt-3 space-y-2">
               {data?.scorer.model_card.strengths.map((item) => (
-                <p key={item} className="text-xs leading-5 text-fg-secondary">• {item}</p>
+                <p key={item} className="text-xs leading-5 text-[#787774]">• {item}</p>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-edge bg-surface p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Privacy posture</p>
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">Privacy posture</p>
             <div className="mt-3 space-y-2">
-              <p className="text-xs leading-5 text-fg-secondary">{data?.scorer.model_card.privacy.workspace_private}</p>
-              <p className="text-xs leading-5 text-fg-secondary">{data?.scorer.model_card.privacy.global_anonymous}</p>
+              <p className="text-xs leading-5 text-[#787774]">{data?.scorer.model_card.privacy.workspace_private}</p>
+              <p className="text-xs leading-5 text-[#787774]">{data?.scorer.model_card.privacy.global_anonymous}</p>
             </div>
           </div>
         </div>
-        <div className="mt-4 rounded-2xl border border-edge bg-[var(--panel-subtle)] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-fg-muted">Roadmap to a proprietary scorer</p>
+        <div className="mt-4 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#ACABA8]">Roadmap to a proprietary scorer</p>
           <div className="mt-3 space-y-2">
             {data?.scorer.model_card.path_to_proprietary_model.map((item) => (
-              <p key={item} className="text-xs leading-5 text-fg-secondary">• {item}</p>
+              <p key={item} className="text-xs leading-5 text-[#787774]">• {item}</p>
             ))}
           </div>
         </div>
       </details>
 
-      <GlassCard className="p-6">
-        <h2 className="mb-3 text-sm font-semibold text-fg">Recent training activity</h2>
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <h2 className="mb-3 text-sm font-semibold text-[#37352F]">Recent training activity</h2>
         <div className="space-y-3">
           {data?.recent_labels?.length ? data.recent_labels.map((label) => (
-            <div key={label.id} className="rounded-2xl border border-edge bg-surface p-3">
+            <div key={label.id} className="rounded-[6px] border border-[#E9E9E7] bg-white p-3 hover:bg-[#F7F7F5] transition-colors">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-fg">{label.customer_identifier || label.conversation_id}</p>
+                <p className="text-sm font-medium text-[#37352F]">{label.customer_identifier || label.conversation_id}</p>
                 <div className="flex items-center gap-2 text-[11px]">
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-fg-muted">{label.source}</span>
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 capitalize text-fg-muted">{label.example_kind}</span>
-                  <span className="rounded-full bg-[var(--panel-subtle)] px-2 py-1 text-fg-muted">
+                  <span className="rounded-[4px] bg-[#F7F7F5] border border-[#E9E9E7] px-2 py-1 capitalize text-[#ACABA8]">{label.source}</span>
+                  <span className="rounded-[4px] bg-[#F7F7F5] border border-[#E9E9E7] px-2 py-1 capitalize text-[#ACABA8]">{label.example_kind}</span>
+                  <span className="rounded-[4px] bg-[#F7F7F5] border border-[#E9E9E7] px-2 py-1 text-[#ACABA8]">
                     {label.share_scope === "global_anonymous" ? "shared" : "private"}
                   </span>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-fg-secondary">
+              <p className="mt-1 text-xs text-[#787774]">
                 {label.dimension} · {(label.override_score * 100).toFixed(0)}%
               </p>
-              {label.reason ? <p className="mt-2 text-xs text-fg-muted">{label.reason}</p> : null}
+              {label.reason ? <p className="mt-2 text-xs text-[#ACABA8]">{label.reason}</p> : null}
             </div>
           )) : (
-            <p className="text-sm text-fg-muted">No human labels yet.</p>
+            <p className="text-sm text-[#ACABA8]">No human labels yet.</p>
           )}
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
 }
@@ -1614,25 +1615,25 @@ export default function SettingsPage() {
   const activeTabConfig = tabs.find((tab) => tab.id === activeTab) || tabs[0];
 
   return (
-    <div className="space-y-6 pb-10">
-      <GlassCard className="rounded-[1.3rem] p-4 sm:p-5">
+    <div className="space-y-6 pb-10 bg-white min-h-full">
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4 sm:p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <p className="page-eyebrow">Setup</p>
-        <h1 className="mt-2 page-title">Setup checklist.</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#37352F]">Setup checklist.</h1>
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           {tabs.map((tab) => (
             <button
               key={`summary-${tab.id}`}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`operator-chip ${activeTab === tab.id ? "border-[var(--border-strong)] bg-[var(--panel)] text-fg" : ""}`}
+              className={`operator-chip ${activeTab === tab.id ? "border-[#D0D0CD] bg-[#F1F1EF] text-[#37352F]" : ""}`}
             >
               {activeTab === tab.id ? "▼" : tab.id === "connections" || tab.id === "knowledge" ? "✓" : "–"} {tab.label}
             </button>
           ))}
         </div>
-      </GlassCard>
+      </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-[6px] p-1 flex gap-1 flex-wrap">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1642,19 +1643,19 @@ export default function SettingsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-xl px-4 py-2.5 text-left transition-all ${
+              className={`rounded-[4px] px-4 py-2.5 text-left transition-all ${
                 isActive
-                  ? "bg-[var(--panel)] shadow-sm"
-                  : "bg-[var(--surface-soft)] hover:bg-[var(--panel)]"
+                  ? "bg-white border border-[#E9E9E7] text-[#37352F] font-medium shadow-sm"
+                  : "text-[#787774] hover:text-[#37352F] hover:bg-[#EBEBEA]"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-edge bg-[var(--panel-subtle)]">
-                  <Icon className="h-4 w-4 text-fg" />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-[4px] border border-[#E9E9E7] ${isActive ? "bg-white" : "bg-[#F1F1EF]"}`}>
+                  <Icon className={`h-4 w-4 ${isActive ? "text-[#37352F]" : "text-[#787774]"}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-fg">{tab.label}</p>
-                  <p className="text-xs text-fg-secondary">{tab.description}</p>
+                  <p className={`text-sm font-semibold ${isActive ? "text-[#37352F]" : "text-[#787774]"}`}>{tab.label}</p>
+                  <p className="text-xs text-[#ACABA8]">{tab.description}</p>
                 </div>
               </div>
             </button>
@@ -1662,10 +1663,10 @@ export default function SettingsPage() {
         })}
       </div>
 
-      <GlassCard className="rounded-[1.2rem] p-4 sm:p-5">
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4 sm:p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-base font-semibold tracking-[-0.03em] text-fg">{activeTabConfig.label}</p>
+            <p className="text-base font-semibold tracking-[-0.03em] text-[#37352F]">{activeTabConfig.label}</p>
           </div>
           <span className="operator-chip">{activeTabConfig.description}</span>
         </div>
@@ -1677,7 +1678,7 @@ export default function SettingsPage() {
           {activeTab === "calibration" && <CalibrationTab />}
           {activeTab === "workspace" && <WorkspaceTab />}
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
 }

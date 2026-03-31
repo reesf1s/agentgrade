@@ -9,11 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
+        sans: ["ui-sans-serif", "-apple-system", "BlinkMacSystemFont", '"Segoe UI"', "Helvetica", "Arial", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       colors: {
-        // shadcn/ui CSS variable references (Linear-mapped)
+        // shadcn/ui CSS variable references (Notion-mapped)
         background:  "hsl(var(--shadcn-background))",
         foreground:  "hsl(var(--shadcn-foreground))",
         card:        { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
@@ -27,57 +27,58 @@ const config: Config = {
         input:       "hsl(var(--input))",
         ring:        "hsl(var(--ring))",
 
-        // Linear design system color tokens
+        // Notion design system color tokens
         score: {
-          good:     "#4EA76B",
-          warning:  "#D98832",
-          critical: "#DC5B5B",
+          good:     "#0F7B3D",
+          warning:  "#C47A00",
+          critical: "#C4342C",
         },
         // Semantic surface tokens
         surface: {
-          DEFAULT:   "#1C1C1E",
-          secondary: "#222225",
-          hover:     "#242428",
-          active:    "#2A2A2E",
+          DEFAULT:   "#FFFFFF",
+          sidebar:   "#F7F7F5",
+          hover:     "#F1F1EF",
+          active:    "#EBEBEA",
+          secondary: "#FAFAFA",
         },
         edge: {
-          DEFAULT: "rgba(255,255,255,0.08)",
-          strong:  "rgba(255,255,255,0.14)",
-          hover:   "rgba(255,255,255,0.12)",
+          DEFAULT: "#E9E9E7",
+          strong:  "#D0D0CD",
+          hover:   "#D9D9D6",
         },
         fg: {
-          DEFAULT:   "rgba(255,255,255,0.92)",
-          secondary: "rgba(255,255,255,0.48)",
-          muted:     "rgba(255,255,255,0.28)",
-          faint:     "rgba(255,255,255,0.14)",
+          DEFAULT:   "#37352F",
+          secondary: "#787774",
+          muted:     "#ACABA8",
+          faint:     "#C9C9C6",
         },
         base: {
-          DEFAULT: "#161618",
-          white:   "#FFFFFF",
+          DEFAULT: "#FFFFFF",
+          dark:    "#37352F",
         },
         sidebar: {
-          DEFAULT:    "#1A1A1C",
-          border:     "rgba(255,255,255,0.06)",
-          fg:         "rgba(255,255,255,0.72)",
-          "fg-muted": "rgba(255,255,255,0.3)",
-          active:     "rgba(255,255,255,0.07)",
-          hover:      "rgba(255,255,255,0.04)",
+          DEFAULT:    "#F7F7F5",
+          border:     "#E9E9E7",
+          fg:         "#37352F",
+          "fg-muted": "#ACABA8",
+          active:     "rgba(35,131,226,0.08)",
+          hover:      "#EBEBEA",
         },
-        // Linear purple accent
+        // Notion blue accent
         brand: {
-          DEFAULT: "#5E6AD2",
-          light:   "#7178E0",
-          dark:    "#4D5AC0",
-          muted:   "rgba(94,106,210,0.12)",
-          soft:    "rgba(94,106,210,0.07)",
+          DEFAULT: "#2383E2",
+          light:   "#1d6fc2",
+          dark:    "#1558a8",
+          muted:   "rgba(35,131,226,0.10)",
+          soft:    "rgba(35,131,226,0.06)",
         },
         // Glass helpers (for arbitrary value access)
         glass: {
-          DEFAULT: "#1C1C1E",
-          hover:   "#212124",
-          elevated:"#222225",
-          border:  "rgba(255,255,255,0.08)",
-          "border-hover": "rgba(255,255,255,0.14)",
+          DEFAULT:        "#FFFFFF",
+          hover:          "#F7F7F5",
+          elevated:       "#FFFFFF",
+          border:         "#E9E9E7",
+          "border-hover": "#D9D9D6",
         },
       },
       borderRadius: {
@@ -88,13 +89,13 @@ const config: Config = {
         sm:    "4px",
       },
       boxShadow: {
-        glass:     "0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)",
-        "glass-lg":"0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)",
-        "glow-green": "0 0 16px rgba(78,167,107,0.2)",
-        "glow-amber": "0 0 16px rgba(217,136,50,0.2)",
-        "glow-red":   "0 0 16px rgba(220,91,91,0.2)",
-        "glow-brand": "0 0 16px rgba(94,106,210,0.25)",
-        ring: "0 0 0 2px #161618, 0 0 0 4px rgba(94,106,210,0.5)",
+        glass:        "0 1px 2px rgba(0,0,0,0.06), 0 0 0 1px #E9E9E7",
+        "glass-lg":   "0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px #E9E9E7",
+        "glow-green": "0 0 12px rgba(15,123,61,0.15)",
+        "glow-amber": "0 0 12px rgba(196,122,0,0.15)",
+        "glow-red":   "0 0 12px rgba(196,52,44,0.15)",
+        "glow-brand": "0 0 12px rgba(35,131,226,0.2)",
+        ring: "0 0 0 2px #FFFFFF, 0 0 0 4px rgba(35,131,226,0.4)",
       },
       animation: {
         "fade-in":        "fade-in 0.2s ease both",

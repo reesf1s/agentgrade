@@ -24,12 +24,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard",     label: "Overview",     icon: Layers,        section: "operate" },
-  { href: "/conversations", label: "Review queue", icon: MessageSquare, section: "operate" },
-  { href: "/patterns",      label: "Issues",       icon: Sparkles,      section: "operate" },
-  { href: "/reports",       label: "Reports",      icon: FileBarChart,  section: "learn" },
-  { href: "/benchmarks",    label: "Benchmarks",   icon: BarChart3,     section: "learn" },
-  { href: "/settings",      label: "Setup",        icon: Settings,      section: "configure" },
+  { href: "/dashboard",     label: "Overview",       icon: Layers,        section: "operate" },
+  { href: "/conversations", label: "Conversations",  icon: MessageSquare, section: "operate" },
+  { href: "/patterns",      label: "Issues",         icon: Sparkles,      section: "operate" },
+  { href: "/reports",       label: "Reports",        icon: FileBarChart,  section: "learn" },
+  { href: "/benchmarks",    label: "Benchmarks",     icon: BarChart3,     section: "learn" },
+  { href: "/settings",      label: "Settings",       icon: Settings,      section: "configure" },
 ];
 
 function NavLink({
@@ -56,19 +56,19 @@ function NavLink({
       className={cn(
         "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-all duration-100",
         isActive
-          ? "bg-[rgba(255,255,255,0.07)] text-[rgba(255,255,255,0.9)] font-medium"
-          : "text-[rgba(255,255,255,0.48)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[rgba(255,255,255,0.72)] font-normal"
+          ? "bg-[rgba(35,131,226,0.08)] text-[#37352F] font-medium"
+          : "text-[#787774] hover:bg-[#EBEBEA] hover:text-[#37352F] font-normal"
       )}
     >
       {isActive && (
-        <span className="absolute left-0 top-1/2 h-3.5 w-[2px] -translate-y-1/2 rounded-full bg-[#5E6AD2]" />
+        <span className="absolute left-0 top-1/2 h-3.5 w-[2px] -translate-y-1/2 rounded-full bg-[#2383E2]" />
       )}
       <Icon
         className={cn(
           "h-[15px] w-[15px] shrink-0 transition-colors",
           isActive
-            ? "text-[rgba(255,255,255,0.6)]"
-            : "text-[rgba(255,255,255,0.28)] group-hover:text-[rgba(255,255,255,0.5)]"
+            ? "text-[#787774]"
+            : "text-[#ACABA8] group-hover:text-[#787774]"
         )}
       />
       <span className="flex-1 truncate">{label}</span>
@@ -101,13 +101,13 @@ export function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 pb-4 pt-5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#5E6AD2]">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#2383E2]">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="white" />
           </svg>
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold tracking-[-0.01em] text-[rgba(255,255,255,0.9)]">
+          <p className="truncate text-[13px] font-semibold tracking-[-0.01em] text-[#37352F]">
             AgentGrade
           </p>
         </div>
@@ -117,7 +117,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-2.5 pb-4">
         {sections.map((section, i) => (
           <div key={section.key} className={i > 0 ? "mt-5" : ""}>
-            <p className="mb-1 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[rgba(255,255,255,0.2)]">
+            <p className="mb-1 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">
               {section.label}
             </p>
             <div className="space-y-px">
@@ -137,8 +137,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="mx-2.5 mt-auto border-t border-[rgba(255,255,255,0.06)] pb-4 pt-3">
-        <p className="px-2.5 text-[11px] text-[rgba(255,255,255,0.18)]">v1.0</p>
+      <div className="mx-2.5 mt-auto border-t border-[#E9E9E7] pb-4 pt-3">
+        <p className="px-2.5 text-[11px] text-[#ACABA8]">v1.0</p>
       </div>
     </>
   );
@@ -149,23 +149,23 @@ export function Sidebar() {
       <div
         className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-3 lg:hidden"
         style={{
-          background: "#1A1A1C",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: "#F7F7F5",
+          borderBottom: "1px solid #E9E9E7",
         }}
       >
         <Link href="/dashboard" prefetch className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#5E6AD2]">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#2383E2]">
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 1L10.5 6H14L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L2 6H5.5L8 1Z" fill="white" />
             </svg>
           </div>
-          <span className="text-[13px] font-semibold text-[rgba(255,255,255,0.9)]">AgentGrade</span>
+          <span className="text-[13px] font-semibold text-[#37352F]">AgentGrade</span>
         </Link>
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-md p-1.5 text-[rgba(255,255,255,0.4)] transition-colors hover:text-[rgba(255,255,255,0.7)]"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
+          className="rounded-md p-1.5 text-[#787774] transition-colors hover:text-[#37352F]"
+          style={{ background: "#F1F1EF", border: "1px solid #E9E9E7" }}
           aria-label="Toggle navigation"
         >
           {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -177,7 +177,7 @@ export function Sidebar() {
         <button
           type="button"
           className="fixed inset-0 z-40 animate-backdrop-in lg:hidden"
-          style={{ background: "rgba(0,0,0,0.6)" }}
+          style={{ background: "rgba(0,0,0,0.3)" }}
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
         />

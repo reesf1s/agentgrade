@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -17,9 +17,9 @@ import { scoreAccent, pct } from "@/lib/utils";
 import type { DashboardData } from "@/lib/dashboard-data";
 
 function trendState(delta: number) {
-  if (delta > 0.02) return { label: "Improving", Icon: TrendingUp, color: "#10B981" };
-  if (delta < -0.02) return { label: "Declining", Icon: TrendingDown, color: "#EF4444" };
-  return { label: "Steady", Icon: Minus, color: "#6B7280" };
+  if (delta > 0.02) return { label: "Improving", Icon: TrendingUp, color: "#0F7B3D" };
+  if (delta < -0.02) return { label: "Declining", Icon: TrendingDown, color: "#C4342C" };
+  return { label: "Steady", Icon: Minus, color: "#787774" };
 }
 
 export function DashboardPageClient({ data }: { data: DashboardData }) {
@@ -51,274 +51,234 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
 
   if (reviewed === 0) {
     return (
-      <div className="space-y-6 pb-8">
+      <div className="space-y-6 pb-8 animate-fade-in">
         <div className="page-header">
           <div>
-            <p className="page-eyebrow mb-2">Weekly control tower</p>
             <h1 className="page-title">Overview</h1>
             <p className="page-subtitle mt-2">
-              The workspace is live, but there are no usable scores yet.
+              Your agent&apos;s performance at a glance
             </p>
           </div>
         </div>
 
-        <GlassCard elevated className="p-6 sm:p-7">
-          <div className="assessment-hero">
-            <div>
-              <p className="page-eyebrow">Status</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-fg">
-                Waiting for scored conversations
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-fg-secondary">
-                {data.conversations.length > 0
-                  ? "Conversations are arriving, but they have not produced usable scores yet."
-                  : "No recent conversations have landed in this workspace yet."}
-              </p>
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-8 text-center"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div className="mx-auto max-w-sm">
+            <div
+              className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ background: "#F7F7F5", border: "1px solid #E9E9E7" }}
+            >
+              <TrendingUp className="h-5 w-5" style={{ color: "#ACABA8" }} />
             </div>
-            <div className="assessment-score-card rounded-[20px] border border-white/70 bg-white/60 p-5">
-              <p className="page-eyebrow">Next step</p>
-              <p className="mt-3 text-base font-semibold text-fg">
-                Review incoming conversations first.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href="/conversations" className="glass-button glass-button-primary text-sm">
-                  Open queue
-                </Link>
-                <Link href="/settings" className="glass-button text-sm">
-                  Check setup
-                </Link>
-              </div>
+            <h2 className="text-base font-semibold" style={{ color: "#37352F" }}>
+              Waiting for scored conversations
+            </h2>
+            <p className="mt-2 text-sm leading-6" style={{ color: "#787774" }}>
+              {data.conversations.length > 0
+                ? "Conversations are arriving, but they have not produced usable scores yet."
+                : "No recent conversations have landed in this workspace yet."}
+            </p>
+            <div className="mt-5 flex justify-center gap-2">
+              <Link href="/conversations" className="glass-button glass-button-primary text-sm">
+                Open conversations
+              </Link>
+              <Link href="/settings" className="glass-button text-sm">
+                Check setup
+              </Link>
             </div>
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 animate-fade-in">
+      {/* Page header */}
       <div className="page-header">
         <div>
-          <p className="page-eyebrow mb-2">Weekly control tower</p>
           <h1 className="page-title">Overview</h1>
-          <p className="page-subtitle mt-2">
-            See what changed, what repeats, and what to fix next.
-          </p>
+          <p className="page-subtitle mt-2">Your agent&apos;s performance at a glance</p>
         </div>
-        <Link
-          href="/reports"
-          className="glass-button glass-button-primary inline-flex items-center gap-1.5 text-sm"
-        >
-          Open report
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
       </div>
 
-      <section className="assessment-hero">
-        <GlassCard elevated className="p-6 sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            <div className="space-y-4">
-              <div className="token-row">
-                <span className="token-pill">This week</span>
-                <span className="token-pill">
-                  {reviewed} reviewed
-                </span>
-                <span className="token-pill" style={{ color: trend.color }}>
-                  <TrendIcon className="h-3.5 w-3.5" />
-                  {trend.label}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-fg-secondary">Overall quality</p>
-                <div className="mt-3 flex flex-wrap items-center gap-5">
-                  <div
-                    className="score-ring"
-                    style={
-                      {
-                        "--ring-pct": `${Math.round(avgScore * 100)}%`,
-                        "--ring-color": scoreAccent(avgScore),
-                      } as React.CSSProperties
-                    }
-                  >
-                    <div className="score-ring-label">
-                      <span style={{ color: scoreAccent(avgScore) }}>{pct(avgScore)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="assessment-title" style={{ color: scoreAccent(avgScore) }}>
-                      {pct(avgScore)}
-                    </p>
-                    <p className="assessment-summary max-w-md">
-                      {trendDelta > 0.02
-                        ? "Quality is improving across recent reviews."
-                        : trendDelta < -0.02
-                          ? "Quality slipped this week and needs attention."
-                          : "Quality is broadly stable this week."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Four metric cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Overall quality */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-5"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <p className="metric-label">Overall quality</p>
+          <p
+            className="metric-value mt-2"
+            style={{ color: scoreAccent(avgScore), fontSize: "30px" }}
+          >
+            {pct(avgScore)}
+          </p>
+          <p className="metric-sub mt-1 flex items-center gap-1">
+            <TrendIcon className="h-3.5 w-3.5" style={{ color: trend.color }} />
+            <span style={{ color: trend.color }}>{trend.label}</span>
+          </p>
+        </div>
 
-            <div className="assessment-score-card rounded-xl border border-edge bg-surface-secondary p-5">
-              <p className="page-eyebrow">Next move</p>
-              <p className="mt-2 text-base font-semibold tracking-[-0.02em] text-fg">
-                {primaryPattern ? primaryPattern.title : "Keep the review queue moving"}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-fg-secondary">
-                {nextMove}
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="value-block">
-                  <span className="value-key">Needs review</span>
-                  <span className="value-text">{lowScoreConversations.length}</span>
-                </div>
-                <div className="value-block">
-                  <span className="value-key">Hallucination</span>
-                  <span className="value-text">{pct(hallucinationRate)}</span>
-                </div>
-                <div className="value-block">
-                  <span className="value-key">Escalation</span>
-                  <span className="value-text">{pct(escalationRate)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </GlassCard>
+        {/* Conversations scored */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-5"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <p className="metric-label">Conversations scored</p>
+          <p className="metric-value mt-2" style={{ fontSize: "30px", color: "#37352F" }}>
+            {reviewed.toLocaleString()}
+          </p>
+          <p className="metric-sub mt-1">Total analyzed</p>
+        </div>
 
-        <GlassCard className="p-6">
-          <div className="space-y-5">
-            <div>
-              <p className="page-eyebrow">Top issue</p>
-              {primaryPattern ? (
-                <>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <SeverityBadge severity={primaryPattern.severity} />
-                    <span className="text-sm font-medium text-fg-secondary">
-                      {primaryPattern.affected_conversation_ids.length} affected
-                    </span>
-                  </div>
-                  <p className="mt-3 text-lg font-semibold tracking-[-0.03em] text-fg">
-                    {primaryPattern.title}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-fg-secondary">
-                    {primaryPattern.description}
-                  </p>
-                  <Link
-                    href="/patterns"
-                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-light"
-                  >
-                    Review issue
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p className="mt-3 text-lg font-semibold tracking-[-0.03em] text-fg">
-                    No repeated issue
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-fg-secondary">
-                    Nothing is clustering into a serious workspace-wide problem.
-                  </p>
-                </>
-              )}
-            </div>
+        {/* Hallucination rate */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-5"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <p className="metric-label">Hallucination rate</p>
+          <p
+            className="metric-value mt-2"
+            style={{
+              fontSize: "30px",
+              color: hallucinationRate > 0.1 ? "#C4342C" : hallucinationRate > 0.05 ? "#C47A00" : "#0F7B3D",
+            }}
+          >
+            {pct(hallucinationRate)}
+          </p>
+          <p className="metric-sub mt-1">
+            {hallucinationRate > 0.1 ? "Needs attention" : hallucinationRate > 0.05 ? "Monitor closely" : "Within target"}
+          </p>
+        </div>
 
-            <div className="light-divider pt-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="value-block">
-                  <span className="value-key">Safe to ignore</span>
-                  <span className="value-text">
-                    {safeConversations.length > 0 ? `${safeConversations.length} healthy` : "Nothing notable"}
-                  </span>
-                  <span className="value-muted">
-                    {safeConversations.length > 0
-                      ? "Strong conversations are not shaping the workspace trend."
-                      : "No low-priority area needs time right now."}
-                  </span>
-                </div>
-                <div className="value-block">
-                  <span className="value-key">Review queue</span>
-                  <span className="value-text">
-                    {lowScoreConversations.length > 0 ? `${lowScoreConversations.length} worth opening` : "Queue is calm"}
-                  </span>
-                  <span className="value-muted">
-                    {lowScoreConversations.length > 0
-                      ? "Start with the lowest-scoring conversations."
-                      : "Use the queue for spot checks rather than firefighting."}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </GlassCard>
-      </section>
+        {/* Escalation rate */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-5"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <p className="metric-label">Escalation rate</p>
+          <p
+            className="metric-value mt-2"
+            style={{
+              fontSize: "30px",
+              color: escalationRate > 0.15 ? "#C4342C" : escalationRate > 0.08 ? "#C47A00" : "#37352F",
+            }}
+          >
+            {pct(escalationRate)}
+          </p>
+          <p className="metric-sub mt-1">
+            {escalationRate > 0.15 ? "High escalation" : escalationRate > 0.08 ? "Elevated" : "Normal range"}
+          </p>
+        </div>
+      </div>
 
+      {/* Two-column section: top issues + trend chart */}
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <GlassCard className="p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="page-eyebrow">Needs action</p>
-              <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-fg">
-                Review these first
-              </h2>
-            </div>
-            <Link href="/conversations" className="text-sm font-semibold text-brand hover:text-brand-light">
-              Open queue
+        {/* Top issues */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between border-b border-[#E9E9E7] px-5 py-4">
+            <h2 className="text-sm font-semibold" style={{ color: "#37352F" }}>
+              Top issues
+            </h2>
+            <Link
+              href="/patterns"
+              className="text-xs font-medium"
+              style={{ color: "#2383E2" }}
+            >
+              See all →
             </Link>
           </div>
 
-          <div className="mt-5 compact-list">
-            {lowScoreConversations.length === 0 ? (
-              <div className="empty-inline py-10">No urgent conversations right now.</div>
-            ) : (
-              lowScoreConversations.slice(0, 4).map((conversation) => (
+          {data.patterns.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm" style={{ color: "#787774" }}>
+                No issues detected — quality looks good
+              </p>
+            </div>
+          ) : (
+            <div>
+              {data.patterns.slice(0, 5).map((pattern, idx) => (
                 <Link
-                  key={conversation.id}
-                  href={`/conversations/${conversation.id}`}
-                  className="compact-list-item flex items-start justify-between gap-4"
+                  key={pattern.id}
+                  href="/patterns"
+                  className="flex items-start gap-4 px-5 py-3 transition-colors"
+                  style={{
+                    borderBottom: idx < Math.min(data.patterns.length, 5) - 1 ? "1px solid #F1F1EF" : "none",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F7F7F5"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = ""; }}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-fg">
-                      {conversation.customer_identifier || `Conversation #${conversation.id.slice(0, 6)}`}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-sm font-medium leading-snug transition-colors"
+                      style={{ color: "#37352F" }}
+                    >
+                      {pattern.title}
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-fg-secondary">
-                      {conversation.quality_scores?.summary || "Needs review"}
+                    <p
+                      className="mt-0.5 text-xs leading-relaxed line-clamp-1"
+                      style={{ color: "#787774" }}
+                    >
+                      {pattern.description}
                     </p>
                   </div>
-                  <ScoreBadge score={conversation.quality_scores?.overall_score || 0} size="sm" />
+                  <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                    <SeverityBadge severity={pattern.severity} />
+                    <span className="text-xs tabular-nums" style={{ color: "#ACABA8" }}>
+                      {pattern.affected_conversation_ids.length}
+                    </span>
+                  </div>
                 </Link>
-              ))
-            )}
-          </div>
-        </GlassCard>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <GlassCard className="p-6">
-          <p className="page-eyebrow">Trend</p>
-          <div className="mt-2 flex items-center gap-2">
+        {/* Quality trend chart */}
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white p-5"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center gap-2">
             <TrendIcon className="h-4 w-4" style={{ color: trend.color }} />
-            <h2 className="text-xl font-semibold tracking-[-0.03em] text-fg">
-              {trend.label}
+            <h2 className="text-sm font-semibold" style={{ color: "#37352F" }}>
+              Quality trend
             </h2>
+            <span className="ml-auto text-xs" style={{ color: trend.color }}>
+              {trend.label}
+            </span>
           </div>
 
           {data.trend_data.length === 0 ? (
-            <p className="empty-inline mt-8">Trend data will appear once more conversations are scored.</p>
+            <p className="mt-8 text-center text-sm" style={{ color: "#ACABA8" }}>
+              Trend data will appear once more conversations are scored.
+            </p>
           ) : (
-            <div className="mt-5 h-56">
+            <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.trend_data} margin={{ left: -10, right: 8, top: 4, bottom: 0 }}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <LineChart
+                  data={data.trend_data}
+                  margin={{ left: -10, right: 8, top: 4, bottom: 0 }}
+                >
+                  <CartesianGrid stroke="#F1F1EF" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.3)" }}
+                    tick={{ fontSize: 11, fill: "#ACABA8" }}
                     tickFormatter={(value) => value.slice(5)}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0.3, 1]}
-                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.3)" }}
+                    tick={{ fontSize: 11, fill: "#ACABA8" }}
                     tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
                     axisLine={false}
                     tickLine={false}
@@ -326,29 +286,73 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "rgba(14,14,20,0.95)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "10px",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                      background: "#FFFFFF",
+                      border: "1px solid #E9E9E7",
+                      borderRadius: "6px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                       fontSize: 12,
-                      color: "rgba(255,255,255,0.85)",
+                      color: "#37352F",
                     }}
                     formatter={(value) => [`${Math.round(Number(value) * 100)}%`, "Quality"]}
                   />
                   <Line
                     type="monotone"
                     dataKey="overall"
-                    stroke="#5E6AD2"
+                    stroke="#2383E2"
                     strokeWidth={2}
                     dot={false}
-                    activeDot={{ r: 4, fill: "#7178E0", stroke: "rgba(255,255,255,0.2)", strokeWidth: 2 }}
+                    activeDot={{ r: 4, fill: "#2383E2", stroke: "#FFFFFF", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
-        </GlassCard>
+        </div>
       </div>
+
+      {/* Low-score conversations (secondary) */}
+      {lowScoreConversations.length > 0 && (
+        <div
+          className="rounded-[6px] border border-[#E9E9E7] bg-white"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between border-b border-[#E9E9E7] px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold" style={{ color: "#37352F" }}>
+                Needs attention
+              </h2>
+              <p className="mt-0.5 text-xs" style={{ color: "#787774" }}>
+                Conversations scoring below 65%
+              </p>
+            </div>
+            <span
+              className="rounded-[4px] px-2 py-0.5 text-xs font-medium"
+              style={{ background: "#F7F7F5", color: "#787774", border: "1px solid #E9E9E7" }}
+            >
+              {lowScoreConversations.length}
+            </span>
+          </div>
+          <div className="compact-list">
+            {lowScoreConversations.slice(0, 4).map((conversation) => (
+              <Link
+                key={conversation.id}
+                href={`/conversations/${conversation.id}`}
+                className="compact-list-item flex items-start justify-between gap-4"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium" style={{ color: "#37352F" }}>
+                    {conversation.customer_identifier || `Conversation #${conversation.id.slice(0, 6)}`}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "#787774" }}>
+                    {conversation.quality_scores?.summary || "Needs review"}
+                  </p>
+                </div>
+                <ScoreBadge score={conversation.quality_scores?.overall_score || 0} size="sm" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

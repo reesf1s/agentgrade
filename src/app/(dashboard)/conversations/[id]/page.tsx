@@ -14,8 +14,6 @@ import {
   User,
   X,
 } from "lucide-react";
-import { GlassButton } from "@/components/ui/glass-button";
-import { GlassCard } from "@/components/ui/glass-card";
 import { GlassSelect, GlassTextarea } from "@/components/ui/glass-input";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { useToast } from "@/components/ui/toast";
@@ -425,12 +423,12 @@ export default function ConversationDetailPage() {
       <div className="pb-8">
         <Link
           href="/conversations"
-          className="mb-5 inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-[#787774] hover:text-[#37352F]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Review queue
         </Link>
-        <div className="glass-static p-10 text-center">
-          <p className="text-sm text-fg-muted">Loading…</p>
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-10 text-center" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <p className="text-sm text-[#ACABA8]">Loading…</p>
         </div>
       </div>
     );
@@ -441,16 +439,20 @@ export default function ConversationDetailPage() {
       <div className="pb-8">
         <Link
           href="/conversations"
-          className="mb-5 inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-[#787774] hover:text-[#37352F]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Review queue
         </Link>
-        <div className="glass-static p-10 text-center">
-          <p className="text-sm font-medium text-fg-secondary">Could not load this conversation</p>
-          <p className="mt-1 text-xs text-fg-muted">There was a problem fetching the data. Try again.</p>
-          <GlassButton size="sm" className="mt-4" onClick={() => { setLoading(true); setRetryCount((n) => n + 1); }}>
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-10 text-center" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <p className="text-sm font-medium text-[#787774]">Could not load this conversation</p>
+          <p className="mt-1 text-xs text-[#ACABA8]">There was a problem fetching the data. Try again.</p>
+          <button
+            type="button"
+            className="glass-button mt-4 text-sm"
+            onClick={() => { setLoading(true); setRetryCount((n) => n + 1); }}
+          >
             Retry
-          </GlassButton>
+          </button>
         </div>
       </div>
     );
@@ -461,12 +463,12 @@ export default function ConversationDetailPage() {
       <div className="pb-8">
         <Link
           href="/conversations"
-          className="mb-5 inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-[#787774] hover:text-[#37352F]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Review queue
         </Link>
-        <div className="glass-static p-10 text-center">
-          <p className="text-sm text-fg-muted">Conversation not found.</p>
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-10 text-center" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <p className="text-sm text-[#ACABA8]">Conversation not found.</p>
         </div>
       </div>
     );
@@ -501,108 +503,142 @@ export default function ConversationDetailPage() {
     customer: {
       icon: User,
       label: "Customer",
-      bubbleClass: "msg-customer",
+      bubbleClass: "bg-[#F7F7F5] border border-[#E9E9E7] text-[#37352F] rounded-[6px]",
       align: "start" as const,
-      avatarBg: "bg-[rgba(255,255,255,0.07)] border-[rgba(255,255,255,0.1)]",
+      avatarBg: "bg-[#F7F7F5] border-[#E9E9E7]",
     },
     agent: {
       icon: Bot,
       label: "AI agent",
-      bubbleClass: "msg-agent",
+      bubbleClass: "bg-[rgba(35,131,226,0.06)] border border-[rgba(35,131,226,0.12)] text-[#37352F] rounded-[6px]",
       align: "end" as const,
-      avatarBg: "bg-brand/[0.08] border-brand/20",
+      avatarBg: "bg-[rgba(35,131,226,0.06)] border-[rgba(35,131,226,0.12)]",
     },
     human_agent: {
       icon: Headphones,
       label: "Human agent",
-      bubbleClass: "msg-human",
+      bubbleClass: "bg-[rgba(15,123,61,0.06)] border border-[rgba(15,123,61,0.12)] text-[#37352F] rounded-[6px]",
       align: "end" as const,
-      avatarBg: "bg-score-good/[0.08] border-score-good/20",
+      avatarBg: "bg-[rgba(15,123,61,0.06)] border-[rgba(15,123,61,0.12)]",
     },
     tool: {
       icon: Sparkles,
       label: "Tool call",
-      bubbleClass: "msg-tool",
+      bubbleClass: "bg-[#F7F7F5] border border-[#E9E9E7] text-[#787774] italic rounded-[6px]",
       align: "center" as const,
-      avatarBg: "bg-surface-secondary border-edge",
+      avatarBg: "bg-[#F7F7F5] border-[#E9E9E7]",
     },
     system: {
       icon: Sparkles,
       label: "System",
-      bubbleClass: "msg-tool",
+      bubbleClass: "bg-[#F7F7F5] border border-[#E9E9E7] text-[#787774] italic rounded-[6px]",
       align: "center" as const,
-      avatarBg: "bg-surface-secondary border-edge",
+      avatarBg: "bg-[#F7F7F5] border-[#E9E9E7]",
     },
   } as const;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 bg-white">
+      {/* Top navigation bar */}
       <div className="review-topline">
         <Link
           href="/conversations"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-secondary hover:text-fg"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[#787774] hover:text-[#37352F]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Review queue
         </Link>
         <div className="review-action-strip">
           {nextConversationId && (
-            <Link href={`/conversations/${nextConversationId}`} className="glass-button inline-flex items-center gap-1.5 text-sm">
+            <Link
+              href={`/conversations/${nextConversationId}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2383E2] hover:text-[#1a6fc4]"
+            >
               Open next
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           )}
-          <button type="button" className="glass-button text-sm" onClick={() => setShowAdvancedDrawer(true)}>
+          <button
+            type="button"
+            className="glass-button text-sm"
+            onClick={() => setShowAdvancedDrawer(true)}
+          >
             Advanced
           </button>
         </div>
       </div>
 
+      {/* Assessment hero */}
       <section className="assessment-hero">
-        <div className="glass-elevated p-6 sm:p-7">
-          <div className="token-row">
-            <span className="token-pill capitalize">{conv.platform}</span>
-            <span className="token-pill">
+        {/* Main assessment card */}
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6 sm:p-7" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          {/* Token row */}
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium capitalize text-[#787774]">
+              {conv.platform}
+            </span>
+            <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
               {new Date(conv.created_at).toLocaleDateString("en-GB")}
             </span>
-            <span className="token-pill">{conv.message_count} messages</span>
-            {evidenceLabel ? <span className="token-pill">{evidenceLabel}</span> : null}
-            {conv.was_escalated ? <span className="token-pill">Escalated</span> : null}
+            <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
+              {conv.message_count} messages
+            </span>
+            {evidenceLabel ? (
+              <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
+                {evidenceLabel}
+              </span>
+            ) : null}
+            {conv.was_escalated ? (
+              <span className="inline-flex items-center rounded-[4px] border border-[rgba(196,52,44,0.2)] bg-[rgba(196,52,44,0.08)] px-2 py-0.5 text-[11px] font-medium text-[#C4342C]">
+                Escalated
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-5 flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <p className="page-eyebrow">Assessment</p>
-              <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-fg sm:text-[2.4rem]">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Assessment</p>
+              <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-[#37352F] sm:text-[2.4rem]">
                 {conv.customer_identifier || "Unknown customer"}
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                {qs ? <ScoreBadge score={qs.overall_score} size="lg" /> : <span className="operator-chip">Scoring</span>}
+                {qs ? (
+                  <ScoreBadge score={qs.overall_score} size="lg" />
+                ) : (
+                  <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
+                    Scoring
+                  </span>
+                )}
                 <span
-                  className={`insight-badge ${
+                  className={`inline-flex items-center rounded-[4px] border px-2 py-0.5 text-[11px] font-medium ${
                     assessmentLabel === "Healthy" || assessmentLabel === "Strong answer"
-                      ? "insight-badge-good"
+                      ? "border-[rgba(15,123,61,0.2)] bg-[rgba(15,123,61,0.08)] text-[#0F7B3D]"
                       : assessmentLabel === "Needs review" || assessmentLabel === "Risky"
-                        ? "insight-badge-warning"
+                        ? "border-[rgba(196,122,0,0.2)] bg-[rgba(196,122,0,0.08)] text-[#C47A00]"
                         : assessmentLabel === "Broken"
-                          ? "insight-badge-risk"
-                          : ""
+                          ? "border-[rgba(196,52,44,0.2)] bg-[rgba(196,52,44,0.08)] text-[#C4342C]"
+                          : "border-[#E9E9E7] bg-[#F7F7F5] text-[#787774]"
                   }`}
                 >
                   {assessmentLabel}
                 </span>
-                {confidenceLevel ? <span className="operator-chip capitalize">{confidenceLevel} confidence</span> : null}
+                {confidenceLevel ? (
+                  <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium capitalize text-[#787774]">
+                    {confidenceLevel} confidence
+                  </span>
+                ) : null}
               </div>
-              <p className="mt-5 text-xl leading-8 tracking-[-0.02em] text-fg">
+              <p className="mt-5 text-xl leading-8 tracking-[-0.02em] text-[#37352F]">
                 {displaySummary}
               </p>
-              <p className="mt-3 text-base font-medium text-fg-secondary">
+              <p className="mt-3 text-base font-medium text-[#787774]">
                 {primaryAction}
               </p>
             </div>
 
-            <div className="assessment-score-card rounded-xl border border-edge bg-surface-secondary p-5 sm:min-w-[260px]">
-              <p className="page-eyebrow">Disposition</p>
+            {/* Disposition card */}
+            <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-5 sm:min-w-[260px]" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Disposition</p>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {(["safe", "watch", "action_needed", "escalate_issue"] as ReviewDisposition[]).map((disposition) => (
                   <button
@@ -612,16 +648,16 @@ export default function ConversationDetailPage() {
                     disabled={Boolean(savingDisposition)}
                     className={`disposition-btn ${selectedDisposition === disposition ? "disposition-btn-active" : ""}`}
                   >
-                    <span className="text-sm font-semibold text-fg">{getDispositionLabel(disposition)}</span>
+                    <span className="text-sm font-semibold text-[#37352F]">{getDispositionLabel(disposition)}</span>
                   </button>
                 ))}
               </div>
               {selectedDisposition ? (
-                <p className="mt-4 text-xs text-fg-secondary">
+                <p className="mt-4 text-xs text-[#787774]">
                   Saved as {getDispositionLabel(selectedDisposition).toLowerCase()}.
                 </p>
               ) : (
-                <p className="mt-4 text-xs text-fg-secondary">
+                <p className="mt-4 text-xs text-[#787774]">
                   Mark the review outcome once you&apos;ve checked it.
                 </p>
               )}
@@ -629,45 +665,53 @@ export default function ConversationDetailPage() {
           </div>
         </div>
 
-        <div className="glass-static p-6">
-          <p className="page-eyebrow">Why this matters</p>
+        {/* Why this matters card */}
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-6" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Why this matters</p>
           <div className="mt-4 assessment-strip">
             <div className="assessment-strip-item">
               <span className="value-key">Worked</span>
-              <p className="value-text">{workedLine}</p>
+              <p className="value-text text-[#37352F]">{workedLine}</p>
             </div>
             <div className="assessment-strip-item">
               <span className="value-key">Check</span>
-              <div className="token-row">
+              <div className="flex flex-wrap gap-1.5">
                 {checkItems.length > 0 ? (
-                  checkItems.map((item) => <span key={item} className="token-pill">{item}</span>)
+                  checkItems.map((item) => (
+                    <span key={item} className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
+                      {item}
+                    </span>
+                  ))
                 ) : (
-                  <span className="value-text">No major checks</span>
+                  <span className="value-text text-[#787774]">No major checks</span>
                 )}
               </div>
             </div>
             <div className="assessment-strip-item">
               <span className="value-key">Risk</span>
-              <p className="value-text">{riskLine}</p>
+              <p className="value-text text-[#37352F]">{riskLine}</p>
             </div>
           </div>
 
           {insights.length > 0 && (
-            <div className="mt-5 light-divider pt-5">
-              <p className="page-eyebrow mb-3">Assessment notes</p>
+            <div className="mt-5 border-t border-[#E9E9E7] pt-5">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8] mb-3">Assessment notes</p>
               <div className="space-y-3">
                 {insights.slice(0, 2).map((insight) => (
-                  <div key={insight.title} className="flex items-start gap-3 rounded-lg border border-edge bg-surface-secondary p-3">
+                  <div
+                    key={insight.title}
+                    className="flex items-start gap-3 rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-3"
+                  >
                     {insight.type === "risk" ? (
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-score-critical" />
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C4342C]" />
                     ) : insight.type === "warning" ? (
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-score-warning" />
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#C47A00]" />
                     ) : (
-                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#ACABA8]" />
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-fg">{insight.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-fg-secondary">{insight.body}</p>
+                      <p className="text-sm font-semibold text-[#37352F]">{insight.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-[#787774]">{insight.body}</p>
                     </div>
                   </div>
                 ))}
@@ -677,18 +721,23 @@ export default function ConversationDetailPage() {
         </div>
       </section>
 
+      {/* Transcript + sidebar */}
       <section className="transcript-shell">
-        <div className="transcript-sheet overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-edge px-5 py-4">
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white overflow-hidden" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="flex items-center justify-between gap-3 border-b border-[#E9E9E7] px-5 py-4">
             <div>
-              <p className="text-sm font-semibold text-fg">Transcript</p>
-              <p className="text-xs text-fg-muted">{conv.messages.length} messages</p>
+              <p className="text-sm font-semibold text-[#37352F]">Transcript</p>
+              <p className="text-xs text-[#ACABA8]">{conv.messages.length} messages</p>
             </div>
-            {evidenceLabel ? <span className="operator-chip">{evidenceLabel}</span> : null}
+            {evidenceLabel ? (
+              <span className="inline-flex items-center rounded-[4px] border border-[#E9E9E7] bg-[#F7F7F5] px-2 py-0.5 text-[11px] font-medium text-[#787774]">
+                {evidenceLabel}
+              </span>
+            ) : null}
           </div>
 
           {conv.messages.length === 0 ? (
-            <p className="p-5 text-sm text-fg-muted">No messages recorded.</p>
+            <p className="p-5 text-sm text-[#ACABA8]">No messages recorded.</p>
           ) : (
             <div className="space-y-4 p-5 sm:p-6">
               {conv.messages.map((message, index) => {
@@ -711,28 +760,28 @@ export default function ConversationDetailPage() {
                   >
                     {!isCenter && (
                       <div className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${cfg.avatarBg}`}>
-                        <Icon className="h-4 w-4 text-fg-secondary" />
+                        <Icon className="h-4 w-4 text-[#787774]" />
                       </div>
                     )}
 
                     <div className={`max-w-[640px] ${isCenter ? "w-full" : ""}`}>
                       <div className={`px-4 py-3.5 text-sm ${cfg.bubbleClass}`}>
-                        <p className={`whitespace-pre-wrap leading-7 text-fg ${isRight ? "text-right" : ""}`}>
+                        <p className={`whitespace-pre-wrap leading-7 ${isRight ? "text-right" : ""}`}>
                           {preview}
                         </p>
                         {collapsible && (
                           <button
                             type="button"
                             onClick={() => setExpandedMessages((current) => ({ ...current, [message.id]: !expanded }))}
-                            className="mt-3 text-xs font-semibold text-brand hover:text-brand-light"
+                            className="mt-3 text-xs font-semibold text-[#2383E2] hover:text-[#1a6fc4]"
                           >
                             {expanded ? "Show less" : "Show full response"}
                           </button>
                         )}
                       </div>
                       <div className={`mt-1 flex items-center gap-2 ${isRight ? "justify-end" : ""}`}>
-                        <span className="text-[11px] font-medium text-fg-muted">{cfg.label}</span>
-                        {timestamp ? <span className="text-[11px] text-fg-faint">{timestamp}</span> : null}
+                        <span className="text-[11px] font-medium text-[#ACABA8]">{cfg.label}</span>
+                        {timestamp ? <span className="text-[11px] text-[#ACABA8]">{timestamp}</span> : null}
                       </div>
                     </div>
                   </div>
@@ -742,18 +791,20 @@ export default function ConversationDetailPage() {
           )}
         </div>
 
+        {/* Right sidebar */}
         <div className="space-y-4">
-          <GlassCard className="p-5">
+          {/* Scores card */}
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="page-eyebrow">Scores</p>
-                <p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-fg">Breakdown</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Scores</p>
+                <p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#37352F]">Breakdown</p>
               </div>
               {qs ? <ScoreBadge score={qs.overall_score} size="sm" /> : null}
             </div>
 
             {!qs ? (
-              <p className="mt-4 text-sm text-fg-secondary">
+              <p className="mt-4 text-sm text-[#787774]">
                 {conv.score_status === "waiting_for_completion"
                   ? "Waiting for the conversation to finish."
                   : conv.score_status === "refreshing"
@@ -768,7 +819,7 @@ export default function ConversationDetailPage() {
                     <div key={label} className="score-strip-row">
                       <div>
                         <div className="mb-1 flex items-center justify-between">
-                          <span className="text-xs font-medium text-fg-secondary">{label}</span>
+                          <span className="text-xs font-medium text-[#787774]">{label}</span>
                           <span className="text-xs font-semibold font-mono tabular-nums" style={{ color: scoreAccent(safeScore) }}>
                             {formatScore(safeScore)}%
                           </span>
@@ -785,26 +836,28 @@ export default function ConversationDetailPage() {
                 })}
               </div>
             )}
-          </GlassCard>
+          </div>
 
-          <GlassCard className="p-5">
-            <p className="page-eyebrow">Best next move</p>
+          {/* Best next move card */}
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Best next move</p>
             <div className="action-card mt-4">
-              <p className="text-sm font-semibold text-fg">{primaryAction}</p>
+              <p className="text-sm font-semibold text-[#37352F]">{primaryAction}</p>
               {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.[0]?.expected_impact ? (
-                <p className="mt-2 text-sm leading-6 text-fg-secondary">
+                <p className="mt-2 text-sm leading-6 text-[#787774]">
                   {qs.prompt_improvements[0].expected_impact}
                 </p>
               ) : (
-                <p className="mt-2 text-sm leading-6 text-fg-secondary">
+                <p className="mt-2 text-sm leading-6 text-[#787774]">
                   Use the transcript below to spot-check the claims that matter.
                 </p>
               )}
             </div>
-          </GlassCard>
+          </div>
 
-          <GlassCard className="p-5">
-            <p className="page-eyebrow">Details</p>
+          {/* Details card */}
+          <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-5" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Details</p>
             <div className="mt-4 info-grid">
               {[
                 { label: "Platform", value: conv.platform },
@@ -815,15 +868,16 @@ export default function ConversationDetailPage() {
                 .filter(Boolean)
                 .map((row) => row && (
                   <div key={row.label} className="info-row">
-                    <span className="text-xs text-fg-muted">{row.label}</span>
-                    <span className="text-xs font-medium capitalize text-fg-secondary">{row.value}</span>
+                    <span className="text-xs text-[#ACABA8]">{row.label}</span>
+                    <span className="text-xs font-medium capitalize text-[#787774]">{row.value}</span>
                   </div>
                 ))}
             </div>
-          </GlassCard>
+          </div>
         </div>
       </section>
 
+      {/* Advanced drawer */}
       {showAdvancedDrawer ? (
         <>
           <button
@@ -832,11 +886,11 @@ export default function ConversationDetailPage() {
             className="drawer-backdrop"
             onClick={() => setShowAdvancedDrawer(false)}
           />
-          <aside className="drawer-panel">
-            <div className="drawer-header">
+          <aside className="drawer-panel bg-white border-l border-[#E9E9E7]">
+            <div className="drawer-header border-b border-[#E9E9E7]">
               <div>
-                <p className="page-eyebrow">Advanced review</p>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-fg">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#ACABA8]">Advanced review</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[#37352F]">
                   Claims, evidence and calibration
                 </h2>
               </div>
@@ -850,6 +904,7 @@ export default function ConversationDetailPage() {
             </div>
 
             <div className="drawer-body">
+              {/* Tab buttons */}
               <div className="mb-5 flex flex-wrap gap-2">
                 {([
                   ["claims", "Claims"],
@@ -861,7 +916,12 @@ export default function ConversationDetailPage() {
                     key={key}
                     type="button"
                     onClick={() => setAdvancedTab(key)}
-                    className={`operator-chip cursor-pointer ${advancedTab === key ? "!bg-[rgba(94,106,210,0.15)] !text-[#7178E0] !border-[rgba(94,106,210,0.3)]" : ""}`}
+                    className={`rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      advancedTab === key
+                        ? "bg-white border-[#E9E9E7] text-[#37352F]"
+                        : "bg-transparent border-transparent text-[#787774] hover:text-[#37352F] hover:border-[#E9E9E7]"
+                    }`}
+                    style={advancedTab === key ? { boxShadow: "0 1px 3px rgba(0,0,0,0.04)" } : undefined}
                   >
                     {label}
                   </button>
@@ -872,20 +932,24 @@ export default function ConversationDetailPage() {
                 <div className="space-y-4">
                   {advancedClaimGroups.length > 0 ? (
                     advancedClaimGroups.map((group) => (
-                      <div key={group.title} className="compact-list-item">
-                        <p className="text-sm font-semibold text-fg">{group.title}</p>
+                      <div key={group.title} className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                        <p className="text-sm font-semibold text-[#37352F]">{group.title}</p>
                         <div className="mt-3 space-y-3">
                           {group.items.map((claim) => (
-                            <div key={`${group.title}-${claim.claim}`} className="rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.07)" }}>
-                              <p className="text-sm text-fg">{claim.claim}</p>
-                              <p className="mt-1 text-xs capitalize text-fg-muted">{claim.verdict}</p>
+                            <div
+                              key={`${group.title}-${claim.claim}`}
+                              className="rounded-[6px] border border-[#E9E9E7] bg-white p-3"
+                              style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                            >
+                              <p className="text-sm text-[#37352F]">{claim.claim}</p>
+                              <p className="mt-1 text-xs capitalize text-[#ACABA8]">{claim.verdict}</p>
                             </div>
                           ))}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="empty-inline">No claim checks for this conversation.</p>
+                    <p className="text-sm text-[#ACABA8]">No claim checks for this conversation.</p>
                   )}
                 </div>
               )}
@@ -893,13 +957,17 @@ export default function ConversationDetailPage() {
               {advancedTab === "evidence" && (
                 <div className="space-y-4">
                   {insights.length > 0 ? (
-                    <div className="compact-list-item">
-                      <p className="text-sm font-semibold text-fg">Evidence notes</p>
+                    <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                      <p className="text-sm font-semibold text-[#37352F]">Evidence notes</p>
                       <div className="mt-3 space-y-3">
                         {insights.map((insight) => (
-                          <div key={insight.title} className="rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.07)" }}>
-                            <p className="text-sm font-semibold text-fg">{insight.title}</p>
-                            <p className="mt-1 text-sm leading-6 text-fg-secondary">{insight.body}</p>
+                          <div
+                            key={insight.title}
+                            className="rounded-[6px] border border-[#E9E9E7] bg-white p-3"
+                            style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                          >
+                            <p className="text-sm font-semibold text-[#37352F]">{insight.title}</p>
+                            <p className="mt-1 text-sm leading-6 text-[#787774]">{insight.body}</p>
                           </div>
                         ))}
                       </div>
@@ -907,13 +975,17 @@ export default function ConversationDetailPage() {
                   ) : null}
 
                   {showKnowledgeAndPromptDetails && qs?.prompt_improvements?.length ? (
-                    <div className="compact-list-item">
-                      <p className="text-sm font-semibold text-fg">Prompt fixes</p>
+                    <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                      <p className="text-sm font-semibold text-[#37352F]">Prompt fixes</p>
                       <div className="mt-3 space-y-3">
                         {qs.prompt_improvements.slice(0, 3).map((improvement) => (
-                          <div key={improvement.issue} className="rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.07)" }}>
-                            <p className="text-sm font-semibold text-fg">{improvement.issue}</p>
-                            <p className="mt-1 text-sm leading-6 text-fg-secondary">{improvement.expected_impact}</p>
+                          <div
+                            key={improvement.issue}
+                            className="rounded-[6px] border border-[#E9E9E7] bg-white p-3"
+                            style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                          >
+                            <p className="text-sm font-semibold text-[#37352F]">{improvement.issue}</p>
+                            <p className="mt-1 text-sm leading-6 text-[#787774]">{improvement.expected_impact}</p>
                           </div>
                         ))}
                       </div>
@@ -921,13 +993,17 @@ export default function ConversationDetailPage() {
                   ) : null}
 
                   {showKnowledgeAndPromptDetails && qs?.knowledge_gaps?.length ? (
-                    <div className="compact-list-item">
-                      <p className="text-sm font-semibold text-fg">Knowledge gaps</p>
+                    <div className="rounded-[6px] border border-[#E9E9E7] bg-[#F7F7F5] p-4">
+                      <p className="text-sm font-semibold text-[#37352F]">Knowledge gaps</p>
                       <div className="mt-3 space-y-3">
                         {qs.knowledge_gaps.slice(0, 3).map((gap) => (
-                          <div key={gap.topic} className="rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.07)" }}>
-                            <p className="text-sm font-semibold text-fg">{gap.topic}</p>
-                            <p className="mt-1 text-sm leading-6 text-fg-secondary">{gap.description}</p>
+                          <div
+                            key={gap.topic}
+                            className="rounded-[6px] border border-[#E9E9E7] bg-white p-3"
+                            style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                          >
+                            <p className="text-sm font-semibold text-[#37352F]">{gap.topic}</p>
+                            <p className="mt-1 text-sm leading-6 text-[#787774]">{gap.description}</p>
                           </div>
                         ))}
                       </div>
@@ -935,14 +1011,14 @@ export default function ConversationDetailPage() {
                   ) : null}
 
                   {!insights.length && !(qs?.prompt_improvements?.length || qs?.knowledge_gaps?.length) ? (
-                    <p className="empty-inline">No extra evidence notes for this conversation.</p>
+                    <p className="text-sm text-[#ACABA8]">No extra evidence notes for this conversation.</p>
                   ) : null}
                 </div>
               )}
 
               {advancedTab === "override" && (
                 <div>
-                  <p className="text-sm font-semibold text-fg">Correct the score</p>
+                  <p className="text-sm font-semibold text-[#37352F]">Correct the score</p>
                   {showOverrideForm ? (
                     <div className="mt-4 space-y-3">
                       <select
@@ -973,29 +1049,46 @@ export default function ConversationDetailPage() {
                         placeholder="Why is the current score wrong?"
                       />
                       <div className="flex gap-2">
-                        <GlassButton size="sm" className="w-full" onClick={submitOverride} disabled={overrideState === "saving"}>
+                        <button
+                          type="button"
+                          className="glass-button glass-button-primary w-full text-sm"
+                          onClick={submitOverride}
+                          disabled={overrideState === "saving"}
+                        >
                           {overrideState === "saving" ? "Saving…" : "Save override"}
-                        </GlassButton>
-                        <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowOverrideForm(false)}>
+                        </button>
+                        <button
+                          type="button"
+                          className="glass-button w-full text-sm"
+                          onClick={() => setShowOverrideForm(false)}
+                        >
                           Cancel
-                        </GlassButton>
+                        </button>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-4">
-                      <GlassButton size="sm" onClick={() => setShowOverrideForm(true)}>
+                      <button
+                        type="button"
+                        className="glass-button text-sm"
+                        onClick={() => setShowOverrideForm(true)}
+                      >
                         Add override
-                      </GlassButton>
+                      </button>
                     </div>
                   )}
-                  {overrideState === "saved" ? <p className="mt-3 text-xs text-score-good">Override saved.</p> : null}
-                  {overrideState === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save.</p> : null}
+                  {overrideState === "saved" ? (
+                    <p className="mt-3 text-xs text-[#0F7B3D]">Override saved.</p>
+                  ) : null}
+                  {overrideState === "error" ? (
+                    <p className="mt-3 text-xs text-[#C4342C]">Failed to save.</p>
+                  ) : null}
                 </div>
               )}
 
               {advancedTab === "training" && (
                 <div>
-                  <p className="text-sm font-semibold text-fg">Train the scorer</p>
+                  <p className="text-sm font-semibold text-[#37352F]">Train the scorer</p>
                   {showTrainingForm ? (
                     <div className="mt-4 space-y-3">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -1024,7 +1117,7 @@ export default function ConversationDetailPage() {
                       <div className="grid gap-3 sm:grid-cols-2">
                         {Object.entries(trainingLabels).map(([key, value]) => (
                           <label key={key} className="space-y-1">
-                            <span className="text-[11px] font-semibold capitalize text-fg-secondary">{key}</span>
+                            <span className="text-[11px] font-semibold capitalize text-[#787774]">{key}</span>
                             <input
                               type="number"
                               min={0}
@@ -1038,10 +1131,9 @@ export default function ConversationDetailPage() {
                         ))}
                       </div>
 
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="w-full"
+                      <button
+                        type="button"
+                        className="glass-button w-full text-sm"
                         onClick={() =>
                           setTrainingLabels({
                             overall: qs ? String(Math.round(qs.overall_score * 100)) : "",
@@ -1056,7 +1148,7 @@ export default function ConversationDetailPage() {
                         }
                       >
                         Start from current scores
-                      </GlassButton>
+                      </button>
 
                       <GlassTextarea
                         value={labelNotes}
@@ -1066,23 +1158,40 @@ export default function ConversationDetailPage() {
                       />
 
                       <div className="flex gap-2">
-                        <GlassButton size="sm" className="w-full" onClick={submitTrainingLabels} disabled={labelSetState === "saving"}>
+                        <button
+                          type="button"
+                          className="glass-button glass-button-primary w-full text-sm"
+                          onClick={submitTrainingLabels}
+                          disabled={labelSetState === "saving"}
+                        >
                           {labelSetState === "saving" ? "Saving…" : "Save labels"}
-                        </GlassButton>
-                        <GlassButton size="sm" variant="ghost" className="w-full" onClick={() => setShowTrainingForm(false)}>
+                        </button>
+                        <button
+                          type="button"
+                          className="glass-button w-full text-sm"
+                          onClick={() => setShowTrainingForm(false)}
+                        >
                           Cancel
-                        </GlassButton>
+                        </button>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-4">
-                      <GlassButton size="sm" onClick={() => setShowTrainingForm(true)}>
+                      <button
+                        type="button"
+                        className="glass-button text-sm"
+                        onClick={() => setShowTrainingForm(true)}
+                      >
                         Save training label
-                      </GlassButton>
+                      </button>
                     </div>
                   )}
-                  {labelSetState === "saved" ? <p className="mt-3 text-xs text-score-good">Labels saved.</p> : null}
-                  {labelSetState === "error" ? <p className="mt-3 text-xs text-score-critical">Failed to save.</p> : null}
+                  {labelSetState === "saved" ? (
+                    <p className="mt-3 text-xs text-[#0F7B3D]">Labels saved.</p>
+                  ) : null}
+                  {labelSetState === "error" ? (
+                    <p className="mt-3 text-xs text-[#C4342C]">Failed to save.</p>
+                  ) : null}
                 </div>
               )}
             </div>

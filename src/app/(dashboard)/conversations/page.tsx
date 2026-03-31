@@ -4,9 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { GlassButton } from "@/components/ui/glass-button";
-import { useToast } from "@/components/ui/toast";
-import type { QueueWorkflowState, ReviewDisposition } from "@/lib/review-workflow";
 
 interface ConversationRow {
   id: string;
@@ -33,7 +30,7 @@ interface ConversationRow {
     | "waiting_for_quiet_period";
 }
 
-const GROUP_ORDER = ["Review now", "Quick pass", "Healthy", "Scoring"] as const;
+const GROUP_ORDER = ["Needs attention", "Average", "Good", "Pending"] as const;
 
 function insightLabel(conversation: ConversationRow) {
   if (!conversation.quality_scores) {
@@ -58,12 +55,12 @@ function insightLabel(conversation: ConversationRow) {
   return "Looks healthy";
 }
 
-function groupLabel(conversation: ConversationRow) {
+function groupLabel(conversation: ConversationRow): (typeof GROUP_ORDER)[number] {
   const score = conversation.quality_scores?.overall_score;
-  if (score === undefined || score === null) return "Scoring";
-  if (score < 0.65) return "Review now";
-  if (score < 0.82) return "Quick pass";
-  return "Healthy";
+  if (score === undefined || score === null) return "Pending";
+  if (score < 0.65) return "Needs attention";
+  if (score < 0.82) return "Average";
+  return "Good";
 }
 
 function compactDate(conversation: ConversationRow) {
@@ -73,38 +70,7 @@ function compactDate(conversation: ConversationRow) {
   return confidence ? `${formatted} · ${confidence}` : formatted;
 }
 
-function scoreSummary(conversation: ConversationRow) {
-  if (!conversation.quality_scores) return "Scoring";
-  const accuracy = conversation.quality_scores.accuracy_score;
-  const hallucination = conversation.quality_scores.hallucination_score;
-  const resolution = conversation.quality_scores.resolution_score;
-  return [
-    accuracy !== undefined ? `Acc ${Math.round(accuracy * 100)}` : null,
-    hallucination !== undefined ? `Hall ${Math.round(hallucination * 100)}` : null,
-    resolution !== undefined ? `Res ${Math.round(resolution * 100)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
-function queueStateFromDisposition(disposition: ReviewDisposition): QueueWorkflowState {
-  switch (disposition) {
-    case "safe":
-      return "safe";
-    case "escalate_issue":
-      return "escalated";
-    case "ignore":
-      return "reviewed";
-    case "watch":
-      return "reviewed";
-    case "action_needed":
-    default:
-      return "needs_review";
-  }
-}
-
 export default function ConversationsPage() {
-  const { success, error } = useToast();
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -115,7 +81,6 @@ export default function ConversationsPage() {
   const [flag, setFlag] = useState("");
   const [sortPreset, setSortPreset] = useState<"review" | "risk" | "recent" | "safe">("review");
   const [showFilters, setShowFilters] = useState(false);
-  const [actingOn, setActingOn] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState(false);
 
   const fetchConversations = useCallback(() => {
@@ -160,51 +125,6 @@ export default function ConversationsPage() {
     return () => clearTimeout(timeout);
   }, [conversations, loading, fetchConversations]);
 
-  async function applyDisposition(conversationId: string, disposition: ReviewDisposition) {
-    const removed = conversations.find((conversation) => conversation.id === conversationId);
-    if (!removed) return;
-
-    setActingOn(conversationId);
-    setConversations((current) => current.filter((conversation) => conversation.id !== conversationId));
-
-    try {
-      const response = await fetch(`/api/conversations/${conversationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          disposition,
-          queue_state: queueStateFromDisposition(disposition),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update conversation");
-      }
-
-      success(`Marked as ${disposition.replace("_", " ")}`);
-    } catch (err) {
-      console.error(err);
-      setConversations((current) => [removed, ...current]);
-      error("Could not update review state");
-    } finally {
-      setActingOn(null);
-    }
-  }
-
-  const stats = useMemo(() => {
-    const scored = conversations.filter((conversation) => Boolean(conversation.quality_scores));
-    const attention = scored.filter((conversation) => (conversation.quality_scores?.overall_score ?? 1) < 0.65);
-    const quickPass = scored.filter((conversation) => {
-      const score = conversation.quality_scores?.overall_score ?? 0;
-      return score >= 0.65 && score < 0.82;
-    });
-    return {
-      attention: attention.length,
-      quickPass: quickPass.length,
-      scoring: conversations.filter((conversation) => !conversation.quality_scores).length,
-    };
-  }, [conversations]);
-
   const sorted = useMemo(() => {
     const items = [...conversations];
     items.sort((a, b) => {
@@ -230,10 +150,10 @@ export default function ConversationsPage() {
 
   const groups = useMemo(() => {
     const grouped: Record<(typeof GROUP_ORDER)[number], ConversationRow[]> = {
-      "Review now": [],
-      "Quick pass": [],
-      Healthy: [],
-      Scoring: [],
+      "Needs attention": [],
+      Average: [],
+      Good: [],
+      Pending: [],
     };
 
     for (const conversation of sorted) {
@@ -244,65 +164,44 @@ export default function ConversationsPage() {
   }, [sorted]);
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="page-header">
-        <div>
-          <p className="page-eyebrow mb-2">Weekly review loop</p>
-          <h1 className="page-title">Review queue</h1>
-          <p className="page-subtitle mt-2">
-            Open what matters, clear the queue, and move on. {total} conversations loaded.
-          </p>
-        </div>
-
-        <GlassButton size="sm">
-          {stats.attention + stats.quickPass} worth reviewing
-        </GlassButton>
+    <div className="space-y-5 pb-8">
+      {/* Page header */}
+      <div className="pt-1">
+        <h1 className="text-xl font-semibold text-[#37352F]">Conversations</h1>
+        <p className="mt-1 text-sm text-[#787774]">
+          {total.toLocaleString()} conversations · search and filter to investigate issues
+        </p>
       </div>
 
-      <div className="summary-strip">
-        <div className="summary-strip-item">
-          <p className="value-key">Review now</p>
-          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">{stats.attention}</p>
-          <p className="mt-1 text-sm text-fg-secondary">Highest-value items to open first.</p>
-        </div>
-        <div className="summary-strip-item">
-          <p className="value-key">Quick pass</p>
-          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">{stats.quickPass}</p>
-          <p className="mt-1 text-sm text-fg-secondary">Worth checking, but not urgent.</p>
-        </div>
-        <div className="summary-strip-item">
-          <p className="value-key">Scoring</p>
-          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-fg">{stats.scoring}</p>
-          <p className="mt-1 text-sm text-fg-secondary">Still waiting for a final assessment.</p>
-        </div>
-      </div>
-
-      <div className="glass-static p-4 sm:p-5">
+      {/* Filter bar */}
+      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#ACABA8]" />
             <input
               type="text"
               placeholder="Search customer or conversation"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="glass-input w-full py-2.5 pl-9 pr-3 text-sm"
+              className="w-full rounded-[6px] border border-[#E9E9E7] bg-white py-2 pl-9 pr-3 text-sm text-[#37352F] placeholder-[#ACABA8] outline-none transition-colors focus:border-[#2383E2]"
             />
           </label>
 
           <div className="flex flex-wrap items-center gap-2">
             {([
-              ["review", "Review first"],
+              ["review", "Lowest quality"],
               ["risk", "Highest risk"],
               ["recent", "Most recent"],
-              ["safe", "Lowest risk"],
+              ["safe", "Best first"],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setSortPreset(key)}
-                className={`operator-chip cursor-pointer transition-colors ${
-                  sortPreset === key ? "!bg-[rgba(94,106,210,0.15)] !text-[#7178E0] !border-[rgba(94,106,210,0.3)]" : ""
+                className={`inline-flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  sortPreset === key
+                    ? "!bg-[rgba(35,131,226,0.08)] !text-[#2383E2] !border-[rgba(35,131,226,0.2)]"
+                    : "border-[#E9E9E7] bg-white text-[#787774] hover:bg-[#F1F1EF]"
                 }`}
               >
                 {label}
@@ -313,7 +212,7 @@ export default function ConversationsPage() {
           <button
             type="button"
             onClick={() => setShowFilters((current) => !current)}
-            className="operator-chip cursor-pointer lg:ml-auto"
+            className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#E9E9E7] bg-white px-2.5 py-1 text-xs font-medium text-[#787774] transition-colors hover:bg-[#F1F1EF] lg:ml-auto"
           >
             Refine
             <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? "rotate-180" : ""}`} />
@@ -321,22 +220,22 @@ export default function ConversationsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 grid gap-3 pt-4 md:grid-cols-2 xl:grid-cols-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="mt-4 grid gap-3 border-t border-[#E9E9E7] pt-4 md:grid-cols-2 xl:grid-cols-4">
             <select
               value={scoreFilter}
               onChange={(event) => setScoreFilter(event.target.value)}
-              className="glass-input px-3 py-2 text-sm"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All scores</option>
-              <option value="critical">Review now</option>
-              <option value="warning">Quick pass</option>
-              <option value="good">Healthy</option>
+              <option value="critical">Needs attention</option>
+              <option value="warning">Average</option>
+              <option value="good">Good</option>
             </select>
 
             <select
               value={platform}
               onChange={(event) => setPlatform(event.target.value)}
-              className="glass-input px-3 py-2 text-sm"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All platforms</option>
               <option value="intercom">Intercom</option>
@@ -349,7 +248,7 @@ export default function ConversationsPage() {
             <select
               value={escalated}
               onChange={(event) => setEscalated(event.target.value)}
-              className="glass-input px-3 py-2 text-sm"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All escalation states</option>
               <option value="true">Escalated</option>
@@ -361,141 +260,128 @@ export default function ConversationsPage() {
               placeholder="Flag keyword"
               value={flag}
               onChange={(event) => setFlag(event.target.value)}
-              className="glass-input px-3 py-2 text-sm"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] placeholder-[#ACABA8] outline-none focus:border-[#2383E2]"
             />
           </div>
         )}
       </div>
 
-      <div className="space-y-5">
-        {GROUP_ORDER.map((group) => {
-          const items = groups[group];
-          if (!items.length) return null;
+      {/* Loading */}
+      {loading && (
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
+          <p className="text-sm text-[#ACABA8]">Loading conversations…</p>
+        </div>
+      )}
 
-          return (
-            <section key={group} className="glass-static overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-edge px-5 py-3.5">
-                <div>
-                  <p className="text-sm font-semibold text-fg">{group}</p>
-                  <p className="text-xs text-fg-muted">{items.length} conversations</p>
+      {/* Error */}
+      {!loading && fetchError && (
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#FEF2F2]">
+            <AlertTriangle className="h-4 w-4 text-[#C4342C]" />
+          </div>
+          <p className="text-sm font-medium text-[#37352F]">Could not load conversations</p>
+          <p className="mt-1 text-xs text-[#787774]">Check your connection and try again.</p>
+          <button
+            type="button"
+            onClick={fetchConversations}
+            className="mt-4 rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-1.5 text-sm font-medium text-[#37352F] transition-colors hover:bg-[#F1F1EF]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && !fetchError && conversations.length === 0 && (
+        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F7F5]">
+            <Search className="h-4 w-4 text-[#ACABA8]" />
+          </div>
+          <p className="text-sm font-medium text-[#37352F]">No conversations found</p>
+          <p className="mt-1 text-xs text-[#787774]">Try a different filter or search term.</p>
+        </div>
+      )}
+
+      {/* Grouped tables */}
+      {!loading && !fetchError && conversations.length > 0 && (
+        <div className="space-y-5">
+          {GROUP_ORDER.map((group) => {
+            const items = groups[group];
+            if (!items.length) return null;
+
+            return (
+              <section key={group} className="overflow-hidden rounded-[6px] border border-[#E9E9E7] bg-white">
+                {/* Group header */}
+                <div className="flex items-center gap-2 border-b border-[#E9E9E7] bg-[#F7F7F5] px-4 py-2.5">
+                  <span className="text-[13px] font-semibold text-[#37352F]">{group}</span>
+                  <span className="text-[12px] text-[#ACABA8]">· {items.length}</span>
                 </div>
-                <span className="operator-chip">
-                  {group === "Review now"
-                    ? "Open first"
-                    : group === "Quick pass"
-                      ? "Fast scan"
-                      : group === "Healthy"
-                        ? "Low priority"
-                        : "In progress"}
-                </span>
-              </div>
 
-              <div className="hidden px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted lg:grid lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_90px_220px_140px]">
-                <span>Conversation</span>
-                <span>Assessment</span>
-                <span>Score</span>
-                <span>Signals</span>
-                <span>When</span>
-              </div>
+                {/* Table header */}
+                <div className="hidden border-b border-[#E9E9E7] bg-[#F7F7F5] lg:grid lg:grid-cols-[minmax(0,1fr)_100px_160px_120px] lg:px-4 lg:py-2.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Conversation</span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Score</span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Flags</span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Date</span>
+                </div>
 
-              {items.map((conversation) => (
-                <div key={conversation.id} className="queue-table-row">
-                  <div className="min-w-0">
-                    <Link href={`/conversations/${conversation.id}`} className="block">
-                      <p className="truncate text-sm font-semibold text-fg">
+                {/* Rows */}
+                {items.map((conversation, index) => (
+                  <Link
+                    key={conversation.id}
+                    href={`/conversations/${conversation.id}`}
+                    className={`flex cursor-pointer flex-col gap-2 px-4 py-3 transition-colors hover:bg-[#F7F7F5] lg:grid lg:grid-cols-[minmax(0,1fr)_100px_160px_120px] lg:items-center ${
+                      index < items.length - 1 ? "border-b border-[#F1F1EF]" : ""
+                    }`}
+                  >
+                    {/* Conversation identity */}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#37352F]">
                         {conversation.customer_identifier || conversation.external_id || "Unknown"}
                       </p>
-                      <p className="mt-1 text-xs text-fg-secondary">
+                      <p className="mt-0.5 text-xs text-[#787774]">
                         {insightLabel(conversation)}
                       </p>
-                    </Link>
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-fg-secondary">
-                      {conversation.quality_scores?.summary || (conversation.score_status === "waiting_for_completion" ? "Still open" : "Scoring")}
-                    </p>
-                  </div>
-
-                  <div className="lg:justify-self-start">
-                    {conversation.quality_scores ? (
-                      <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
-                    ) : (
-                      <span className="operator-chip">Scoring</span>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-fg-secondary">
-                    {scoreSummary(conversation)}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 lg:block">
-                    <p className="text-xs text-fg-muted">{compactDate(conversation)}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="!px-2.5"
-                        onClick={() => applyDisposition(conversation.id, "safe")}
-                        loading={actingOn === conversation.id}
-                      >
-                        Safe
-                      </GlassButton>
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="!px-2.5"
-                        onClick={() => applyDisposition(conversation.id, "action_needed")}
-                        loading={actingOn === conversation.id}
-                      >
-                        Action
-                      </GlassButton>
-                      <GlassButton
-                        size="sm"
-                        variant="ghost"
-                        className="!px-2.5"
-                        onClick={() => applyDisposition(conversation.id, "escalate_issue")}
-                        loading={actingOn === conversation.id}
-                      >
-                        Escalate
-                      </GlassButton>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </section>
-          );
-        })}
 
-        {!loading && fetchError && (
-          <div className="glass-static py-16 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-edge bg-surface-secondary">
-              <AlertTriangle className="h-4 w-4 text-score-critical" />
-            </div>
-            <p className="text-sm font-medium text-fg-secondary">Could not load conversations</p>
-            <p className="mt-1 text-xs text-fg-muted">Check your connection and try again.</p>
-            <GlassButton size="sm" className="mt-4" onClick={fetchConversations}>
-              Retry
-            </GlassButton>
-          </div>
-        )}
+                    {/* Score */}
+                    <div>
+                      {conversation.quality_scores ? (
+                        <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
+                      ) : (
+                        <span className="inline-flex items-center rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774]">
+                          Scoring
+                        </span>
+                      )}
+                    </div>
 
-        {!loading && !fetchError && conversations.length === 0 && (
-          <div className="glass-static py-16 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-edge bg-surface-secondary">
-              <Search className="h-4 w-4 text-fg-muted" />
-            </div>
-            <p className="text-sm font-medium text-fg-secondary">No conversations found</p>
-            <p className="mt-1 text-xs text-fg-muted">Try a different filter or search term.</p>
-          </div>
-        )}
+                    {/* Flags */}
+                    <div className="flex flex-wrap gap-1">
+                      {conversation.quality_scores?.flags?.length ? (
+                        conversation.quality_scores.flags.slice(0, 3).map((f) => (
+                          <span
+                            key={f}
+                            className="max-w-[140px] truncate rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774]"
+                          >
+                            {f}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-[#ACABA8]">—</span>
+                      )}
+                    </div>
 
-        {loading && (
-          <div className="glass-static py-16 text-center">
-            <p className="text-sm text-fg-muted">Loading conversations…</p>
-          </div>
-        )}
-      </div>
+                    {/* Date */}
+                    <div>
+                      <span className="text-xs text-[#787774]">{compactDate(conversation)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen" style={{ background: "#161618" }}>
+    <div className="min-h-screen bg-white">
       <Sidebar />
 
       <div className="flex min-h-screen flex-col lg:pl-56">
@@ -17,7 +17,7 @@ export default function DashboardLayout({
           <div className="hidden items-center gap-2 lg:flex">
             <span
               className="text-[11px] font-medium tracking-[0.06em] uppercase"
-              style={{ color: "rgba(255,255,255,0.28)" }}
+              style={{ color: "#ACABA8" }}
             >
               Quality Ops
             </span>
@@ -27,23 +27,23 @@ export default function DashboardLayout({
             <div
               className="flex items-center gap-1.5 rounded-md px-2 py-1"
               style={{
-                background: "rgba(78,167,107,0.08)",
-                border: "1px solid rgba(78,167,107,0.15)",
+                background: "rgba(15,123,61,0.08)",
+                border: "1px solid rgba(15,123,61,0.15)",
               }}
             >
               <span
                 className="h-1.5 w-1.5 rounded-full animate-pulse-soft"
-                style={{ background: "#4EA76B" }}
+                style={{ background: "#0F7B3D" }}
               />
-              <span className="text-[11px] font-medium" style={{ color: "#4EA76B" }}>
+              <span className="text-[11px] font-medium" style={{ color: "#0F7B3D" }}>
                 Live
               </span>
             </div>
             <div
               className="rounded-md px-1.5 py-1 transition-colors"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: "#F1F1EF",
+                border: "1px solid #E9E9E7",
               }}
             >
               <UserButton
@@ -55,7 +55,7 @@ export default function DashboardLayout({
                     userButtonOuterIdentifier: "text-[12px] font-medium hidden xl:block",
                   },
                   variables: {
-                    colorText: "rgba(255,255,255,0.6)",
+                    colorText: "#787774",
                   },
                 }}
                 showName

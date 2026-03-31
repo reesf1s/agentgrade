@@ -51,11 +51,11 @@ export function truncate(str: string, len: number): string {
   return str.slice(0, len) + "...";
 }
 
-/** Returns hex color for score: green/amber/red (Linear palette) */
+/** Returns hex color for score: green/amber/red (Notion light palette) */
 export function scoreAccent(score: number): string {
-  if (score >= 0.75) return "#4EA76B";
-  if (score >= 0.55) return "#D98832";
-  return "#DC5B5B";
+  if (score >= 0.75) return "#0F7B3D";
+  if (score >= 0.55) return "#C47A00";
+  return "#C4342C";
 }
 
 export function pct(v: number): string {
