@@ -32,9 +32,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-white">
       <Sidebar />
 
-      <div className="flex min-h-screen flex-col lg:pl-[220px]">
+      <div className="flex min-h-screen flex-col pt-[52px] lg:pl-[220px] lg:pt-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between gap-4 border-b border-[#E9E9E7] bg-white px-5 pt-[52px] lg:px-6 lg:pt-0">
+        <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between gap-4 border-b border-[#E9E9E7] bg-white px-5 lg:px-6">
           {/* Breadcrumb / page title */}
           <div className="flex items-center">
             {pageLabel && (
