@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, Search } from "lucide-react";
+import { AlertTriangle, Bot, ChevronDown, Filter, Search } from "lucide-react";
 import { ScoreBadge } from "@/components/ui/score-badge";
 
 interface ConversationRow {
@@ -167,64 +167,71 @@ export default function ConversationsPage() {
     <div className="space-y-5 pb-8">
       {/* Page header */}
       <div className="pt-1">
-        <h1 className="text-xl font-semibold text-[#37352F]">Conversations</h1>
+        <h1 className="text-2xl font-bold tracking-[-0.03em] text-[#37352F]">Conversations</h1>
         <p className="mt-1 text-sm text-[#787774]">
           {total.toLocaleString()} conversations · search and filter to investigate issues
         </p>
       </div>
 
-      {/* Filter bar */}
-      <div className="rounded-[6px] border border-[#E9E9E7] bg-white p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <label className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#ACABA8]" />
+      {/* Filter bar — above the table, not inside a card */}
+      <div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search input */}
+          <label className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#ACABA8]" />
             <input
               type="text"
               placeholder="Search customer or conversation"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-[6px] border border-[#E9E9E7] bg-white py-2 pl-9 pr-3 text-sm text-[#37352F] placeholder-[#ACABA8] outline-none transition-colors focus:border-[#2383E2]"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white h-8 pl-8 pr-3 text-[13px] text-[#37352F] placeholder-[#ACABA8] focus:border-[#2383E2] outline-none w-48"
             />
           </label>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {([
-              ["review", "Lowest quality"],
-              ["risk", "Highest risk"],
-              ["recent", "Most recent"],
-              ["safe", "Best first"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSortPreset(key)}
-                className={`inline-flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  sortPreset === key
-                    ? "!bg-[rgba(35,131,226,0.08)] !text-[#2383E2] !border-[rgba(35,131,226,0.2)]"
-                    : "border-[#E9E9E7] bg-white text-[#787774] hover:bg-[#F1F1EF]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* Sort pills */}
+          {([
+            ["review", "Lowest quality"],
+            ["risk", "Highest risk"],
+            ["recent", "Most recent"],
+            ["safe", "Best first"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSortPreset(key)}
+              className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                sortPreset === key
+                  ? "bg-[#F0F7FF] border-[rgba(35,131,226,0.3)] text-[#2383E2]"
+                  : "bg-white border-[#E9E9E7] text-[#6B6B67] hover:bg-[#F1F1EF]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
 
+          {/* Filter toggle */}
           <button
             type="button"
             onClick={() => setShowFilters((current) => !current)}
-            className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#E9E9E7] bg-white px-2.5 py-1 text-xs font-medium text-[#787774] transition-colors hover:bg-[#F1F1EF] lg:ml-auto"
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] transition-colors ${
+              showFilters
+                ? "bg-[#F0F7FF] border-[rgba(35,131,226,0.3)] text-[#2383E2]"
+                : "bg-white border-[#E9E9E7] text-[#6B6B67] hover:bg-[#F1F1EF]"
+            }`}
           >
-            Refine
+            <Filter className="h-3 w-3" />
+            Filter
             <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? "rotate-180" : ""}`} />
           </button>
         </div>
 
+        {/* Expanded filters */}
         {showFilters && (
-          <div className="mt-4 grid gap-3 border-t border-[#E9E9E7] pt-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-[#E9E9E7]">
             <select
               value={scoreFilter}
               onChange={(event) => setScoreFilter(event.target.value)}
-              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white h-8 px-3 text-[13px] text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All scores</option>
               <option value="critical">Needs attention</option>
@@ -235,7 +242,7 @@ export default function ConversationsPage() {
             <select
               value={platform}
               onChange={(event) => setPlatform(event.target.value)}
-              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white h-8 px-3 text-[13px] text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All platforms</option>
               <option value="intercom">Intercom</option>
@@ -248,7 +255,7 @@ export default function ConversationsPage() {
             <select
               value={escalated}
               onChange={(event) => setEscalated(event.target.value)}
-              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] outline-none focus:border-[#2383E2]"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white h-8 px-3 text-[13px] text-[#37352F] outline-none focus:border-[#2383E2]"
             >
               <option value="all">All escalation states</option>
               <option value="true">Escalated</option>
@@ -260,128 +267,153 @@ export default function ConversationsPage() {
               placeholder="Flag keyword"
               value={flag}
               onChange={(event) => setFlag(event.target.value)}
-              className="rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-2 text-sm text-[#37352F] placeholder-[#ACABA8] outline-none focus:border-[#2383E2]"
+              className="rounded-[6px] border border-[#E9E9E7] bg-white h-8 px-3 text-[13px] text-[#37352F] placeholder-[#ACABA8] outline-none focus:border-[#2383E2]"
             />
           </div>
         )}
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
-          <p className="text-sm text-[#ACABA8]">Loading conversations…</p>
+      {/* Main table container */}
+      <div
+        className="rounded-[8px] border border-[#E9E9E7] bg-white overflow-hidden"
+        style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
+      >
+        {/* Column header row */}
+        <div className="grid grid-cols-[28px_minmax(0,1fr)_90px_180px_110px] items-center border-b border-[#E9E9E7] bg-[#FAFAFA] px-4 py-2">
+          <div />
+          <span className="text-[11px] font-medium text-[#ACABA8] uppercase tracking-[0.06em]">Conversation</span>
+          <span className="text-[11px] font-medium text-[#ACABA8] uppercase tracking-[0.06em]">Score</span>
+          <span className="text-[11px] font-medium text-[#ACABA8] uppercase tracking-[0.06em]">Flags</span>
+          <span className="text-[11px] font-medium text-[#ACABA8] uppercase tracking-[0.06em]">Date</span>
         </div>
-      )}
 
-      {/* Error */}
-      {!loading && fetchError && (
-        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#FEF2F2]">
-            <AlertTriangle className="h-4 w-4 text-[#C4342C]" />
+        {/* Loading state */}
+        {loading && (
+          <div className="py-20 text-center">
+            <p className="text-[13px] text-[#ACABA8]">Loading conversations…</p>
           </div>
-          <p className="text-sm font-medium text-[#37352F]">Could not load conversations</p>
-          <p className="mt-1 text-xs text-[#787774]">Check your connection and try again.</p>
-          <button
-            type="button"
-            onClick={fetchConversations}
-            className="mt-4 rounded-[6px] border border-[#E9E9E7] bg-white px-3 py-1.5 text-sm font-medium text-[#37352F] transition-colors hover:bg-[#F1F1EF]"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Empty */}
-      {!loading && !fetchError && conversations.length === 0 && (
-        <div className="rounded-[6px] border border-[#E9E9E7] bg-white py-16 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F7F5]">
-            <Search className="h-4 w-4 text-[#ACABA8]" />
+        {/* Error state */}
+        {!loading && fetchError && (
+          <div className="py-20 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#FEF2F2]">
+              <AlertTriangle className="h-5 w-5 text-[#C4342C]" />
+            </div>
+            <p className="text-[15px] font-semibold text-[#37352F]">Could not load conversations</p>
+            <p className="mt-2 text-[13px] text-[#787774] max-w-xs mx-auto">Check your connection and try again.</p>
+            <button
+              type="button"
+              onClick={fetchConversations}
+              className="mt-5 inline-flex items-center gap-2 rounded-[6px] border border-[#E9E9E7] bg-white px-4 py-2 text-[13px] font-medium text-[#37352F] transition-colors hover:bg-[#F1F1EF]"
+            >
+              Retry
+            </button>
           </div>
-          <p className="text-sm font-medium text-[#37352F]">No conversations found</p>
-          <p className="mt-1 text-xs text-[#787774]">Try a different filter or search term.</p>
-        </div>
-      )}
+        )}
 
-      {/* Grouped tables */}
-      {!loading && !fetchError && conversations.length > 0 && (
-        <div className="space-y-5">
-          {GROUP_ORDER.map((group) => {
-            const items = groups[group];
-            if (!items.length) return null;
+        {/* Empty state */}
+        {!loading && !fetchError && conversations.length === 0 && (
+          <div className="py-20 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#F0F7FF] flex items-center justify-center mx-auto mb-4">
+              <Bot className="h-5 w-5 text-[#2383E2]" />
+            </div>
+            <p className="text-[15px] font-semibold text-[#37352F]">No conversations yet</p>
+            <p className="mt-2 text-[13px] text-[#787774] max-w-xs mx-auto">
+              Connect a platform to start grading your AI agent conversations.
+            </p>
+            <Link
+              href="/settings"
+              className="mt-5 inline-flex items-center gap-2 rounded-[6px] bg-[#2383E2] text-white px-4 py-2 text-[13px] font-medium hover:bg-[#1d6fc2] transition-colors"
+            >
+              Connect a platform
+            </Link>
+          </div>
+        )}
 
-            return (
-              <section key={group} className="overflow-hidden rounded-[6px] border border-[#E9E9E7] bg-white">
-                {/* Group header */}
-                <div className="flex items-center gap-2 border-b border-[#E9E9E7] bg-[#F7F7F5] px-4 py-2.5">
-                  <span className="text-[13px] font-semibold text-[#37352F]">{group}</span>
-                  <span className="text-[12px] text-[#ACABA8]">· {items.length}</span>
-                </div>
+        {/* Table body with inline group dividers */}
+        {!loading && !fetchError && conversations.length > 0 && (
+          <>
+            {GROUP_ORDER.map((group) => {
+              const items = groups[group];
+              if (!items.length) return null;
 
-                {/* Table header */}
-                <div className="hidden border-b border-[#E9E9E7] bg-[#F7F7F5] lg:grid lg:grid-cols-[minmax(0,1fr)_100px_160px_120px] lg:px-4 lg:py-2.5">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Conversation</span>
-                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Score</span>
-                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Flags</span>
-                  <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#ACABA8]">Date</span>
-                </div>
+              return (
+                <div key={group}>
+                  {/* Group section divider */}
+                  <div className="bg-[#F7F7F5] px-4 py-1.5 flex items-center gap-2 border-b border-[#E9E9E7]">
+                    <span className="text-[11px] font-semibold text-[#37352F] uppercase tracking-[0.06em]">
+                      {group}
+                    </span>
+                    <span className="text-[11px] text-[#ACABA8] ml-1">{items.length}</span>
+                  </div>
 
-                {/* Rows */}
-                {items.map((conversation, index) => (
-                  <Link
-                    key={conversation.id}
-                    href={`/conversations/${conversation.id}`}
-                    className={`flex cursor-pointer flex-col gap-2 px-4 py-3 transition-colors hover:bg-[#F7F7F5] lg:grid lg:grid-cols-[minmax(0,1fr)_100px_160px_120px] lg:items-center ${
-                      index < items.length - 1 ? "border-b border-[#F1F1EF]" : ""
-                    }`}
-                  >
-                    {/* Conversation identity */}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[#37352F]">
-                        {conversation.customer_identifier || conversation.external_id || "Unknown"}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[#787774]">
-                        {insightLabel(conversation)}
-                      </p>
-                    </div>
+                  {/* Rows */}
+                  {items.map((conversation) => (
+                    <Link
+                      key={conversation.id}
+                      href={`/conversations/${conversation.id}`}
+                      className="grid grid-cols-[28px_minmax(0,1fr)_90px_180px_110px] items-center px-4 py-2.5 border-b border-[#F1F1EF] last:border-0 hover:bg-[#FAFAFA] transition-colors cursor-pointer"
+                    >
+                      {/* Checkbox area */}
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 rounded border border-[#D0D0CD]" />
+                      </div>
 
-                    {/* Score */}
-                    <div>
-                      {conversation.quality_scores ? (
-                        <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
-                      ) : (
-                        <span className="inline-flex items-center rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774]">
-                          Scoring
-                        </span>
-                      )}
-                    </div>
+                      {/* Conversation column */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-[#F0F7FF] flex items-center justify-center shrink-0">
+                          <Bot className="h-3.5 w-3.5 text-[#2383E2]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-[#37352F] truncate">
+                            {conversation.customer_identifier || conversation.external_id || "Unknown"}
+                          </p>
+                          <p className="text-[11px] text-[#ACABA8] mt-0.5">
+                            {insightLabel(conversation)}
+                          </p>
+                        </div>
+                      </div>
 
-                    {/* Flags */}
-                    <div className="flex flex-wrap gap-1">
-                      {conversation.quality_scores?.flags?.length ? (
-                        conversation.quality_scores.flags.slice(0, 3).map((f) => (
-                          <span
-                            key={f}
-                            className="max-w-[140px] truncate rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774]"
-                          >
-                            {f}
+                      {/* Score column */}
+                      <div>
+                        {conversation.quality_scores ? (
+                          <ScoreBadge score={conversation.quality_scores.overall_score} size="sm" />
+                        ) : (
+                          <span className="inline-flex items-center rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774]">
+                            Scoring
                           </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-[#ACABA8]">—</span>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* Date */}
-                    <div>
-                      <span className="text-xs text-[#787774]">{compactDate(conversation)}</span>
-                    </div>
-                  </Link>
-                ))}
-              </section>
-            );
-          })}
-        </div>
-      )}
+                      {/* Flags column */}
+                      <div className="flex flex-wrap gap-1">
+                        {conversation.quality_scores?.flags?.length ? (
+                          conversation.quality_scores.flags.slice(0, 3).map((f) => (
+                            <span
+                              key={f}
+                              className="rounded-[4px] bg-[#F1F1EF] px-1.5 py-0.5 text-[10px] text-[#787774] max-w-[140px] truncate"
+                            >
+                              {f}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-[#ACABA8]">—</span>
+                        )}
+                      </div>
+
+                      {/* Date column */}
+                      <div>
+                        <span className="text-[12px] text-[#787774]">{compactDate(conversation)}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
     </div>
   );
 }

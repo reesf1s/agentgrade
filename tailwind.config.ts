@@ -12,6 +12,9 @@ const config: Config = {
         sans: ["ui-sans-serif", "-apple-system", "BlinkMacSystemFont", '"Segoe UI"', "Helvetica", "Arial", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
+      spacing: {
+        sidebar: "220px",
+      },
       colors: {
         // shadcn/ui CSS variable references (Notion-mapped)
         background:  "hsl(var(--shadcn-background))",

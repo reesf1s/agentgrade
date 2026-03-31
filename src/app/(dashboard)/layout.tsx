@@ -1,31 +1,54 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserButton } from "@clerk/nextjs";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const pathLabels: Record<string, string> = {
+  "/dashboard":     "Overview",
+  "/conversations": "Conversations",
+  "/patterns":      "Issues",
+  "/reports":       "Reports",
+  "/benchmarks":    "Benchmarks",
+  "/settings":      "Settings",
+};
+
+function getPageLabel(pathname: string | null): string {
+  if (!pathname) return "";
+  // Exact match first
+  if (pathLabels[pathname]) return pathLabels[pathname];
+  // Match by prefix (e.g. /conversations/[id])
+  for (const [key, label] of Object.entries(pathLabels)) {
+    if (pathname.startsWith(`${key}/`)) return label;
+  }
+  return "";
+}
+
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const pageLabel = getPageLabel(pathname);
+
   return (
     <div className="min-h-screen bg-white">
       <Sidebar />
 
-      <div className="flex min-h-screen flex-col lg:pl-56">
-        <header
-          className="dashboard-topbar sticky top-0 z-30 flex h-[46px] items-center justify-between gap-4 px-5 pt-14 lg:px-6 lg:pt-0"
-        >
-          <div className="hidden items-center gap-2 lg:flex">
-            <span
-              className="text-[11px] font-medium tracking-[0.06em] uppercase"
-              style={{ color: "#ACABA8" }}
-            >
-              Quality Ops
-            </span>
+      <div className="flex min-h-screen flex-col lg:pl-[220px]">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between gap-4 border-b border-[#E9E9E7] bg-white px-5 pt-[52px] lg:px-6 lg:pt-0">
+          {/* Breadcrumb / page title */}
+          <div className="flex items-center">
+            {pageLabel && (
+              <span className="text-[14px] font-medium text-[#37352F]">
+                {pageLabel}
+              </span>
+            )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          {/* Right side */}
+          <div className="flex items-center gap-2">
+            {/* Live indicator */}
             <div
-              className="flex items-center gap-1.5 rounded-md px-2 py-1"
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1"
               style={{
                 background: "rgba(15,123,61,0.08)",
                 border: "1px solid rgba(15,123,61,0.15)",
@@ -35,10 +58,15 @@ export default function DashboardLayout({
                 className="h-1.5 w-1.5 rounded-full animate-pulse-soft"
                 style={{ background: "#0F7B3D" }}
               />
-              <span className="text-[11px] font-medium" style={{ color: "#0F7B3D" }}>
+              <span
+                className="text-[11px] font-medium"
+                style={{ color: "#0F7B3D" }}
+              >
                 Live
               </span>
             </div>
+
+            {/* User button */}
             <div
               className="rounded-md px-1.5 py-1 transition-colors"
               style={{
@@ -64,7 +92,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
+        <main className="flex-1 px-6 py-6 lg:py-8">
           <div className="mx-auto w-full max-w-[1160px] animate-fade-in">
             {children}
           </div>
@@ -72,4 +100,12 @@ export default function DashboardLayout({
       </div>
     </div>
   );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <DashboardLayoutInner>{children}</DashboardLayoutInner>;
 }

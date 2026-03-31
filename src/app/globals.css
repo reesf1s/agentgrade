@@ -114,7 +114,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "ss01", "cv01", "cv11";
 }
 
 :focus-visible {
@@ -162,11 +162,20 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px #E9E9E7;
 }
 
+.card-hover {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card-hover:hover {
+  border-color: #D0D0CD;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
 
 .glass-sidebar {
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-border);
+  background: #FFFFFF;
+  border-right: 1px solid #E9E9E7;
 }
 
 /* ─── Buttons — Notion style ──────────────────────────────────────────────── */
@@ -179,18 +188,21 @@ body {
   background: #FFFFFF;
   border: 1px solid #E9E9E7;
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  padding: 5px 12px;
   font-size: 13px;
   font-weight: 500;
   color: #37352F;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s ease, border-color 0.1s ease;
+  line-height: 1.4;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .glass-button:hover {
-  background: #F1F1EF;
+  background: #F7F7F5;
   border-color: #D0D0CD;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .glass-button:active {
@@ -208,16 +220,17 @@ body {
 
 .glass-button-primary {
   background: #2383E2;
-  border-color: transparent;
+  border-color: #1d6fc2;
   color: #FFFFFF;
   font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow: 0 1px 3px rgba(35,131,226,0.3);
 }
 
 .glass-button-primary:hover {
   background: #1d6fc2;
-  border-color: transparent;
+  border-color: #1558a8;
   color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(35,131,226,0.35);
 }
 
 /* ─── Inputs — Notion style ───────────────────────────────────────────────── */
@@ -305,6 +318,40 @@ select.glass-input option {
   border: 1px solid rgba(196,52,44,0.2);
 }
 
+/* ─── Data table ──────────────────────────────────────────────────────────── */
+
+.data-table {
+  border-radius: 8px;
+  border: 1px solid #E9E9E7;
+  background: #FFFFFF;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.data-table-header {
+  background: #FAFAFA;
+  border-bottom: 1px solid #E9E9E7;
+  padding: 8px 16px;
+  display: grid;
+}
+
+.data-table-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid #F1F1EF;
+  transition: background 0.1s ease;
+  cursor: pointer;
+  display: grid;
+  align-items: center;
+}
+
+.data-table-row:last-child {
+  border-bottom: none;
+}
+
+.data-table-row:hover {
+  background: #FAFAFA;
+}
+
 /* ─── Table ───────────────────────────────────────────────────────────────── */
 
 .glass-table {
@@ -370,18 +417,17 @@ select.glass-input option {
 }
 
 .page-title {
-  font-size: clamp(1.35rem, 1.8vw, 1.75rem);
-  line-height: 1.15;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #37352F;
+  line-height: 1.2;
 }
 
 .page-subtitle {
-  max-width: 42rem;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: #787774;
+  margin-top: 3px;
 }
 
 .section-label {
@@ -418,19 +464,18 @@ select.glass-input option {
 }
 
 .metric-value {
-  font-size: 1.85rem;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--text-primary);
+  color: #37352F;
 }
 
 .metric-sub {
-  margin-top: 6px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #787774;
+  margin-top: 4px;
 }
 
 /* ─── Score ring ──────────────────────────────────────────────────────────── */
@@ -601,7 +646,7 @@ select.glass-input option {
 
 .compact-list-item {
   border-bottom: 1px solid #F1F1EF;
-  padding: 12px 0;
+  padding: 10px 16px;
 }
 
 .compact-list-item:last-child {
@@ -940,8 +985,12 @@ select.glass-input option {
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.2s ease-out;
 }
 
 @keyframes shimmer {

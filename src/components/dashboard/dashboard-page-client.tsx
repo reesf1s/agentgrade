@@ -55,39 +55,165 @@ export function DashboardPageClient({ data }: { data: DashboardData }) {
         <div className="page-header">
           <div>
             <h1 className="page-title">Overview</h1>
-            <p className="page-subtitle mt-2">
-              Your agent&apos;s performance at a glance
-            </p>
           </div>
         </div>
 
-        <div
-          className="rounded-[6px] border border-[#E9E9E7] bg-white p-8 text-center"
-          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
-        >
-          <div className="mx-auto max-w-sm">
-            <div
-              className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ background: "#F7F7F5", border: "1px solid #E9E9E7" }}
-            >
-              <TrendingUp className="h-5 w-5" style={{ color: "#ACABA8" }} />
-            </div>
-            <h2 className="text-base font-semibold" style={{ color: "#37352F" }}>
-              Waiting for scored conversations
+        <div className="grid gap-5" style={{ gridTemplateColumns: "1.2fr 0.8fr" }}>
+          {/* Left column — onboarding steps */}
+          <div
+            className="rounded-[8px] border border-[#E9E9E7] bg-white p-6"
+            style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          >
+            <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#37352F" }}>
+              Get started with AgentGrade
             </h2>
-            <p className="mt-2 text-sm leading-6" style={{ color: "#787774" }}>
-              {data.conversations.length > 0
-                ? "Conversations are arriving, but they have not produced usable scores yet."
-                : "No recent conversations have landed in this workspace yet."}
+            <p className="mt-1" style={{ fontSize: "13px", color: "#787774" }}>
+              Connect your AI agent to start tracking quality at scale
             </p>
-            <div className="mt-5 flex justify-center gap-2">
-              <Link href="/conversations" className="glass-button glass-button-primary text-sm">
-                Open conversations
-              </Link>
-              <Link href="/settings" className="glass-button text-sm">
-                Check setup
-              </Link>
+
+            <div className="mt-6 flex flex-col gap-0">
+              {/* Step 1 — active */}
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      background: "#2383E2",
+                      color: "#FFFFFF",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    1
+                  </div>
+                  <div style={{ width: "1px", flex: 1, background: "#E9E9E7", marginTop: "6px", marginBottom: "6px" }} />
+                </div>
+                <div className="pb-5">
+                  <p style={{ fontSize: "14px", fontWeight: 600, color: "#37352F" }}>
+                    Connect a data source
+                  </p>
+                  <p className="mt-0.5" style={{ fontSize: "12px", color: "#787774" }}>
+                    Point AgentGrade at your Intercom, Zendesk, Voiceflow, or custom webhook
+                  </p>
+                  <Link
+                    href="/settings"
+                    className="mt-2 inline-block"
+                    style={{ fontSize: "13px", fontWeight: 500, color: "#2383E2" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"; }}
+                  >
+                    Connect source →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Step 2 — pending */}
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      background: "#F1F1EF",
+                      color: "#ACABA8",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    2
+                  </div>
+                  <div style={{ width: "1px", flex: 1, background: "#E9E9E7", marginTop: "6px", marginBottom: "6px" }} />
+                </div>
+                <div className="pb-5">
+                  <p style={{ fontSize: "14px", fontWeight: 500, color: "#787774" }}>
+                    Conversations flow in automatically
+                  </p>
+                  <p className="mt-0.5" style={{ fontSize: "12px", color: "#787774" }}>
+                    Every conversation is automatically scored for accuracy, hallucinations, resolution, and tone
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 — pending */}
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      background: "#F1F1EF",
+                      color: "#ACABA8",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    3
+                  </div>
+                </div>
+                <div className="pb-1">
+                  <p style={{ fontSize: "14px", fontWeight: 500, color: "#787774" }}>
+                    Get actionable insights
+                  </p>
+                  <p className="mt-0.5" style={{ fontSize: "12px", color: "#787774" }}>
+                    See quality trends, detect recurring issues, and get specific prompt improvements
+                  </p>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* Right column — preview card */}
+          <div
+            className="rounded-[8px] border border-[#E9E9E7] p-5"
+            style={{ background: "#FAFAFA" }}
+          >
+            <p
+              className="mb-4 tracking-wide uppercase"
+              style={{ fontSize: "10px", fontWeight: 600, color: "#ACABA8", letterSpacing: "0.08em" }}
+            >
+              Preview
+            </p>
+
+            <div className="flex flex-col gap-3">
+              {/* Mock metric: Overall quality */}
+              <div
+                className="rounded-[6px] border border-[#E9E9E7] bg-white p-4"
+                style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}
+              >
+                <p style={{ fontSize: "11px", color: "#ACABA8", fontWeight: 500 }}>Overall quality</p>
+                <p className="mt-1" style={{ fontSize: "26px", fontWeight: 700, color: "#D3D2D0" }}>—</p>
+                <p style={{ fontSize: "11px", color: "#D3D2D0" }}>Waiting for data</p>
+              </div>
+
+              {/* Mock metrics row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="rounded-[6px] border border-[#E9E9E7] bg-white p-4"
+                  style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}
+                >
+                  <p style={{ fontSize: "11px", color: "#ACABA8", fontWeight: 500 }}>Scored</p>
+                  <p className="mt-1" style={{ fontSize: "22px", fontWeight: 700, color: "#D3D2D0" }}>0</p>
+                </div>
+                <div
+                  className="rounded-[6px] border border-[#E9E9E7] bg-white p-4"
+                  style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}
+                >
+                  <p style={{ fontSize: "11px", color: "#ACABA8", fontWeight: 500 }}>Issues</p>
+                  <p className="mt-1" style={{ fontSize: "22px", fontWeight: 700, color: "#D3D2D0" }}>0</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-3 text-center" style={{ fontSize: "11px", color: "#ACABA8" }}>
+              Sample view once data flows in
+            </p>
           </div>
         </div>
       </div>
