@@ -47,8 +47,8 @@ export function needsFreshScore(
 
 export async function queueEligibleConversationScores(workspaceId: string) {
   const { data: conversations, error } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("id, ended_at, created_at, metadata, quality_scores:ag_quality_scores(scored_at, flags), messages:messages!inner(role)")
+    .from("conversations")
+    .select("id, ended_at, created_at, metadata, quality_scores:quality_scores(scored_at, flags), messages:messages!inner(role)")
     .eq("workspace_id", workspaceId)
     .in("messages.role", ["agent", "human_agent"])
     .order("ended_at", { ascending: false, nullsFirst: false })

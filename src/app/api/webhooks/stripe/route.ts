@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (workspaceId) {
-          await supabaseAdmin.from("ag_alerts").insert({
+          await supabaseAdmin.from("alerts").insert({
             workspace_id: workspaceId,
             alert_type: "billing_payment_failed",
             title: "Subscription payment failed",
@@ -146,7 +146,7 @@ async function syncWorkspaceSubscription(input: {
   };
 
   const { error } = await supabaseAdmin
-    .from("ag_workspaces")
+    .from("workspaces")
     .update(updates)
     .eq("id", workspaceId);
 
@@ -161,7 +161,7 @@ async function findWorkspaceId(input: {
 }): Promise<string | null> {
   if (input.subscriptionId) {
     const { data: bySubscription } = await supabaseAdmin
-      .from("ag_workspaces")
+      .from("workspaces")
       .select("id")
       .eq("stripe_subscription_id", input.subscriptionId)
       .maybeSingle();
@@ -173,7 +173,7 @@ async function findWorkspaceId(input: {
 
   if (input.customerId) {
     const { data: byCustomer } = await supabaseAdmin
-      .from("ag_workspaces")
+      .from("workspaces")
       .select("id")
       .eq("stripe_customer_id", input.customerId)
       .maybeSingle();

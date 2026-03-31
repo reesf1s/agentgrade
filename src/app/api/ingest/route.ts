@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Look up the connection by webhook_secret (the API key IS the webhook secret)
     const { data: connections } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, workspace_id, platform, is_active")
       .eq("webhook_secret", apiKey)
       .limit(1);
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // --- Monthly conversation quota enforcement ---
     const { data: workspace } = await supabaseAdmin
-      .from("ag_workspaces")
+      .from("workspaces")
       .select("monthly_conversation_limit, plan")
       .eq("id", connection.workspace_id)
       .single();
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       const firstOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
       const { count } = await supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .select("id", { count: "exact", head: true })
         .eq("workspace_id", connection.workspace_id)
         .gte("created_at", firstOfMonth);

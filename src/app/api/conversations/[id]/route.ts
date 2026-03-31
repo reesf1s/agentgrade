@@ -58,20 +58,20 @@ export async function GET(
 
     const [convRes, messagesRes, scoreRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .select("*")
         .eq("id", id)
         .eq("workspace_id", ctx.workspace.id)
         .single(),
 
       supabaseAdmin
-        .from("ag_messages")
+        .from("messages")
         .select("*")
         .eq("conversation_id", id)
         .order("timestamp", { ascending: true }),
 
       supabaseAdmin
-        .from("ag_quality_scores")
+        .from("quality_scores")
         .select("*")
         .eq("conversation_id", id)
         .single(),
@@ -157,7 +157,7 @@ export async function PATCH(
     }
 
     const { data: conversation, error: fetchError } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id, metadata")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -192,7 +192,7 @@ export async function PATCH(
     }
 
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .update(updatePayload)
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)

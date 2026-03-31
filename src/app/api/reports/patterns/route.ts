@@ -15,7 +15,7 @@ function isMissingTableError(error: { code?: string } | null | undefined) {
 
 async function loadUsableScoreMap(conversationIds: string[]) {
   const { data } = await supabaseAdmin
-    .from("ag_quality_scores")
+    .from("quality_scores")
     .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
     .in("conversation_id", conversationIds);
 
@@ -56,14 +56,14 @@ export async function GET() {
 
     const [patternsRes, fixesRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_failure_patterns")
+        .from("failure_patterns")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("is_resolved", false)
         .order("detected_at", { ascending: false }),
 
       supabaseAdmin
-        .from("ag_suggested_fixes")
+        .from("suggested_fixes")
         .select("*")
         .eq("workspace_id", workspaceId)
         .in("status", ["draft", "approved"])

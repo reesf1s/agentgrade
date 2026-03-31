@@ -352,7 +352,7 @@ function buildModelBundle(examples: CalibrationExample[]) {
 
 async function loadCalibrationExamples(workspaceId: string) {
   const overridesQuery = await supabaseAdmin
-    .from("ag_quality_overrides")
+    .from("quality_overrides")
     .select("id, quality_score_id, dimension, override_score, created_at")
     .order("created_at", { ascending: false })
     .limit(4000);
@@ -367,7 +367,7 @@ async function loadCalibrationExamples(workspaceId: string) {
 
   const qualityScoreIds = [...new Set(overrideRows.map((row) => row.quality_score_id))];
   const scoresQuery = await supabaseAdmin
-    .from("ag_quality_scores")
+    .from("quality_scores")
     .select(
       "id, conversation_id, overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score, edge_case_score, escalation_score, structural_metrics, claim_analysis, flags, prompt_improvements, knowledge_gaps"
     )
@@ -377,7 +377,7 @@ async function loadCalibrationExamples(workspaceId: string) {
 
   const conversationIds = [...new Set(scoreRows.map((row) => row.conversation_id))];
   const conversationsQuery = await supabaseAdmin
-    .from("ag_conversations")
+    .from("conversations")
     .select("id, workspace_id, metadata")
     .in("id", conversationIds);
   const conversationRows = (conversationsQuery.data || []) as ConversationRow[];

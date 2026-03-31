@@ -100,17 +100,17 @@ function nextMilestone(current: number, milestones: number[]) {
 export async function getTrainingInsights(workspaceId: string): Promise<TrainingInsights> {
   const [overridesRes, scoresRes, conversationsRes, learnedSummary] = await Promise.all([
     supabaseAdmin
-      .from("ag_quality_overrides")
+      .from("quality_overrides")
       .select("quality_score_id, dimension")
       .order("created_at", { ascending: false })
       .limit(6000),
     supabaseAdmin
-      .from("ag_quality_scores")
+      .from("quality_scores")
       .select("id, conversation_id, overall_score, accuracy_score, resolution_score, confidence_level, flags, summary")
       .order("scored_at", { ascending: false })
       .limit(1500),
     supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("id, workspace_id, customer_identifier, platform, created_at, metadata")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false })

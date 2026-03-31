@@ -218,12 +218,12 @@ export async function scoreConversation(conversationId: string): Promise<{
   // ── Load conversation + messages from DB ────────────────────────
   const [convResult, msgResult] = await Promise.all([
     supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select("*")
       .eq("id", conversationId)
       .single(),
     supabaseAdmin
-      .from("ag_messages")
+      .from("messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("timestamp", { ascending: true }),
@@ -402,12 +402,12 @@ export async function scoreConversation(conversationId: string): Promise<{
 
   // Upsert so re-scoring overwrites the previous result
   ({ error: upsertError } = await supabaseAdmin
-    .from("ag_quality_scores")
+    .from("quality_scores")
     .upsert(fullRecord, { onConflict: "conversation_id" }));
 
   if (isLegacyQualityScoresColumnError(upsertError)) {
     ({ error: upsertError } = await supabaseAdmin
-      .from("ag_quality_scores")
+      .from("quality_scores")
       .upsert(legacyRecord, { onConflict: "conversation_id" }));
   }
 
@@ -420,7 +420,7 @@ export async function scoreConversation(conversationId: string): Promise<{
   // Structural analysis determines escalation — sync it back to the conversation row
   if (structuralMetrics.escalation_turn !== undefined) {
     await supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .update({ was_escalated: true })
       .eq("id", conversationId);
   }
@@ -464,8 +464,8 @@ async function runPatternDetectionAsync(workspaceId: string): Promise<void> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: convs } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("id, created_at, platform, quality_scores:ag_quality_scores(*)")
+    .from("conversations")
+    .select("id, created_at, platform, quality_scores:quality_scores(*)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
     .not("quality_scores", "is", null)

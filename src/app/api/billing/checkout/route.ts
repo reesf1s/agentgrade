@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
       // Save customer ID to workspace
       await supabaseAdmin
-        .from("ag_workspaces")
+        .from("workspaces")
         .update({ stripe_customer_id: customerId })
         .eq("id", ctx.workspace.id);
     }

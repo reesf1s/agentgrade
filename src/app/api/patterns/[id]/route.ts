@@ -44,7 +44,7 @@ export async function PATCH(
     };
 
     const { data, error } = await supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .update(updatePayload)
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)

@@ -20,7 +20,7 @@ export async function POST() {
 
   // Check if workspace already has conversations
   const { count } = await supabaseAdmin
-    .from("ag_conversations")
+    .from("conversations")
     .select("*", { count: "exact", head: true })
     .eq("workspace_id", ctx.workspace.id);
 
@@ -30,7 +30,7 @@ export async function POST() {
 
   // Create a demo connection
   const { data: connection } = await supabaseAdmin
-    .from("ag_agent_connections")
+    .from("agent_connections")
     .insert({
       workspace_id: ctx.workspace.id,
       platform: "custom",
@@ -78,7 +78,7 @@ export async function POST() {
   }));
 
   const { data: conversations, error: convError } = await supabaseAdmin
-    .from("ag_conversations")
+    .from("conversations")
     .insert(conversationsToInsert)
     .select("id");
 
@@ -107,10 +107,10 @@ export async function POST() {
     };
   });
 
-  await supabaseAdmin.from("ag_quality_scores").insert(scoresToInsert);
+  await supabaseAdmin.from("quality_scores").insert(scoresToInsert);
 
   // Seed failure patterns
-  await supabaseAdmin.from("ag_failure_patterns").insert([
+  await supabaseAdmin.from("failure_patterns").insert([
     {
       workspace_id: ctx.workspace.id,
       title: "Hallucinated product features",

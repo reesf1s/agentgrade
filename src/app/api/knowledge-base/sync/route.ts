@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     // Find active supported connection with API key
     const { data: connections } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, platform, api_key_encrypted, config")
       .eq("workspace_id", workspaceId)
       .eq("is_active", true)
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         apiKey,
       });
       await supabaseAdmin
-        .from("ag_agent_connections")
+        .from("agent_connections")
         .update({ last_sync_at: new Date().toISOString() })
         .eq("id", connection.id);
 
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     }
 
     await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .update({ last_sync_at: new Date().toISOString() })
       .eq("id", connection.id);
 

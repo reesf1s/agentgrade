@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     since.setDate(since.getDate() - days);
 
     const { data: convs, error } = await supabaseAdmin
-      .from("ag_conversations")
-      .select("created_at, quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score)")
+      .from("conversations")
+      .select("created_at, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, tone_score, sentiment_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", since.toISOString())
       .not("quality_scores", "is", null)
@@ -114,8 +114,8 @@ export async function GET(request: NextRequest) {
     priorSince.setDate(priorSince.getDate() - days);
 
     const { data: priorConvs } = await supabaseAdmin
-      .from("ag_conversations")
-      .select("quality_scores:ag_quality_scores(overall_score)")
+      .from("conversations")
+      .select("quality_scores:quality_scores(overall_score)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", priorSince.toISOString())
       .lt("created_at", since.toISOString())

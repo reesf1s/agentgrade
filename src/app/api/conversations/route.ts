@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
     const useInnerJoin = scoreFilter !== "all";
     const joinClause = useInnerJoin
       ? "quality_scores:quality_scores!inner(overall_score,accuracy_score,hallucination_score,resolution_score,flags,summary,confidence_level)"
-      : "quality_scores:ag_quality_scores(overall_score,accuracy_score,hallucination_score,resolution_score,flags,summary,confidence_level)";
+      : "quality_scores:quality_scores(overall_score,accuracy_score,hallucination_score,resolution_score,flags,summary,confidence_level)";
 
     let query = supabaseAdmin
-      .from("ag_conversations")
+      .from("conversations")
       .select(`*, ${joinClause}`, { count: "exact" })
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false })

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     await ensureFixesSynthesized(workspaceId);
 
     let query = supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("occurrence_count", { ascending: false })
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     if (isMissingTableError(error)) {
       const { data: patterns, error: patternsError } = await supabaseAdmin
-        .from("ag_failure_patterns")
+        .from("failure_patterns")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("is_resolved", false)
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
  */
 async function ensureFixesSynthesized(workspaceId: string) {
   const { data: existing } = await supabaseAdmin
-    .from("ag_suggested_fixes")
+    .from("suggested_fixes")
     .select("id")
     .eq("workspace_id", workspaceId)
     .limit(1);
@@ -115,7 +115,7 @@ async function ensureFixesSynthesized(workspaceId: string) {
   // Degrade cleanly instead of throwing from every GET.
   if (!existing) {
     const { error: tableError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("id", { count: "exact", head: true })
       .limit(1);
 
@@ -128,8 +128,8 @@ async function ensureFixesSynthesized(workspaceId: string) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: conversations } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("id, quality_scores:ag_quality_scores(prompt_improvements, knowledge_gaps)")
+    .from("conversations")
+    .select("id, quality_scores:quality_scores(prompt_improvements, knowledge_gaps)")
     .eq("workspace_id", workspaceId)
     .gte("created_at", thirtyDaysAgo.toISOString())
     .not("quality_scores", "is", null);
@@ -213,7 +213,7 @@ async function ensureFixesSynthesized(workspaceId: string) {
   ];
 
   if (fixesToInsert.length > 0) {
-    const { error } = await supabaseAdmin.from("ag_suggested_fixes").insert(fixesToInsert);
+    const { error } = await supabaseAdmin.from("suggested_fixes").insert(fixesToInsert);
     if (isMissingTableError(error)) return;
   }
 }

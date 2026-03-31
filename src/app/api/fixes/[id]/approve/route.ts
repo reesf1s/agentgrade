@@ -29,7 +29,7 @@ export async function POST(
 
     // Verify fix belongs to workspace
     const { data: fix, error: fetchError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .select("id, status")
       .eq("id", id)
       .eq("workspace_id", ctx.workspace.id)
@@ -53,7 +53,7 @@ export async function POST(
     }
 
     const { data: updated, error: updateError } = await supabaseAdmin
-      .from("ag_suggested_fixes")
+      .from("suggested_fixes")
       .update({
         status: "approved",
         approved_at: new Date().toISOString(),

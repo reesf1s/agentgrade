@@ -76,7 +76,7 @@ function getJoinedRecord<T>(value: T | T[] | null | undefined): T | null {
 
 async function loadUsableScoreMap(conversationIds: string[]) {
   const { data } = await supabaseAdmin
-    .from("ag_quality_scores")
+    .from("quality_scores")
     .select("conversation_id, overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version")
     .in("conversation_id", conversationIds);
 
@@ -115,27 +115,27 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
 
   const [conversationsRes, alertsRes, trendRes, patternsRes] = await Promise.all([
     supabaseAdmin
-      .from("ag_conversations")
-      .select("*, quality_scores:ag_quality_scores(*)")
+      .from("conversations")
+      .select("*, quality_scores:quality_scores(*)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(20),
     supabaseAdmin
-      .from("ag_alerts")
+      .from("alerts")
       .select("*")
       .eq("workspace_id", workspaceId)
       .is("acknowledged_at", null)
       .order("triggered_at", { ascending: false })
       .limit(5),
     supabaseAdmin
-      .from("ag_conversations")
-      .select("created_at, metadata, quality_scores:ag_quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
+      .from("conversations")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
     supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
@@ -230,7 +230,7 @@ export async function loadDashboardData(workspaceId: string): Promise<DashboardD
 
 export async function loadPatternsData(workspaceId: string): Promise<FailurePattern[]> {
   const { data, error } = await supabaseAdmin
-    .from("ag_failure_patterns")
+    .from("failure_patterns")
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("is_resolved", false)
@@ -256,31 +256,31 @@ export async function loadReportData(workspaceId: string): Promise<ReportData> {
 
   const [thisWeekRes, lastWeekRes, trendRes, alertsRes, patternsRes] = await Promise.all([
     supabaseAdmin
-      .from("ag_conversations")
-      .select("*, quality_scores:ag_quality_scores(*)")
+      .from("conversations")
+      .select("*, quality_scores:quality_scores(*)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
-      .from("ag_conversations")
-      .select("metadata, quality_scores:ag_quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
+      .from("conversations")
+      .select("metadata, quality_scores:quality_scores(overall_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", fourteenDaysAgo.toISOString())
       .lt("created_at", sevenDaysAgo.toISOString()),
     supabaseAdmin
-      .from("ag_conversations")
-      .select("created_at, metadata, quality_scores:ag_quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, flags, confidence_level, structural_metrics, scoring_model_version)")
+      .from("conversations")
+      .select("created_at, metadata, quality_scores:quality_scores(overall_score, accuracy_score, hallucination_score, resolution_score, flags, confidence_level, structural_metrics, scoring_model_version)")
       .eq("workspace_id", workspaceId)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
     supabaseAdmin
-      .from("ag_alerts")
+      .from("alerts")
       .select("*")
       .eq("workspace_id", workspaceId)
       .gte("triggered_at", sevenDaysAgo.toISOString())
       .order("triggered_at", { ascending: false })
       .limit(10),
     supabaseAdmin
-      .from("ag_failure_patterns")
+      .from("failure_patterns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("is_resolved", false)
@@ -565,8 +565,8 @@ export async function loadBenchmarkStats(
   since.setDate(since.getDate() - days);
 
   const { data, error } = await supabaseAdmin
-    .from("ag_conversations")
-    .select("quality_scores:ag_quality_scores(overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version), metadata")
+    .from("conversations")
+    .select("quality_scores:quality_scores(overall_score, flags, claim_analysis, confidence_level, structural_metrics, scoring_model_version), metadata")
     .eq("workspace_id", workspaceId)
     .gte("created_at", since.toISOString())
     .not("quality_scores", "is", null);

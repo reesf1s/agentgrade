@@ -27,20 +27,20 @@ export async function GET(
     // Fetch workspace + members in parallel
     const [workspaceRes, membersRes, usageRes] = await Promise.all([
       supabaseAdmin
-        .from("ag_workspaces")
+        .from("workspaces")
         .select("*")
         .eq("id", id)
         .single(),
 
       supabaseAdmin
-        .from("ag_workspace_members")
+        .from("workspace_members")
         .select("id, clerk_user_id, email, role, created_at")
         .eq("workspace_id", id)
         .order("created_at", { ascending: true }),
 
       // Count conversations this calendar month
       supabaseAdmin
-        .from("ag_conversations")
+        .from("conversations")
         .select("id", { count: "exact", head: true })
         .eq("workspace_id", id)
         .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
@@ -99,7 +99,7 @@ export async function PATCH(
     updates.updated_at = new Date().toISOString();
 
     const { data, error } = await supabaseAdmin
-      .from("ag_workspaces")
+      .from("workspaces")
       .update(updates)
       .eq("id", id)
       .select("*")

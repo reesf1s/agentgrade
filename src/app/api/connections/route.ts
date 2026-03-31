@@ -24,7 +24,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .select("id, platform, name, is_active, last_sync_at, webhook_url, created_at")
       .eq("workspace_id", ctx.workspace.id)
       .order("created_at", { ascending: false });
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const webhookUrl = `${resolveAppUrl(request)}/api/webhooks/ingest`;
 
     const { data, error } = await supabaseAdmin
-      .from("ag_agent_connections")
+      .from("agent_connections")
       .insert({
         workspace_id: ctx.workspace.id,
         platform,
